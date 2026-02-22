@@ -50,7 +50,17 @@
   .card { background: #111; padding: 15px; margin-bottom: 20px; border-radius: 10px; border: 1px solid #333; }
   .card.clientes { background: #fff; color: #000; width: 100%; box-sizing: border-box; overflow-x: auto; }
   .row-inputs { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
-  .row-inputs input { flex: 1; min-width: 140px; }
+  .row-inputs input, .row-inputs select { flex: 1; min-width: 140px; }
+  
+  /* CEP E PAGINAÇÃO */
+  .input-group-cep { display: flex !important; flex: 1; min-width: 200px; gap: 0 !important; }
+  .input-group-cep input { border-top-right-radius: 0 !important; border-bottom-right-radius: 0 !important; flex: 1; }
+  .btn-search { width: 50px; background: #f57c00; color: #fff; border: 1px solid #555; border-left: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; padding: 0; border-top-right-radius: 5px; border-bottom-right-radius: 5px; }
+
+  .pagination { display: flex; justify-content: center; gap: 10px; margin-top: 15px; }
+  .btn-page { background: #0d47a1; color: white; padding: 8px 16px; border-radius: 5px; border: none; cursor: pointer; font-weight: bold; }
+  .btn-page:disabled { background: #555; cursor: not-allowed; }
+
   input, select { padding: 10px; border-radius: 5px; border: 1px solid #555; background: #222; color: #fff; width: 100%; box-sizing: border-box; }
   button { padding: 10px 15px; margin: 2px; border-radius: 5px; cursor: pointer; font-weight: bold; border: none; color: #fff; text-transform: uppercase; font-size: 11px; }
   .primary { background: #1565c0; } .success { background: #2e7d32; } .danger { background: #c62828; } .warning { background: #f57c00; } .dark { background: #333; } .wapp { background: #25D366; color: #fff; }
@@ -70,11 +80,6 @@
   .check-save { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; font-size: 14px; background: #333; padding: 10px; border-radius: 5px; }
   #hiddenPrintArea { position: absolute; top: -9999px; left: -9999px; width: 350px; background: #fff; color: #000; padding: 10px; }
   #userInfo { position: absolute; top: 10px; left: 10px; font-size: 10px; color: #aaa; z-index: 10001; }
-
-  /* MASCARA E BOTÃO DE BUSCA */
-  .input-group { display: flex; gap: 5px; flex: 1; min-width: 200px; }
-  .input-group input { flex: 1; }
-  .btn-search { width: 50px; background: #f57c00; color: #fff; border: 1px solid #555; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; padding: 0; }
 
   @media (max-width: 768px) {
     .container { padding: 10px; width: 100%; } .header { padding: 10px; } .titulo { font-size: 16px; } .dash-card { padding: 10px 2px; } .top-actions button { flex: 1; min-width: 120px; }
@@ -140,14 +145,13 @@
     </div>
     <div class="row-inputs">
       <input type="text" id="telefone" placeholder="Telefone">
-      
-      <div class="input-group">
+      <div class="input-group-cep">
           <input type="text" id="cep" placeholder="CEP" onblur="buscarCep()">
           <button class="btn-search" onclick="buscarCep()" title="Buscar CEP">🔍</button>
       </div>
-      
       <input type="text" id="cidade" placeholder="Cidade - UF" list="listaCidadesIBGE">
-      <datalist id="listaCidadesIBGE"></datalist> </div>
+      <datalist id="listaCidadesIBGE"></datalist>
+    </div>
     <div class="row-inputs">
       <input type="text" id="endereco" placeholder="Endereço Completo" style="flex: 3;">
       <button class="primary" onclick="adicionarCliente()" style="flex: 1;">💾 SALVAR</button>
@@ -201,6 +205,11 @@
   <div class="card clientes">
     <input type="text" id="searchBox" class="search-box admin-only" placeholder="🔍 Buscar..." onkeyup="render()" autocomplete="off">
     <div id="listaClientes">Carregando...</div>
+    <div class="pagination" id="paginacaoControles">
+        <button class="btn-page" id="btnAnt" onclick="mudarPagina(-1)">⬅ Anterior</button>
+        <span id="pageInfo" style="color: black; align-self: center; font-weight: bold;">Pág 1</span>
+        <button class="btn-page" id="btnProx" onclick="mudarPagina(1)">Próximo ➡</button>
+    </div>
   </div>
 </div>
 
@@ -277,6 +286,10 @@
   let currentUserRole = 'func';
   let roleSelected = '';
   
+  // PAGINAÇÃO
+  let paginaAtual = 1;
+  const itensPorPagina = 10;
+  
   let unsubscribeClientes = null;
   let unsubscribeCatalogo = null;
   let unsubscribeEmpresa = null;
@@ -287,7 +300,7 @@
       $('#cpf_cnpj').mask('000.000.000-00', {onKeyPress: function(val, e, field, options) {
           field.mask(val.length > 14 ? '00.000.000/0000-00' : '000.000.000-000');
       }});
-      // Carregar Cidades IBGE para o Datalist
+      // Carregar Cidades IBGE
       fetch('https://servicodados.ibge.gov.br/api/v1/localidades/municipios')
         .then(res => res.json())
         .then(cidades => {
@@ -297,14 +310,11 @@
         });
   });
 
-  // --- BUSCA CEP AUTOMÁTICA (VIACEP) ---
   function buscarCep() {
       let cep = document.getElementById('cep').value.replace(/\D/g, '');
-      if (cep.length !== 8) return; // Só busca se tiver 8 dígitos
-      
+      if (cep.length !== 8) { return; }
       document.getElementById('cidade').value = "Buscando...";
       document.getElementById('endereco').value = "Buscando...";
-
       fetch(`https://viacep.com.br/ws/${cep}/json/`)
         .then(res => res.json())
         .then(data => {
@@ -332,10 +342,7 @@
               else document.body.classList.add('role-func');
               document.getElementById('userDisplay').innerHTML = `👤 ${nome}<br><span style="color:#aaa">${role.toUpperCase()}</span>`;
               document.getElementById('loginOverlay').style.display = 'none';
-              
-              // AQUI: LIMPA O CAMPO DE BUSCA SE TIVER SUJEIRA DO LOGIN
               document.getElementById('searchBox').value = ''; 
-              
               iniciarSincronizacao();
           }).catch(() => { iniciarSincronizacao(); document.getElementById('loginOverlay').style.display = 'none'; });
       } else {
@@ -356,7 +363,7 @@
 
   function iniciarSincronizacao() {
       if(unsubscribeClientes) return; 
-      unsubscribeClientes = db.collection("clientes").onSnapshot((snapshot) => { clientes = []; snapshot.forEach((doc) => { clientes.push({ id: doc.id, ...doc.data() }); }); atualizarSelect(); atualizarDashboard(); render(); });
+      unsubscribeClientes = db.collection("clientes").orderBy("nome").onSnapshot((snapshot) => { clientes = []; snapshot.forEach((doc) => { clientes.push({ id: doc.id, ...doc.data() }); }); atualizarSelect(); atualizarDashboard(); render(); });
       unsubscribeCatalogo = db.collection("catalogo").onSnapshot((s)=>{ catalogo=[]; let d=document.getElementById('opcoesCatalogo'),v=document.getElementById('listaCatalogoVis'); if(!d) return; d.innerHTML=''; v.innerHTML=''; s.forEach((doc)=>{ let k=doc.data(); catalogo.push({id:doc.id,...k}); d.innerHTML+=`<option value="${k.nome}">R$ ${k.valor}</option>`; v.innerHTML+=`📦 ${k.nome} - R$ ${k.valor} <button onclick="apagarCat('${doc.id}')" style="color:red;border:none;background:none;cursor:pointer">x</button><br>`; }); });
       unsubscribeEmpresa = db.collection("config").doc("empresa").onSnapshot((doc) => {
           if (doc.exists) { 
@@ -435,12 +442,33 @@
   function formatarDataBR(i){if(!i)return'';let p=i.split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:i;}
   function aplicarLogo(){if(logoBase64){document.getElementById('logoLeft').src=logoBase64;document.getElementById('logoRight').src=logoBase64;document.getElementById('logoLogin').src=logoBase64;document.getElementById('logoLogin').style.display='inline-block';}}
 
+  // --- FUNÇÃO RENDER COM PAGINAÇÃO ---
   function render(){
     let div = document.getElementById('listaClientes'); div.innerHTML = '';
     let termo = document.getElementById('searchBox').value.toLowerCase();
+    
+    // 1. Filtrar lista
+    let listaFiltrada = clientes.filter(c => {
+        return !termo || c.nome.toLowerCase().includes(termo) || (c.cpf_cnpj && c.cpf_cnpj.includes(termo));
+    });
+
+    // 2. Calcular Paginação
+    let totalPaginas = Math.ceil(listaFiltrada.length / itensPorPagina);
+    if(paginaAtual > totalPaginas && totalPaginas > 0) paginaAtual = totalPaginas;
+    if(totalPaginas === 0) paginaAtual = 1;
+
+    let inicio = (paginaAtual - 1) * itensPorPagina;
+    let fim = inicio + itensPorPagina;
+    let itensDaPagina = listaFiltrada.slice(inicio, fim);
+
+    // 3. Atualizar Botões
+    document.getElementById('pageInfo').innerText = `Pág ${paginaAtual} de ${totalPaginas || 1}`;
+    document.getElementById('btnAnt').disabled = (paginaAtual === 1);
+    document.getElementById('btnProx').disabled = (paginaAtual >= totalPaginas || totalPaginas === 0);
+
+    // 4. Renderizar Itens
     let hoje = new Date().toISOString().split('T')[0];
-    clientes.forEach((c) => {
-      if(termo && !c.nome.toLowerCase().includes(termo) && !(c.cpf_cnpj || '').includes(termo)) return;
+    itensDaPagina.forEach((c) => {
       let saldoCli = c.itens.reduce((acc, i) => acc + (Number(i.valor)||0) - (Number(i.pagoValor)||0), 0);
       let html = `<div class="client-card"><div style="display:flex; justify-content:space-between; align-items:flex-start"><div><b style="font-size:18px; color:#0d47a1">${c.nome}</b><br><span style="font-size:12px; color:#555">${c.cpf_cnpj ? 'CPF: '+c.cpf_cnpj : ''} ${c.telefone ? '| '+c.telefone : ''}<br>${c.endereco ? c.endereco : ''}</span></div><div style="text-align:right">Saldo Devedor<br><span style="color:red; font-size:20px; font-weight:bold">${formatarMoeda(saldoCli)}</span></div></div>
       <div class="top-actions"><button class="primary" onclick="imprimirSelecionados('${c.id}', 'extrato')">📄 A4</button><button class="warning" onclick="imprimirSelecionados('${c.id}', 'cupom')">NOTA (CUPOM)</button><button class="dark" onclick="abrirAssinatura('${c.id}')" style="background:#5e35b1;">✍️ PRESENCIAL</button><button class="primary" style="background:#0277bd" onclick="gerarLinkRemoto('${c.id}')">🔗 LINK REMOTO</button><button class="primary" style="background:#006064" onclick="imprimirExtratoGeral('${c.id}')">📋 EXTRATO</button><button class="wapp" onclick="cobrarWhatsApp('${c.id}', ${saldoCli})">💬 COBRAR</button><button class="danger admin-only" onclick="excluirCliente('${c.id}')">🗑️ EXCLUIR</button></div>
@@ -451,58 +479,87 @@
     });
   }
 
+  function mudarPagina(delta) {
+      paginaAtual += delta;
+      render();
+  }
+
+  function abrirAssinatura(id) { const checks = document.querySelectorAll(`.sel-${id}:checked`); if(checks.length === 0) return Swal.fire('Atenção', "Selecione itens", 'warning'); signId = id; document.getElementById('assinaturaModal').style.display = 'flex'; canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.strokeStyle = '#000'; ctx.clearRect(0,0,canvas.width,canvas.height); }
+  function fecharAssinatura() { document.getElementById('assinaturaModal').style.display = 'none'; signId = null; }
+  function limparAssinatura() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+  function finalizarAssinatura(tipo) { let imgAssinatura = canvas.toDataURL(); let salvar = document.getElementById('salvarAssinaturaCheck').checked; if (salvar && signId) { let c = clientes.find(x => x.id === signId); let itens = [...c.itens]; let checks = document.querySelectorAll(`.sel-${signId}:checked`); checks.forEach(cb => { let idx = parseInt(cb.value); if(itens[idx]) itens[idx].assinatura = imgAssinatura; }); db.collection("clientes").doc(signId).update({ itens }); } if (tipo === 'salvar_apenas') { Swal.fire({icon:'success',title:'Salvo!',timer:1000,showConfirmButton:false}); fecharAssinatura(); return; } imprimirSelecionados(signId, tipo, imgAssinatura); fecharAssinatura(); }
+  
+  function gerarImagemWhatsApp() {
+      if (!empDados.end || empDados.end === "") { Swal.fire({ title: 'Aguarde...', text: 'Carregando dados da empresa...', icon: 'info', timer: 3000 }); db.collection("config").doc("empresa").get().then(doc => { if(doc.exists) { let d = doc.data(); empDados = { nome: d.nome, end: d.end, tel: d.tel }; } }); return; }
+      let c = clientes.find(x => x.id === signId); const checks = document.querySelectorAll(`.sel-${signId}:checked`);
+      const indices = Array.from(checks).map(cb => parseInt(cb.value)); const selecionados = indices.map(idx => c.itens[idx]);
+      const totalS = selecionados.reduce((a, i) => a + (Number(i.valor) || 0), 0); const totalPago = selecionados.reduce((a, i) => a + (Number(i.pagoValor) || 0), 0); const assinatura = canvas.toDataURL();
+      let html = `<div style="background:#fff; font-family:'Courier New'; padding:15px; border:1px solid #ccc; width:350px;"><div style="text-align:center; font-weight:bold; margin-bottom:5px; font-size:16px;">${empDados.nome}</div><div style="text-align:center; font-size:11px; margin-bottom:10px; color:#333;">${empDados.end}<br>${empDados.tel}</div><hr style="border:0; border-top:1px dashed #000;"><div style="font-size:12px; margin-bottom:10px;"><b>CLIENTE:</b> ${c.nome.toUpperCase()}</div><table style="width:100%; font-size:11px; border-collapse:collapse; margin-bottom:10px;"><tr style="border-bottom:1px solid #000;"><th style="text-align:left;">Peça</th><th style="text-align:right;">Valor</th></tr>${selecionados.map(i => `<tr><td style="text-align:left; padding:3px 0;">${i.desc}</td><td style="text-align:right; padding:3px 0;">${formatarMoeda(i.valor)}</td></tr>`).join('')}</table><hr style="border:0; border-top:1px dashed #000;"><div style="text-align:right; font-size:14px; font-weight:bold;">TOTAL: ${formatarMoeda(totalS)}</div><div style="text-align:right; font-size:12px;">PAGO: ${formatarMoeda(totalPago)}</div><div style="text-align:right; font-size:14px; font-weight:bold; color:red;">RESTANTE: ${formatarMoeda(totalS-totalPago)}</div><div style="margin-top:20px; text-align:center;"><img src="${assinatura}" style="max-height:50px;"><br><span style="font-size:10px; color:#555;">Assinado Digitalmente</span></div><div style="margin-top:10px; text-align:center; font-size:9px; color:#aaa;">Emitido em: ${new Date().toLocaleString('pt-BR')}</div></div>`;
+      let area = document.getElementById('hiddenPrintArea'); area.innerHTML = html;
+      setTimeout(() => { html2canvas(area, { scale: 2 }).then(canvasImg => { Swal.fire({ title: 'Imagem Gerada!', text: 'Segure na imagem para copiar.', imageUrl: canvasImg.toDataURL("image/jpeg", 0.9), imageWidth: 300, confirmButtonText: 'Fechar' }); area.innerHTML = ''; fecharAssinatura(); }); }, 500);
+  }
+
+  function pagar(id, ii){let c=clientes.find(x=>x.id===id),itens=[...c.itens],v=Number(prompt(`Resta: ${formatarMoeda(itens[ii].valor-itens[ii].pagoValor)}\nQuanto pagou?`));if(v>0){itens[ii].pagoValor+=v;if(itens[ii].pagoValor>=itens[ii].valor)itens[ii].pago=true;db.collection("clientes").doc(id).update({itens});Swal.fire({icon:'success',title:'Pago',toast:true,position:'top-end',timer:1000,showConfirmButton:false});}}
+  function abrirEditar(id,ii){let c=clientes.find(x=>x.id===id),i=c.itens[ii];editRef={id,ii};document.getElementById('editDesc').value=i.desc;document.getElementById('editQtd').value=i.qtd||1;document.getElementById('editValor').value=i.valor;document.getElementById('editData').value=i.data||"";document.getElementById('editVenc').value=i.venc||"";document.getElementById('editModal').style.display='flex';}
+  function salvarEdicao(){let {id,ii}=editRef,c=clientes.find(x=>x.id===id),itens=[...c.itens];itens[ii].desc=document.getElementById('editDesc').value;itens[ii].qtd=Number(document.getElementById('editQtd').value);itens[ii].valor=Number(document.getElementById('editValor').value);itens[ii].data=document.getElementById('editData').value;itens[ii].venc=document.getElementById('editVenc').value;db.collection("clientes").doc(id).update({itens}).then(()=>fecharModal());}
+  function fecharModal(){document.getElementById('editModal').style.display='none';}
+  function excluirLançamento(id,ii){Swal.fire({title:'Excluir item?',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33',confirmButtonText:'Sim'}).then((r)=>{if(r.isConfirmed){let c=clientes.find(x=>x.id===id),itens=[...c.itens];itens.splice(ii,1);db.collection("clientes").doc(id).update({itens});}});}
+  function excluirCliente(id){Swal.fire({title:'Excluir Cliente?',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33',confirmButtonText:'Excluir Tudo'}).then((r)=>{if(r.isConfirmed)db.collection("clientes").doc(id).delete();});}
+  function cobrarWhatsApp(id, saldo) { let c = clientes.find(x => x.id === id); if(saldo<=0) return Swal.fire('Info','Sem débito','info'); if(!c.telefone) return Swal.fire('Erro','Sem telefone','error'); let t = `Olá *${c.nome}*, aqui é da *${empDados.nome}*.\nConsta saldo aberto de *${formatarMoeda(saldo)}*. Podemos acertar?`; window.open(`https://wa.me/55${c.telefone.replace(/\D/g,'')}?text=${encodeURIComponent(t)}`,'_blank'); }
+  function imprimirSelecionados(id, tipo, assinaturaImg = null) { const c = clientes.find(x => x.id === id); const checks = document.querySelectorAll(`.sel-${id}:checked`); const indices = Array.from(checks).map(cb => parseInt(cb.value)); if (indices.length === 0) return Swal.fire('Aviso', "Selecione itens", 'warning'); const selecionados = indices.map(idx => c.itens[idx]); const totalS = selecionados.reduce((a, i) => a + (Number(i.valor) || 0), 0); gerarImpressao(c, selecionados, totalS, tipo, "COMPROVANTE", assinaturaImg); }
+  function imprimirExtratoGeral(id){ let c = clientes.find(x => x.id === id); if(!c.itens.length)return; let t = c.itens.reduce((a, i) => a + (Number(i.valor) || 0), 0); gerarImpressao(c, c.itens, t, 'extrato', "EXTRATO GERAL"); }
   function gerarImpressao(c, itens, total, tipo, titulo, assinaturaNova = null) {
     const logoHtml = logoBase64 ? `<img src="${logoBase64}" style="max-height:60px; display:block; margin:0 auto 5px auto;">` : '';
     let totalPago = itens.reduce((acc, i) => acc + (Number(i.pagoValor) || 0), 0);
     let saldoDevedor = total - totalPago;
     let imgFinal = assinaturaNova || (itens.find(i=>i.assinatura)?.assinatura);
     
-    if (tipo === 'cupom') {
-        let qrContainer = document.createElement('div');
-        new QRCode(qrContainer, { text: "https://seusite.com/validar?id="+c.id, width: 80, height: 80 });
-        let qrCodeImg = qrContainer.querySelector('img').src;
-
-        let h = `<html><head><style>
-            @media print { @page { margin: 0; size: auto; } body { margin: 0; padding: 5px; } }
-            body { font-family: 'Courier New', monospace; width: 70mm; margin: 0 auto; text-align: center; font-size: 11px; color: #000; }
-            .sep { border-bottom: 1px dashed #000; margin: 5px 0; }
-            .text-left { text-align: left; } .text-right { text-align: right; }
-            .bold { font-weight: bold; }
-        </style></head><body>
-            ${logoHtml}
-            <div class="bold" style="font-size:14px">${empDados.nome}</div>
-            <div>${empDados.end}</div>
-            <div>${empDados.tel}</div>
-            <div class="sep"></div>
-            <div class="bold">DOCUMENTO AUXILIAR DE VENDA</div>
-            <div style="font-size:10px">NÃO É DOCUMENTO FISCAL</div>
-            <div class="sep"></div>
-            <table style="width:100%; font-size:11px;">
-                <tr><th class="text-left">ITEM</th><th class="text-right">VALOR</th></tr>
-                ${itens.map((i,idx) => `<tr><td class="text-left">${i.qtd}x ${i.desc.toUpperCase()}</td><td class="text-right">${formatarMoeda(i.valor)}</td></tr>`).join('')}
-            </table>
-            <div class="sep"></div>
-            <div class="text-right bold">TOTAL: ${formatarMoeda(total)}</div>
-            <div class="text-right">PAGO: ${formatarMoeda(totalPago)}</div>
-            <div class="text-right bold" style="font-size:14px">A PAGAR: ${formatarMoeda(saldoDevedor)}</div>
-            <div class="sep"></div>
-            <div class="text-left">CONSUMIDOR:</div>
-            <div class="text-left">${c.nome.toUpperCase()}</div>
-            <div class="text-left">CPF/CNPJ: ${c.cpf_cnpj || 'NÃO INFORMADO'}</div>
-            <div class="sep"></div>
-            ${imgFinal ? `<div style="text-align:center"><img src="${imgFinal}" style="max-height:50px"><br>Assinado Digitalmente</div>` : ''}
-            <br>
-            <div style="text-align:center"><img src="${qrCodeImg}" style="width:80px"></div>
-            <div style="font-size:9px; margin-top:5px">EMISSÃO: ${new Date().toLocaleString('pt-BR')}</div>
-        </body></html>`;
+    // CORREÇÃO: Usar string simples para garantir que a janela abra
+    let conteudo = `
+    <html><head><title>Imprimir</title><style>
+    @media print { @page { margin: 0; } body { margin: 5px; } }
+    body { font-family: 'Courier New', monospace; text-align: center; font-size: ${tipo==='cupom'?'12px':'14px'}; width: ${tipo==='cupom'?'70mm':'98%'}; margin: 0 auto; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border-bottom: 1px dashed #000; padding: 4px 0; text-align: right; }
+    th { text-align: center; border-top: 1px dashed #000; }
+    .text-left { text-align: left; }
+    .bold { font-weight: bold; }
+    </style></head>
+    <body>
+        ${logoHtml}
+        <div class="bold" style="font-size:16px">${empDados.nome}</div>
+        <div>${empDados.end}<br>${empDados.tel}</div>
+        <div style="border-bottom: 1px solid #000; margin: 10px 0;"></div>
         
-        let win = window.open('', '_blank'); win.document.write(h); win.document.close(); setTimeout(() => { win.print(); }, 800);
-        return;
-    }
+        <div class="bold">${titulo}</div>
+        <div class="text-left">
+            CLIENTE: ${c.nome.toUpperCase()}<br>
+            ${c.cpf_cnpj ? 'CPF/CNPJ: '+c.cpf_cnpj : ''}
+        </div>
 
-    let cabecalhoEmpresa = `<div style="font-weight:bold;margin-bottom:5px;font-size:16px;">${empDados.nome}</div><div style="margin-bottom:10px;font-size:14px">${empDados.end}<br>${empDados.tel}</div><div style="border-bottom:1px solid #000;"></div>`;
-    let h = `<html><head><style>@media print{@page{margin:0;size:auto}body{margin:0;padding:5px}}body{font-family:'Courier New';width:95%;margin:0 auto;text-align:center;font-size:14px}table{width:100%;border-collapse:collapse;margin-top:5px}th,td{border-bottom:1px dashed #000;padding:3px 0;text-align:center;font-size:14px}th{border-top:1px dashed #000}.text-left{text-align:left}.text-right{text-align:right}.total-final{text-align:right;margin-top:10px;font-weight:bold;font-size:16px;border-top:1px dashed #000}</style></head><body>${logoHtml}${cabecalhoEmpresa}<h3 style="margin:5px 0;">${titulo}</h3><div style="border-bottom:1px dashed #000;padding-bottom:5px;margin-bottom:5px;text-align:left"><b>CLI: ${c.nome.toUpperCase()}</b><br>${c.cpf_cnpj||''}<br>${c.endereco||''}</div><table><thead><tr><th>Data</th><th class="text-left">Peça</th><th class="text-right">Valor</th></tr></thead><tbody>${itens.map(i=>`<tr><td>${formatarDataBR(i.data).substring(0,5)}</td><td class="text-left">${i.desc.toUpperCase()}</td><td class="text-right">${formatarMoeda(i.valor)}</td></tr>`).join('')}</tbody></table><div style="text-align:right;margin-top:10px">TOTAL: <b>${formatarMoeda(total)}</b></div><div style="text-align:right">PAGO: <b>${formatarMoeda(totalPago)}</b></div><div class="total-final">SALDO: ${formatarMoeda(saldoDevedor)}</div>${imgFinal ? `<br><img src="${imgFinal}" style="max-height:60px"><br>Assinado Digitalmente` : '<br><br>__________________________<br>Assinatura'}</body></html>`;
-    let win = window.open('', '_blank'); win.document.write(h); win.document.close(); setTimeout(() => { win.print(); }, 800);
+        <table>
+            <tr><th class="text-left">ITEM</th><th>QTD</th><th>VALOR</th></tr>
+            ${itens.map(i => `<tr><td class="text-left">${i.desc}</td><td>${i.qtd||1}</td><td>${formatarMoeda(i.valor)}</td></tr>`).join('')}
+        </table>
+
+        <div style="margin-top:10px; text-align:right;">
+            TOTAL: <span class="bold">${formatarMoeda(total)}</span><br>
+            PAGO: ${formatarMoeda(totalPago)}<br>
+            A PAGAR: <span class="bold" style="font-size:16px">${formatarMoeda(saldoDevedor)}</span>
+        </div>
+
+        ${imgFinal ? `<div style="margin-top:20px; text-align:center;"><img src="${imgFinal}" style="max-height:60px;"><br>Assinado Digitalmente</div>` : '<br><br>__________________________<br>Assinatura'}
+        <br><div style="font-size:10px;">Emitido: ${new Date().toLocaleString()}</div>
+        <script>window.print(); window.onafterprint = function(){ window.close(); };<\/script>
+    </body></html>`;
+
+    let win = window.open('', '_blank');
+    if(win) {
+        win.document.write(conteudo);
+        win.document.close();
+    } else {
+        Swal.fire('Erro', 'Pop-up bloqueado! Permita pop-ups para imprimir.', 'error');
+    }
   }
 
   function fazerBackupLocal() { if(!clientes.length)return Swal.fire('Erro','Vazio','error'); let b=new Blob([JSON.stringify(clientes)],{type:"application/json"}),l=document.createElement("a");l.href=URL.createObjectURL(b);l.download=`backup_${new Date().toISOString().split('T')[0]}.json`;document.body.appendChild(l);l.click();document.body.removeChild(l);Swal.fire('Sucesso','Backup salvo','success'); }
