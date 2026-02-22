@@ -39,7 +39,6 @@
   body.role-func .admin-only { display: none !important; }
   body.mode-client .admin-only, body.mode-client .header button, body.mode-client .card:not(#areaClienteRemoto) { display: none !important; }
   body.mode-client #areaClienteRemoto { display: block !important; }
-  /* Se for modo cliente, esconde o login imediatamente via CSS se a classe for adicionada a tempo */
   body.mode-client #loginOverlay { display: none !important; } 
   
   #areaClienteRemoto { display: none; background: #111; padding: 20px; border-radius: 10px; text-align: center; }
@@ -77,12 +76,10 @@
   td { border-bottom: 1px solid #eee; padding: 8px; text-align: center; font-size: 12px; }
   .vencido { color: #c62828 !important; font-weight: bold; background-color: #ffebee; }
   .search-box { width: 100%; padding: 12px; font-size: 16px; border: 2px solid #0d47a1; border-radius: 8px; margin-bottom: 20px; background: #f0f8ff; color: #000; font-weight: bold; box-sizing: border-box; }
-  
   .client-card { background: #f9f9f9; color: #000; padding: 15px; margin-top: 20px; margin-bottom: 30px; border-radius: 15px; border: 3px solid #333; box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
   .top-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 15px; align-items: center; }
   .table-actions { display: flex; justify-content: center; align-items: center; gap: 5px; flex-wrap: nowrap; }
   .table-actions button, .table-actions label { margin: 0; padding: 0 10px; height: 32px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; font-size: 12px; border-radius: 5px; font-weight: bold; cursor: pointer; color: #fff; }
-  
   .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 1000; }
   .modal-content { background: #222; padding: 25px; border-radius: 10px; width: 90%; max-width: 450px; color: #fff; border: 1px solid #555; }
   .modal-content input, .modal-content select { width: 95%; margin-bottom: 10px; }
@@ -287,8 +284,8 @@
     <hr style="border:1px solid #444; margin: 10px 0;">
     <p>IMPRIMIR:</p>
     <div style="display:flex; gap:10px; justify-content:center;">
-        <button class="primary" onclick="finalizarAssinatura('extrato')">A4</button>
-        <button class="warning" onclick="finalizarAssinatura('cupom')">NOTA (CUPOM)</button>
+        <button class="primary" onclick="finalizarAssinatura('extrato')">📄 IMPRIMIR A4</button>
+        <button class="warning" onclick="finalizarAssinatura('cupom')">🖨️ IMPRIMIR CUPOM</button>
     </div>
   </div>
 </div>
@@ -358,10 +355,9 @@
   const urlParams = new URLSearchParams(window.location.search);
   const clienteIdUrl = urlParams.get('cliente');
 
-  // Se tiver ID na URL, ativa modo Cliente IMEDIATAMENTE antes de tudo
+  // Se tiver ID na URL, ativa modo Cliente IMEDIATAMENTE
   if(clienteIdUrl) {
       document.body.classList.add('mode-client');
-      // Força esconder login
       const style = document.createElement('style');
       style.innerHTML = '#loginOverlay { display: none !important; }';
       document.head.appendChild(style);
@@ -397,7 +393,7 @@
 
   // --- AUTH ---
   auth.onAuthStateChanged((user) => {
-      if (document.body.classList.contains('mode-client')) return; // Bloqueia login se for cliente
+      if (document.body.classList.contains('mode-client')) return; 
       
       if (user) {
           db.collection("usuarios").doc(user.uid).get().then((doc) => {
@@ -426,7 +422,7 @@
       
       // IMPORTANTE: Redimensionar Canvas ao abrir
       const cvs = document.getElementById('canvasAssinatura');
-      cvs.width = cvs.parentElement.offsetWidth; // Pega largura do pai
+      cvs.width = cvs.parentElement.offsetWidth;
       cvs.height = 200;
       
       const ctx = cvs.getContext('2d');
@@ -434,7 +430,7 @@
       ctx.strokeStyle = '#000';
       ctx.clearRect(0,0,cvs.width,cvs.height);
       
-      setupCanvasEvents(cvs); // Reaplica eventos
+      setupCanvasEvents(cvs); 
   }
   
   function salvarAssinaturaRemota() { 
@@ -447,6 +443,17 @@
               Swal.fire({ icon: 'success', title: 'Assinado!', text: 'Obrigado!', showConfirmButton: false }); 
               setTimeout(() => document.body.innerHTML = "<h2 style='text-align:center;padding:50px;color:#fff;'>Tudo certo! Pode fechar.</h2>", 2000);
           }); 
+      }); 
+  }
+
+  // --- FUNÇÃO PARA GERAR LINK ---
+  function gerarLinkRemoto(id) { 
+      // Detecta URL base (localhost ou github)
+      let baseUrl = window.location.href.split('?')[0];
+      let link = `${baseUrl}?cliente=${id}`;
+      
+      navigator.clipboard.writeText(link).then(() => {
+          Swal.fire({title: 'Link Copiado!', html: `Envie para o cliente:<br><br><b>${link}</b>`, icon: 'success'});
       }); 
   }
 
@@ -593,6 +600,8 @@
     let win = window.open('', '_blank'); win.document.write(conteudo); win.document.close();
   }
 
+  // --- FUNCOES BASE ---
+  function salvarDadosEmpresa() { let n=document.getElementById('confEmpNome').value, e=document.getElementById('confEmpEnd').value, t=document.getElementById('confEmpTel').value, c=document.getElementById('confEmpCnpj').value; db.collection("config").doc("empresa").set({ nome: n, end: e, tel: t, cnpj: c }, {merge: true}).then(() => Swal.fire({ icon: 'success', title: 'Salvo!', timer: 1500, showConfirmButton:false })); }
   function salvarCatalogo() { let n=document.getElementById('catNome').value,v=Number(document.getElementById('catValor').value); if(n&&v){db.collection("catalogo").add({nome:n.toUpperCase(),valor:v});document.getElementById('catNome').value='';document.getElementById('catValor').value='';} }
   function apagarCat(id){db.collection("catalogo").doc(id).delete();}
   function preencherValorCat(){let t=document.getElementById('descricao').value.toUpperCase(),a=catalogo.find(c=>c.nome===t);if(a)document.getElementById('valor').value=a.valor;}
@@ -618,7 +627,6 @@
   function limparRemoto() { let cvs = document.getElementById('canvasRemoto'); let ctx = cvs.getContext('2d'); ctx.clearRect(0,0,cvs.width,cvs.height); }
   function fecharAssinatura() { document.getElementById('assinaturaModal').style.display = 'none'; signId = null; }
   function finalizarAssinatura(tipo) { let imgAssinatura = document.getElementById('canvasAssinatura').toDataURL(); let salvar = document.getElementById('salvarAssinaturaCheck').checked; if (salvar && signId) { let c = clientes.find(x => x.id === signId); let itens = [...c.itens]; let checks = document.querySelectorAll(`.sel-${signId}:checked`); checks.forEach(cb => { let idx = parseInt(cb.value); if(itens[idx]) itens[idx].assinatura = imgAssinatura; }); db.collection("clientes").doc(signId).update({ itens }); } if (tipo === 'salvar_apenas') { Swal.fire({icon:'success',title:'Salvo!',timer:1000,showConfirmButton:false}); fecharAssinatura(); return; } imprimirSelecionados(signId, tipo, imgAssinatura); fecharAssinatura(); }
-  function gerarLinkRemoto(id) { let l = `${window.location.href.split('?')[0]}?cliente=${id}`; navigator.clipboard.writeText(l).then(() => Swal.fire({title: 'Link Copiado!', html: `Envie para o cliente:<br><b>${l}</b>`, icon: 'success'})); }
   function gerarImagemWhatsApp() { if (!empDados.end) { Swal.fire({ title: 'Aguarde...', text: 'Carregando dados...', icon: 'info', timer: 3000 }); return; } let c = clientes.find(x => x.id === signId); const checks = document.querySelectorAll(`.sel-${signId}:checked`); const indices = Array.from(checks).map(cb => parseInt(cb.value)); const selecionados = indices.map(idx => c.itens[idx]); const totalS = selecionados.reduce((a, i) => a + (Number(i.valor) || 0), 0); const totalPago = selecionados.reduce((a, i) => a + (Number(i.pagoValor) || 0), 0); const assinatura = document.getElementById('canvasAssinatura').toDataURL(); let html = `<div style="background:#fff; font-family:'Courier New'; padding:15px; border:1px solid #ccc; width:350px;"><div style="text-align:center; font-weight:bold; margin-bottom:5px; font-size:16px;">${empDados.nome}</div><div style="text-align:center; font-size:11px; margin-bottom:10px; color:#333;">${empDados.end}<br>${empDados.tel}</div><hr style="border:0; border-top:1px dashed #000;"><div style="font-size:12px; margin-bottom:10px;"><b>CLIENTE:</b> ${c.nome.toUpperCase()}</div><table style="width:100%; font-size:11px; border-collapse:collapse; margin-bottom:10px;"><tr style="border-bottom:1px solid #000;"><th style="text-align:left;">Peça</th><th style="text-align:right;">Valor</th></tr>${selecionados.map(i => `<tr><td style="text-align:left; padding:3px 0;">${i.desc}</td><td style="text-align:right; padding:3px 0;">${formatarMoeda(i.valor)}</td></tr>`).join('')}</table><hr style="border:0; border-top:1px dashed #000;"><div style="text-align:right; font-size:14px; font-weight:bold;">TOTAL: ${formatarMoeda(totalS)}</div><div style="text-align:right; font-size:12px;">PAGO: ${formatarMoeda(totalPago)}</div><div style="text-align:right; font-size:14px; font-weight:bold; color:red;">RESTANTE: ${formatarMoeda(totalS-totalPago)}</div><div style="margin-top:20px; text-align:center;"><img src="${assinatura}" style="max-height:50px;"><br><span style="font-size:10px; color:#555;">Assinado Digitalmente</span></div><div style="margin-top:10px; text-align:center; font-size:9px; color:#aaa;">Emitido em: ${new Date().toLocaleString('pt-BR')}</div></div>`; let area = document.getElementById('hiddenPrintArea'); area.innerHTML = html; setTimeout(() => { html2canvas(area, { scale: 2 }).then(canvasImg => { Swal.fire({ title: 'Imagem Gerada!', text: 'Segure na imagem para copiar.', imageUrl: canvasImg.toDataURL("image/jpeg", 0.9), imageWidth: 300, confirmButtonText: 'Fechar' }); area.innerHTML = ''; fecharAssinatura(); }); }, 500); }
 </script>
 </body>
