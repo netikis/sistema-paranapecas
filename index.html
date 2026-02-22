@@ -8,14 +8,15 @@
 <title>PARANÁ PEÇAS - GESTÃO PRO</title>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script> <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
 <style>
   body { font-family: 'Segoe UI', Arial, sans-serif; background: #000; margin: 0; color: #fff; overflow-x: hidden; }
   
-  /* TELA DE LOGIN MODERNA */
+  /* LOGIN OTIMIZADO */
   #loginOverlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: linear-gradient(135deg, #000000 0%, #0d47a1 150%);
@@ -28,29 +29,30 @@
   }
   .login-box input {
       background: #222; border: 1px solid #444; color: #fff; margin-bottom: 15px;
-      font-size: 16px; padding: 15px; width: 100%; border-radius: 8px; box-sizing: border-box;
-  }
-  .login-box button {
-      width: 100%; padding: 15px; font-size: 16px; margin-top: 10px;
+      font-size: 16px; padding: 15px; width: 100%; border-radius: 8px; box-sizing: border-box; text-align: center;
   }
   
-  /* CABEÇALHO E CONTAINER */
+  /* BOTÕES DE PERFIL */
+  .btn-perfil {
+      width: 100%; padding: 15px; margin: 10px 0; border: none; border-radius: 8px;
+      font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
+      transition: transform 0.2s;
+  }
+  .btn-perfil:active { transform: scale(0.98); }
+  .btn-admin { background: linear-gradient(135deg, #1565c0, #0d47a1); color: #fff; }
+  .btn-balcao { background: linear-gradient(135deg, #424242, #616161); color: #fff; }
+
   .header { display: flex; align-items: center; justify-content: space-between; background: #0d47a1; color: #fff; padding: 15px 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
   .header .titulo { flex: 1; text-align: center; font-size: 20px; font-weight: bold; text-transform: uppercase; }
   .header img { height: 40px; max-width: 100px; object-fit: contain; }
   .container { width: 98%; padding: 10px; margin: 0 auto; box-sizing: border-box; }
   
-  /* PERMISSÕES: SE FOR 'BALCÃO', ESCONDE COISAS DE ADMIN */
+  /* PERMISSÕES */
   body.role-func .admin-only { display: none !important; }
-
-  /* MODO CLIENTE REMOTO (LINK) */
-  body.mode-client .admin-only, 
-  body.mode-client .header button,
-  body.mode-client .card:not(#areaClienteRemoto) { display: none !important; }
+  body.mode-client .admin-only, body.mode-client .header button, body.mode-client .card:not(#areaClienteRemoto) { display: none !important; }
   body.mode-client #areaClienteRemoto { display: block !important; }
   #areaClienteRemoto { display: none; background: #111; padding: 20px; border-radius: 10px; text-align: center; }
 
-  /* COMPONENTES */
   .dashboard { display: flex; gap: 10px; margin-bottom: 20px; justify-content: space-between; overflow-x: auto; } 
   .dash-card { flex: 1; padding: 15px 5px; border-radius: 10px; text-align: center; border: 1px solid #333; min-width: 100px; }
   .dash-card h3 { margin: 0 0 5px 0; font-size: 12px; text-transform: uppercase; }
@@ -83,7 +85,7 @@
   
   .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 1000; }
   .modal-content { background: #222; padding: 25px; border-radius: 10px; width: 90%; max-width: 450px; color: #fff; border: 1px solid #555; }
-  .modal-content input { width: 95%; margin-bottom: 10px; }
+  .modal-content input, .modal-content select { width: 95%; margin-bottom: 10px; }
 
   #canvasAssinatura, #canvasRemoto { background: #fff; border: 2px dashed #555; cursor: crosshair; touch-action: none; width: 100%; height: 200px; border-radius: 5px; margin-bottom: 10px; }
   .check-save { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; font-size: 14px; background: #333; padding: 10px; border-radius: 5px; }
@@ -104,17 +106,27 @@
 
 <div id="loginOverlay">
   <div class="login-box">
-    <img id="logoLogin" src="" style="max-height: 80px; margin-bottom: 20px; display:none;">
-    <h2 style="color: #fff; margin-top: 0;">ACESSO SEGURO</h2>
-    <p style="color: #aaa; font-size: 12px; margin-bottom:20px;">Entre com suas credenciais</p>
+    <img id="logoLogin" src="" style="max-height: 60px; margin-bottom: 10px; display:none;">
     
-    <form onsubmit="event.preventDefault(); fazerLogin();">
-        <input type="email" id="emailInput" placeholder="E-mail (ex: admin@loja.com)" required>
-        <input type="password" id="senhaInput" placeholder="Senha" required>
-        <button type="submit" class="primary" id="btnLogin">ENTRAR</button>
-    </form>
-    
-    <div id="msgLogin" style="color: #ff5252; margin-top: 15px; font-size: 13px;"></div>
+    <div id="step-1">
+        <h2 style="color: #fff; margin-top: 0;">QUEM É VOCÊ?</h2>
+        <p style="color: #aaa; font-size: 12px; margin-bottom:20px;">Selecione seu perfil</p>
+        <button class="btn-perfil btn-admin" onclick="selecionarPerfil('admin')">🛡️ ADMINISTRADOR</button>
+        <button class="btn-perfil btn-balcao" onclick="selecionarPerfil('func')">👤 BALCÃO / VENDAS</button>
+    </div>
+
+    <div id="step-2" style="display:none;">
+        <h3 id="tituloLogin" style="color: #fff; margin-top: 0;">SENHA</h3>
+        <br>
+        <form onsubmit="event.preventDefault(); fazerLogin();">
+            <input type="email" id="emailInput" placeholder="Seu E-mail" required>
+            <input type="password" id="senhaInput" placeholder="Sua Senha" required>
+            <button type="submit" class="primary" id="btnLogin" style="width: 100%; padding: 12px; font-size: 14px;">ENTRAR</button>
+        </form>
+        <div id="msgLogin" style="color: #ff5252; margin-top: 15px; font-size: 13px;"></div>
+        <br>
+        <button class="dark" onclick="voltarLogin()" style="width: 100%; margin-top:10px; background: transparent; color: #888;">⬅ Voltar</button>
+    </div>
   </div>
 </div>
 
@@ -123,13 +135,12 @@
   <div class="titulo">PARANÁ PEÇAS - GESTÃO PRO</div>
   <div style="display:flex; align-items:center;">
     <div id="userDisplay" style="font-size:10px; margin-right:10px; text-align:right; line-height:1.2;"></div>
-    <button class="danger" onclick="fazerLogout()" style="padding: 5px 10px; font-size: 10px;">SAIR</button>
+    <button class="danger" onclick="logout()" style="padding: 5px 10px; font-size: 10px;">SAIR</button>
     <img id="logoRight" src="" alt="">
   </div>
 </header>
 
 <div class="container">
-
   <div id="areaClienteRemoto" class="card">
       <h3 style="color:#38ef7d">✍️ ÁREA DE ASSINATURA</h3>
       <div id="listaItensRemoto" style="text-align:left; background:#222; padding:10px; border-radius:5px; margin-bottom:20px; font-size:14px;">Carregando...</div>
@@ -200,7 +211,8 @@
         <label>Logo:</label> <input type="file" id="logoInput" accept="image/*" style="margin-bottom:15px; font-size: 12px;"><br>
         <button class="primary" onclick="fazerBackupLocal()" style="width: 100%; margin-bottom: 10px;">💾 BACKUP</button>
         <button class="dark" onclick="gerarRelatorioMes()" style="width: 100%; margin-bottom: 10px;">📈 RELATÓRIO</button>
-        <button class="warning" onclick="migrarDados()" style="width: 100%;">🔄 SINCRONIZAR</button>
+        <button class="warning" onclick="abrirModalUsuario()" style="width: 100%;">👥 NOVO USUÁRIO</button>
+        <button class="warning" onclick="migrarDados()" style="width: 100%; margin-top: 5px;">🔄 SINCRONIZAR</button>
       </div>
     </div>
   </div>
@@ -220,6 +232,23 @@
     <label>Data Entrada:</label><input type="date" id="editData">
     <label>Data Vencimento:</label><input type="date" id="editVenc">
     <br><br><button class="success" onclick="salvarEdicao()">Salvar</button><button class="danger" onclick="fecharModal()">Sair</button>
+  </div>
+</div>
+
+<div class="modal" id="modalUsuario">
+  <div class="modal-content">
+    <h3>👥 Cadastrar Funcionário</h3>
+    <label>Nome:</label><input type="text" id="novoUserNome" placeholder="Ex: João Silva">
+    <label>E-mail:</label><input type="email" id="novoUserEmail" placeholder="Ex: joao@loja.com">
+    <label>Senha:</label><input type="password" id="novoUserSenha" placeholder="Mínimo 6 dígitos">
+    <label>Perfil:</label>
+    <select id="novoUserPerfil">
+        <option value="func">👤 Balcão (Acesso Restrito)</option>
+        <option value="admin">🛡️ Administrador (Total)</option>
+    </select>
+    <br><br>
+    <button class="success" onclick="criarUsuario()">CRIAR CONTA</button>
+    <button class="danger" onclick="document.getElementById('modalUsuario').style.display='none'">CANCELAR</button>
   </div>
 </div>
 
@@ -246,134 +275,181 @@
 <div id="hiddenPrintArea"></div>
 
 <script>
-    const firebaseConfig = {
-  apiKey: "AIzaSyDx0wGiH9IdMH6_8RSi-2upT-UnZqZ_UmE",
-  authDomain: "gestaodeclientes-7f8f0.firebaseapp.com",
-  projectId: "gestaodeclientes-7f8f0",
-  storageBucket: "gestaodeclientes-7f8f0.firebasestorage.app",
-  messagingSenderId: "1094763260816",
-  appId: "1:1094763260816:web:628adb8b5d167469236115"
-};
+  // 🔴 SUAS CHAVES INSERIDAS 🔴
+  const firebaseConfig = {
+    apiKey: "AIzaSyDx0wGiH9IdMH6_8RSi-2upT-UnZqZ_UmE",
+    authDomain: "gestaodeclientes-7f8f0.firebaseapp.com",
+    projectId: "gestaodeclientes-7f8f0",
+    storageBucket: "gestaodeclientes-7f8f0.firebasestorage.app",
+    messagingSenderId: "1094763260816",
+    appId: "1:1094763260816:web:628adb8b5d167469236115"
+  };
 
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
-  const auth = firebase.auth(); // ATIVANDO AUTENTICAÇÃO
+  const auth = firebase.auth();
   
   let clientes = [];
   let catalogo = [];
   let logoBase64 = localStorage.getItem('logoParana') || "";
   let empDados = { nome: "PARANÁ PEÇAS", end: "", tel: "" };
-  let currentUserRole = 'func'; // Padrão: funcionário (restrito)
-
-  // --- SISTEMA DE AUTENTICAÇÃO E PERMISSÕES ---
+  let currentUserRole = 'func';
+  let roleSelected = '';
   
-  // Monitora se o usuário está logado ou não
+  // OTIMIZAÇÃO (Lazy Load)
+  let unsubscribeClientes = null;
+  let unsubscribeCatalogo = null;
+  let unsubscribeEmpresa = null;
+
+  // --- LOGICA DE LOGIN ---
   auth.onAuthStateChanged((user) => {
       const isClientMode = document.body.classList.contains('mode-client');
-      if (isClientMode) return; // Se for cliente remoto, ignora login
+      if (isClientMode) return; 
 
       if (user) {
-          // Usuário logado: Busca permissão no Firestore
+          // LOGADO
           db.collection("usuarios").doc(user.uid).get().then((doc) => {
-              if (doc.exists && doc.data().perfil === 'admin') {
-                  currentUserRole = 'admin';
-                  document.body.classList.remove('role-func');
-                  document.getElementById('userDisplay').innerHTML = `👤 ${doc.data().nome || user.email}<br><span style="color:#4caf50">ADMINISTRADOR</span>`;
-              } else {
-                  currentUserRole = 'func';
-                  document.body.classList.add('role-func'); // Esconde coisas de admin
-                  document.getElementById('userDisplay').innerHTML = `👤 ${user.email}<br><span style="color:#aaa">BALCÃO</span>`;
-              }
+              // Se não achar o usuário no banco (admin inicial), assume admin
+              let role = (doc.exists) ? doc.data().perfil : 'admin';
+              let nome = (doc.exists) ? doc.data().nome : user.email;
+              
+              // Verifica se a role bate com a seleção da tela inicial (opcional, mas bom pra UX)
+              // Aqui simplesmente logamos e definimos a permissão real baseada no banco
+              currentUserRole = role;
+              if(currentUserRole === 'admin') document.body.classList.remove('role-func');
+              else document.body.classList.add('role-func');
+              
+              document.getElementById('userDisplay').innerHTML = `👤 ${nome}<br><span style="color:#aaa">${role.toUpperCase()}</span>`;
               document.getElementById('loginOverlay').style.display = 'none';
-          }).catch(err => {
-              console.log("Erro ao buscar perfil, assumindo balcão", err);
-              currentUserRole = 'func';
-              document.body.classList.add('role-func');
+              iniciarSincronizacao();
+          }).catch(() => {
+              // Erro de permissão ou rede, tenta carregar como func
+              iniciarSincronizacao();
               document.getElementById('loginOverlay').style.display = 'none';
           });
       } else {
-          // Não logado: Mostra tela de login
+          // NÃO LOGADO
+          pararSincronizacao();
           document.getElementById('loginOverlay').style.display = 'flex';
           document.getElementById('senhaInput').value = '';
           document.getElementById('emailInput').value = '';
+          voltarLogin();
       }
   });
+
+  function selecionarPerfil(role) {
+      roleSelected = role;
+      document.getElementById('step-1').style.display = 'none';
+      document.getElementById('step-2').style.display = 'block';
+      let titulo = role === 'admin' ? 'ÁREA ADMINISTRATIVA' : 'ÁREA DE BALCÃO';
+      document.getElementById('tituloLogin').innerText = titulo;
+      document.getElementById('emailInput').focus();
+  }
+
+  function voltarLogin() {
+      roleSelected = '';
+      document.getElementById('step-1').style.display = 'block';
+      document.getElementById('step-2').style.display = 'none';
+      document.getElementById('senhaInput').value = '';
+  }
 
   function fazerLogin() {
       const email = document.getElementById('emailInput').value;
       const pass = document.getElementById('senhaInput').value;
-      const btn = document.getElementById('btnLogin');
       const msg = document.getElementById('msgLogin');
-      
-      btn.innerText = "Verificando...";
+      document.getElementById('btnLogin').innerText = "Verificando...";
       msg.innerText = "";
       
-      auth.signInWithEmailAndPassword(email, pass)
-      .then(() => {
-          btn.innerText = "ENTRAR"; // Sucesso, o onAuthStateChanged vai fechar a tela
-      })
-      .catch((error) => {
-          btn.innerText = "ENTRAR";
-          console.error(error);
-          if(error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-             msg.innerText = "E-mail ou senha incorretos.";
-          } else if (error.code === 'auth/invalid-email') {
-             msg.innerText = "E-mail inválido.";
+      auth.signInWithEmailAndPassword(email, pass).catch((error) => {
+          document.getElementById('btnLogin').innerText = "ENTRAR";
+          if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+              msg.innerText = "E-mail ou senha incorretos.";
           } else {
-             msg.innerText = "Erro ao entrar: " + error.message;
+              msg.innerText = "Erro: " + error.message;
           }
       });
   }
 
-  function fazerLogout() {
-      auth.signOut().then(() => {
-          // Recarrega a página para limpar memória
-          window.location.reload();
-      });
-  }
+  function logout() { auth.signOut(); }
 
-  // --- DADOS DA EMPRESA ---
-  db.collection("config").doc("empresa").onSnapshot((doc) => {
-      if (doc.exists) {
-          let d = doc.data();
-          empDados = { nome: d.nome, end: d.end, tel: d.tel };
-          if(document.getElementById('confEmpNome')) {
-              document.getElementById('confEmpNome').value = empDados.nome;
-              document.getElementById('confEmpEnd').value = empDados.end;
-              document.getElementById('confEmpTel').value = empDados.tel;
-          }
-      }
-  });
-
-  function salvarDadosEmpresa() {
-      let n = document.getElementById('confEmpNome').value;
-      let e = document.getElementById('confEmpEnd').value;
-      let t = document.getElementById('confEmpTel').value;
-      db.collection("config").doc("empresa").set({ nome: n, end: e, tel: t }).then(() => Swal.fire({ icon: 'success', title: 'Sucesso!', text: 'Dados sincronizados!', timer: 1500, showConfirmButton: false }));
-  }
-
-  // --- VARIÁVEIS DO SISTEMA ---
-  let editRef = {id:null, ii:null};
-  let signId = null;
-  let isDrawing = false;
-  let lastX = 0; let lastY = 0;
+  // --- CADASTRO DE USUÁRIO (SECUNDÁRIO) ---
+  function abrirModalUsuario() { document.getElementById('modalUsuario').style.display = 'flex'; }
   
-  let isClientMode = false;
-  let remoteClientId = null;
-  const canvasRemoto = document.getElementById('canvasRemoto');
-  const ctxRemoto = canvasRemoto.getContext('2d');
-  const canvas = document.getElementById('canvasAssinatura');
-  const ctx = canvas.getContext('2d');
+  function criarUsuario() {
+      const nome = document.getElementById('novoUserNome').value;
+      const email = document.getElementById('novoUserEmail').value;
+      const senha = document.getElementById('novoUserSenha').value;
+      const perfil = document.getElementById('novoUserPerfil').value;
 
-  // VERIFICAÇÃO DE URL (MODO CLIENTE)
+      if(!email || !senha || !nome) return Swal.fire('Erro', 'Preencha tudo!', 'error');
+
+      // TRUQUE DO APP SECUNDÁRIO PARA NÃO DESLOGAR O ADMIN
+      const secondaryApp = firebase.initializeApp(firebaseConfig, "Secondary");
+
+      secondaryApp.auth().createUserWithEmailAndPassword(email, senha)
+          .then((userCredential) => {
+              // Salva os dados extras no Firestore (usando o app Principal, que já está logado como admin)
+              return db.collection("usuarios").doc(userCredential.user.uid).set({
+                  nome: nome,
+                  email: email,
+                  perfil: perfil
+              });
+          })
+          .then(() => {
+              secondaryApp.auth().signOut(); // Desloga o secundário
+              secondaryApp.delete(); // Mata o app secundário
+              
+              document.getElementById('modalUsuario').style.display = 'none';
+              // Limpa campos
+              document.getElementById('novoUserNome').value = '';
+              document.getElementById('novoUserEmail').value = '';
+              document.getElementById('novoUserSenha').value = '';
+              
+              Swal.fire('Sucesso', 'Usuário criado com sucesso!', 'success');
+          })
+          .catch((error) => {
+              Swal.fire('Erro', error.message, 'error');
+              secondaryApp.delete(); // Garante que limpa a memória se der erro
+          });
+  }
+
+  // --- SINCRONIZAÇÃO OTIMIZADA ---
+  function iniciarSincronizacao() {
+      if(unsubscribeClientes) return; 
+      unsubscribeClientes = db.collection("clientes").onSnapshot((snapshot) => {
+        clientes = []; snapshot.forEach((doc) => { clientes.push({ id: doc.id, ...doc.data() }); });
+        atualizarSelect(); atualizarDashboard(); render();
+      });
+      unsubscribeCatalogo = db.collection("catalogo").onSnapshot((s)=>{
+        catalogo=[]; let d=document.getElementById('opcoesCatalogo'),v=document.getElementById('listaCatalogoVis');
+        if(!d) return; d.innerHTML=''; v.innerHTML='';
+        s.forEach((doc)=>{ let k=doc.data(); catalogo.push({id:doc.id,...k}); d.innerHTML+=`<option value="${k.nome}">R$ ${k.valor}</option>`; v.innerHTML+=`📦 ${k.nome} - R$ ${k.valor} <button onclick="apagarCat('${doc.id}')" style="color:red;border:none;background:none;cursor:pointer">x</button><br>`; });
+      });
+      unsubscribeEmpresa = db.collection("config").doc("empresa").onSnapshot((doc) => {
+          if (doc.exists) { let d = doc.data(); empDados = { nome: d.nome, end: d.end, tel: d.tel }; if(document.getElementById('confEmpNome')) { document.getElementById('confEmpNome').value = empDados.nome; document.getElementById('confEmpEnd').value = empDados.end; document.getElementById('confEmpTel').value = empDados.tel; } }
+      });
+      aplicarLogo();
+  }
+
+  function pararSincronizacao() {
+      if(unsubscribeClientes) { unsubscribeClientes(); unsubscribeClientes = null; }
+      if(unsubscribeCatalogo) { unsubscribeCatalogo(); unsubscribeCatalogo = null; }
+      if(unsubscribeEmpresa) { unsubscribeEmpresa(); unsubscribeEmpresa = null; }
+      clientes = []; catalogo = [];
+  }
+
+  // --- RESTO DO CÓDIGO (MANTER IGUAL AO ANTERIOR) ---
+  let isClientMode = false; let remoteClientId = null;
+  const canvasRemoto = document.getElementById('canvasRemoto'); const ctxRemoto = canvasRemoto.getContext('2d');
+  const canvas = document.getElementById('canvasAssinatura'); const ctx = canvas.getContext('2d');
+
   window.onload = function() {
       const urlParams = new URLSearchParams(window.location.search);
       const cid = urlParams.get('cliente');
       if(cid) {
-          isClientMode = true;
-          remoteClientId = cid;
+          isClientMode = true; remoteClientId = cid;
           document.body.classList.add('mode-client');
-          document.getElementById('loginOverlay').style.display = 'none'; // Cliente não loga
+          document.getElementById('loginOverlay').style.display = 'none';
           canvasRemoto.width = canvasRemoto.offsetWidth || 300; canvasRemoto.height = 200;
           ctxRemoto.lineWidth = 2; ctxRemoto.lineJoin = 'round'; ctxRemoto.lineCap = 'round'; ctxRemoto.strokeStyle = '#000';
           setupCanvasEvents(canvasRemoto, ctxRemoto);
@@ -387,10 +463,10 @@
                   document.getElementById('listaItensRemoto').innerHTML = html;
               } else Swal.fire('Erro', 'Link inválido.', 'error');
           });
+          db.collection("config").doc("empresa").get().then(doc => { if(doc.exists) { let d=doc.data(); empDados={nome:d.nome,end:d.end,tel:d.tel}; } });
       }
   };
 
-  // --- CANVAS & ASSINATURA ---
   function setupCanvasEvents(cvs, cx) {
       cvs.addEventListener('mousedown', (e) => { isDrawing = true; [lastX, lastY] = [e.offsetX, e.offsetY]; });
       cvs.addEventListener('mousemove', (e) => { if(!isDrawing) return; cx.beginPath(); cx.moveTo(lastX, lastY); cx.lineTo(e.offsetX, e.offsetY); cx.stroke(); [lastX, lastY] = [e.offsetX, e.offsetY]; });
@@ -403,13 +479,10 @@
   function limparRemoto() { ctxRemoto.clearRect(0, 0, canvasRemoto.width, canvasRemoto.height); }
   function salvarAssinaturaRemota() { let img = canvasRemoto.toDataURL(); db.collection("clientes").doc(remoteClientId).get().then(doc => { let itens = doc.data().itens; itens.forEach(i => { if(!i.pago) i.assinatura = img; }); db.collection("clientes").doc(remoteClientId).update({ itens }).then(() => { Swal.fire({ icon: 'success', title: 'Assinado!', text: 'Assinatura enviada.', showConfirmButton: false }); setTimeout(() => { document.body.innerHTML = "<h2 style='text-align:center; padding:50px; color:#fff;'>Obrigado! Pode fechar esta janela.</h2>"; }, 2000); }); }); }
   function gerarLinkRemoto(id) { let l = `${window.location.href.split('?')[0]}?cliente=${id}`; navigator.clipboard.writeText(l).then(() => Swal.fire({title: 'Link Copiado!', html: `Envie para o cliente:<br><b>${l}</b>`, icon: 'success'})); }
-
-  db.collection("clientes").onSnapshot((snapshot) => { if(isClientMode) return; clientes = []; snapshot.forEach((doc) => { clientes.push({ id: doc.id, ...doc.data() }); }); atualizarSelect(); atualizarDashboard(); render(); aplicarLogo(); });
   
-  // --- FUNÇÕES CRUD ---
+  function salvarDadosEmpresa() { let n=document.getElementById('confEmpNome').value, e=document.getElementById('confEmpEnd').value, t=document.getElementById('confEmpTel').value; db.collection("config").doc("empresa").set({ nome: n, end: e, tel: t }).then(() => Swal.fire({ icon: 'success', title: 'Sucesso!', text: 'Dados sincronizados!', timer: 1500, showConfirmButton: false })); }
   function salvarCatalogo() { let n=document.getElementById('catNome').value,v=Number(document.getElementById('catValor').value); if(n&&v){db.collection("catalogo").add({nome:n.toUpperCase(),valor:v});document.getElementById('catNome').value='';document.getElementById('catValor').value='';} }
   function apagarCat(id){db.collection("catalogo").doc(id).delete();}
-  db.collection("catalogo").onSnapshot((s)=>{catalogo=[];let d=document.getElementById('opcoesCatalogo'),v=document.getElementById('listaCatalogoVis'); if(!d)return; d.innerHTML='';v.innerHTML='';s.forEach((doc)=>{let k=doc.data();catalogo.push({id:doc.id,...k});d.innerHTML+=`<option value="${k.nome}">R$ ${k.valor}</option>`;v.innerHTML+=`📦 ${k.nome} - R$ ${k.valor} <button onclick="apagarCat('${doc.id}')" style="color:red;border:none;background:none;cursor:pointer">x</button><br>`;});});
   function preencherValorCat(){let t=document.getElementById('descricao').value.toUpperCase(),a=catalogo.find(c=>c.nome===t);if(a)document.getElementById('valor').value=a.valor;}
   function atualizarSelect(){let s=document.getElementById('clienteSelect'),c=s.value;s.innerHTML='<option value="">Selecione...</option>';clientes.sort((a,b)=>a.nome.localeCompare(b.nome)).forEach((k)=>{let o=document.createElement('option');o.value=k.id;o.textContent=k.nome;s.appendChild(o)});if(c)s.value=c;}
   function adicionarCliente(){let n=document.getElementById('nome').value.trim();if(!n)return Swal.fire('Erro','Nome obrigatório','error');db.collection("clientes").add({nome:n,cpf_cnpj:document.getElementById('cpf_cnpj').value,ie:document.getElementById('ie').value,telefone:document.getElementById('telefone').value,cep:document.getElementById('cep').value,cidade:document.getElementById('cidade').value,endereco:document.getElementById('endereco').value,itens:[]});Swal.fire('Sucesso','Cliente salvo','success');}
@@ -420,7 +493,6 @@
   function aplicarLogo(){if(logoBase64){document.getElementById('logoLeft').src=logoBase64;document.getElementById('logoRight').src=logoBase64;document.getElementById('logoLogin').src=logoBase64;document.getElementById('logoLogin').style.display='inline-block';}}
   document.getElementById('logoInput').addEventListener('change',e=>{let r=new FileReader();r.onload=ev=>{logoBase64=ev.target.result;localStorage.setItem('logoParana',logoBase64);aplicarLogo();};r.readAsDataURL(e.target.files[0]);});
 
-  // --- RENDERIZAR LISTA ---
   function render(){
     let div = document.getElementById('listaClientes'); div.innerHTML = '';
     let termo = document.getElementById('searchBox').value.toLowerCase();
@@ -437,39 +509,17 @@
     });
   }
 
-  // --- OUTRAS FUNÇÕES ---
   function abrirAssinatura(id) { const checks = document.querySelectorAll(`.sel-${id}:checked`); if(checks.length === 0) return Swal.fire('Atenção', "Selecione itens", 'warning'); signId = id; document.getElementById('assinaturaModal').style.display = 'flex'; canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.strokeStyle = '#000'; ctx.clearRect(0,0,canvas.width,canvas.height); }
   function fecharAssinatura() { document.getElementById('assinaturaModal').style.display = 'none'; signId = null; }
   function limparAssinatura() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
   function finalizarAssinatura(tipo) { let imgAssinatura = canvas.toDataURL(); let salvar = document.getElementById('salvarAssinaturaCheck').checked; if (salvar && signId) { let c = clientes.find(x => x.id === signId); let itens = [...c.itens]; let checks = document.querySelectorAll(`.sel-${signId}:checked`); checks.forEach(cb => { let idx = parseInt(cb.value); if(itens[idx]) itens[idx].assinatura = imgAssinatura; }); db.collection("clientes").doc(signId).update({ itens }); } if (tipo === 'salvar_apenas') { Swal.fire({icon:'success',title:'Salvo!',timer:1000,showConfirmButton:false}); fecharAssinatura(); return; } imprimirSelecionados(signId, tipo, imgAssinatura); fecharAssinatura(); }
   
   function gerarImagemWhatsApp() {
-      if (!empDados.end || empDados.end === "") {
-          Swal.fire({ title: 'Aguarde...', text: 'Carregando dados da empresa...', icon: 'info', timer: 3000 });
-          db.collection("config").doc("empresa").get().then(doc => { if(doc.exists) { let d = doc.data(); empDados = { nome: d.nome, end: d.end, tel: d.tel }; } });
-          return;
-      }
-      let c = clientes.find(x => x.id === signId); 
-      const checks = document.querySelectorAll(`.sel-${signId}:checked`);
-      const indices = Array.from(checks).map(cb => parseInt(cb.value)); 
-      const selecionados = indices.map(idx => c.itens[idx]);
-      const totalS = selecionados.reduce((a, i) => a + (Number(i.valor) || 0), 0);
-      const totalPago = selecionados.reduce((a, i) => a + (Number(i.pagoValor) || 0), 0);
-      const assinatura = canvas.toDataURL();
-
-      let html = `<div style="background:#fff; font-family:'Courier New'; padding:15px; border:1px solid #ccc; width:350px;">
-           <div style="text-align:center; font-weight:bold; margin-bottom:5px; font-size:16px;">${empDados.nome}</div>
-           <div style="text-align:center; font-size:11px; margin-bottom:10px; color:#333;">${empDados.end}<br>${empDados.tel}</div>
-           <hr style="border:0; border-top:1px dashed #000;">
-           <div style="font-size:12px; margin-bottom:10px;"><b>CLIENTE:</b> ${c.nome.toUpperCase()}</div>
-           <table style="width:100%; font-size:11px; border-collapse:collapse; margin-bottom:10px;"><tr style="border-bottom:1px solid #000;"><th style="text-align:left;">Peça</th><th style="text-align:right;">Valor</th></tr>${selecionados.map(i => `<tr><td style="text-align:left; padding:3px 0;">${i.desc}</td><td style="text-align:right; padding:3px 0;">${formatarMoeda(i.valor)}</td></tr>`).join('')}</table>
-           <hr style="border:0; border-top:1px dashed #000;">
-           <div style="text-align:right; font-size:14px; font-weight:bold;">TOTAL: ${formatarMoeda(totalS)}</div>
-           <div style="text-align:right; font-size:12px;">PAGO: ${formatarMoeda(totalPago)}</div>
-           <div style="text-align:right; font-size:14px; font-weight:bold; color:red;">RESTANTE: ${formatarMoeda(totalS-totalPago)}</div>
-           <div style="margin-top:20px; text-align:center;"><img src="${assinatura}" style="max-height:50px;"><br><span style="font-size:10px; color:#555;">Assinado Digitalmente</span></div>
-           <div style="margin-top:10px; text-align:center; font-size:9px; color:#aaa;">Emitido em: ${new Date().toLocaleString('pt-BR')}</div></div>`;
-      
+      if (!empDados.end || empDados.end === "") { Swal.fire({ title: 'Aguarde...', text: 'Carregando dados da empresa...', icon: 'info', timer: 3000 }); db.collection("config").doc("empresa").get().then(doc => { if(doc.exists) { let d = doc.data(); empDados = { nome: d.nome, end: d.end, tel: d.tel }; } }); return; }
+      let c = clientes.find(x => x.id === signId); const checks = document.querySelectorAll(`.sel-${signId}:checked`);
+      const indices = Array.from(checks).map(cb => parseInt(cb.value)); const selecionados = indices.map(idx => c.itens[idx]);
+      const totalS = selecionados.reduce((a, i) => a + (Number(i.valor) || 0), 0); const totalPago = selecionados.reduce((a, i) => a + (Number(i.pagoValor) || 0), 0); const assinatura = canvas.toDataURL();
+      let html = `<div style="background:#fff; font-family:'Courier New'; padding:15px; border:1px solid #ccc; width:350px;"><div style="text-align:center; font-weight:bold; margin-bottom:5px; font-size:16px;">${empDados.nome}</div><div style="text-align:center; font-size:11px; margin-bottom:10px; color:#333;">${empDados.end}<br>${empDados.tel}</div><hr style="border:0; border-top:1px dashed #000;"><div style="font-size:12px; margin-bottom:10px;"><b>CLIENTE:</b> ${c.nome.toUpperCase()}</div><table style="width:100%; font-size:11px; border-collapse:collapse; margin-bottom:10px;"><tr style="border-bottom:1px solid #000;"><th style="text-align:left;">Peça</th><th style="text-align:right;">Valor</th></tr>${selecionados.map(i => `<tr><td style="text-align:left; padding:3px 0;">${i.desc}</td><td style="text-align:right; padding:3px 0;">${formatarMoeda(i.valor)}</td></tr>`).join('')}</table><hr style="border:0; border-top:1px dashed #000;"><div style="text-align:right; font-size:14px; font-weight:bold;">TOTAL: ${formatarMoeda(totalS)}</div><div style="text-align:right; font-size:12px;">PAGO: ${formatarMoeda(totalPago)}</div><div style="text-align:right; font-size:14px; font-weight:bold; color:red;">RESTANTE: ${formatarMoeda(totalS-totalPago)}</div><div style="margin-top:20px; text-align:center;"><img src="${assinatura}" style="max-height:50px;"><br><span style="font-size:10px; color:#555;">Assinado Digitalmente</span></div><div style="margin-top:10px; text-align:center; font-size:9px; color:#aaa;">Emitido em: ${new Date().toLocaleString('pt-BR')}</div></div>`;
       let area = document.getElementById('hiddenPrintArea'); area.innerHTML = html;
       setTimeout(() => { html2canvas(area, { scale: 2 }).then(canvasImg => { Swal.fire({ title: 'Imagem Gerada!', text: 'Segure na imagem para copiar.', imageUrl: canvasImg.toDataURL("image/jpeg", 0.9), imageWidth: 300, confirmButtonText: 'Fechar' }); area.innerHTML = ''; fecharAssinatura(); }); }, 500);
   }
@@ -496,5 +546,3 @@
 </script>
 </body>
 </html>
-
-
