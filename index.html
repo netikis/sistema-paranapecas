@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0d47a1">
+<title>PARANÁ PEÇAS - GESTÃO PRO</title>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+
+<style>
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #000; margin: 0; color: #fff; overflow-x: hidden; }
+  
+  /* ESTILOS GERAIS */
+  #loginOverlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: #000; z-index: 9999;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .login-box {
+    background: #111; padding: 40px; border-radius: 10px; border: 1px solid #333;
+    text-align: center; width: 320px; box-shadow: 0 0 20px rgba(0,0,0,0.5);
+  }
+  
+  .header { display: flex; align-items: center; justify-content: space-between; background: #0d47a1; color: #fff; padding: 15px 30px; }
+  .header .titulo { flex: 1; text-align: center; font-size: 20px; font-weight: bold; text-transform: uppercase; }
+  .header img { height: 40px; max-width: 100px; object-fit: contain; }
+  .container { width: 98%; padding: 10px; margin: 0 auto; box-sizing: border-box; }
+  
+  /* Ocultar elementos quando em modo cliente */
+  body.mode-client .admin-only, 
+  body.mode-client .header button,
+  body.mode-client .card:not(#areaClienteRemoto) { display: none !important; }
+  
+  body.mode-client #areaClienteRemoto { display: block !important; }
+  #areaClienteRemoto { display: none; background: #111; padding: 20px; border-radius: 10px; text-align: center; }
+
+  /* DASHBOARD NA MESMA LINHA */
+  .dashboard { display: flex; gap: 10px; margin-bottom: 20px; justify-content: space-between; overflow-x: auto; } 
+  .dash-card { flex: 1; padding: 15px 5px; border-radius: 10px; text-align: center; border: 1px solid #333; min-width: 100px; }
+  .dash-card h3 { margin: 0 0 5px 0; font-size: 12px; text-transform: uppercase; }
+  .dash-card div { font-size: 16px !important; font-weight: bold; }
+  
+  .bg-blue { background: linear-gradient(135deg, #1e3c72, #2a5298); } 
+  .bg-green { background: linear-gradient(135deg, #11998e, #38ef7d); color: #000; } 
+  .bg-red { background: linear-gradient(135deg, #cb2d3e, #ef473a); } 
+  
+  .card { background: #111; padding: 15px; margin-bottom: 20px; border-radius: 10px; border: 1px solid #333; }
+  .card.clientes { background: #fff; color: #000; width: 100%; box-sizing: border-box; overflow-x: auto; }
+  
+  .row-inputs { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .row-inputs input { flex: 1; min-width: 140px; }
+  input, select { padding: 10px; border-radius: 5px; border: 1px solid #555; background: #222; color: #fff; width: 100%; box-sizing: border-box; }
+  
+  button { padding: 10px 15px; margin: 2px; border-radius: 5px; cursor: pointer; font-weight: bold; border: none; color: #fff; text-transform: uppercase; font-size: 11px; }
+  .primary { background: #1565c0; } .success { background: #2e7d32; } .danger { background: #c62828; } .warning { background: #f57c00; } .dark { background: #333; } .wapp { background: #25D366; color: #fff; }
+  
+  table { width: 100%; border-collapse: collapse; margin-top: 15px; background: #fff; color: #000; border-radius: 8px; overflow: hidden; }
+  th { background: #444; color: #fff; padding: 10px; font-size: 11px; }
+  td { border-bottom: 1px solid #eee; padding: 8px; text-align: center; font-size: 12px; }
+  .vencido { color: #c62828 !important; font-weight: bold; background-color: #ffebee; }
+  .search-box { width: 100%; padding: 12px; font-size: 16px; border: 2px solid #0d47a1; border-radius: 8px; margin-bottom: 20px; background: #f0f8ff; color: #000; font-weight: bold; box-sizing: border-box; }
+
+  .client-card {
+    background: #f9f9f9; color: #000; padding: 15px; margin-top: 20px; margin-bottom: 30px; 
+    border-radius: 15px; border: 3px solid #333; box-shadow: 0 6px 12px rgba(0,0,0,0.15); 
+  }
+
+  .top-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 15px; align-items: center; }
+  
+  .table-actions { display: flex; justify-content: center; align-items: center; gap: 5px; flex-wrap: nowrap; }
+  .table-actions button, .table-actions label { 
+    margin: 0; padding: 0 10px; height: 32px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; font-size: 12px; border-radius: 5px; font-weight: bold; cursor: pointer; color: #fff;
+  }
+  
+  body.func-mode .admin-only { display: none !important; }
+
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 1000; }
+  .modal-content { background: #222; padding: 25px; border-radius: 10px; width: 90%; max-width: 450px; color: #fff; border: 1px solid #555; }
+  .modal-content input { width: 95%; margin-bottom: 10px; }
+
+  /* PAD DE ASSINATURA */
+  #canvasAssinatura, #canvasRemoto {
+    background: #fff; border: 2px dashed #555; cursor: crosshair; touch-action: none;
+    width: 100%; height: 200px; border-radius: 5px; margin-bottom: 10px;
+  }
+  .check-save {
+      display: flex; align-items: center; justify-content: center; gap: 10px; 
+      margin-bottom: 15px; font-size: 14px; background: #333; padding: 10px; border-radius: 5px;
+  }
+
+  #hiddenPrintArea { position: absolute; top: -9999px; left: -9999px; width: 350px; background: #fff; color: #000; padding: 10px; }
+
+  @media (max-width: 768px) {
+    .container { padding: 10px; width: 100%; }
+    .header { padding: 10px; }
+    .titulo { font-size: 16px; }
+    .dash-card { padding: 10px 2px; }
+    .top-actions button { flex: 1; min-width: 120px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="loginOverlay">
+  <div class="login-box">
+    <img id="logoLogin" src="" style="max-height: 80px; margin-bottom: 20px; display:none;">
+    <h2 style="color: #1565c0; margin-top: 0;">ACESSO RESTRITO</h2>
+    <p style="color: #aaa; font-size: 12px;">SISTEMA DE GESTÃO</p>
+    <br>
+    <input type="password" id="senhaInput" placeholder="Digite a Senha" style="width: 90%; text-align: center; font-size: 18px;">
+    <br><br>
+    <button class="primary" onclick="verificarSenha()" style="width: 100%; padding: 12px; font-size: 14px;">ENTRAR</button>
+  </div>
+</div>
+
+<header class="header">
+  <img id="logoLeft" src="" alt="">
+  <div class="titulo">PARANÁ PEÇAS - GESTÃO PRO</div>
+  <div style="display:flex; align-items:center;">
+    <button class="danger" onclick="logout()" style="margin-right:10px; padding: 5px 10px; font-size: 10px;">SAIR 🔒</button>
+    <img id="logoRight" src="" alt="">
+  </div>
+</header>
+
+<div class="container">
+
+  <div id="areaClienteRemoto" class="card">
+      <h3 style="color:#38ef7d">✍️ ÁREA DE ASSINATURA DO CLIENTE</h3>
+      <p>Por favor, confira os itens abaixo e assine no quadro.</p>
+      
+      <div id="listaItensRemoto" style="text-align:left; background:#222; padding:10px; border-radius:5px; margin-bottom:20px; font-size:14px;">
+          Carregando itens...
+      </div>
+
+      <p style="font-size:12px; color:#aaa;">Faça sua assinatura abaixo:</p>
+      <canvas id="canvasRemoto"></canvas>
+      <button class="dark" onclick="limparRemoto()">Limpar</button>
+      <button class="success" onclick="salvarAssinaturaRemota()" style="width:100%; margin-top:10px; padding:15px; font-size:16px;">✅ ENVIAR ASSINATURA</button>
+  </div>
+  
+  <div class="dashboard admin-only">
+    <div class="dash-card bg-blue"><h3>Total Vendido</h3><div id="dashTotal">R$ 0,00</div></div>
+    <div class="dash-card bg-green"><h3>Total Recebido</h3><div id="dashRecebido">R$ 0,00</div></div>
+    <div class="dash-card bg-red"><h3>Saldo a Receber</h3><div id="dashDevedor">R$ 0,00</div></div>
+  </div>
+
+  <div class="card admin-only">
+    <h3>👤 Cadastro Completo</h3>
+    <div class="row-inputs">
+      <input type="text" id="nome" placeholder="Nome Completo / Razão Social" style="flex: 2;">
+      <input type="text" id="cpf_cnpj" placeholder="CPF ou CNPJ">
+      <input type="text" id="ie" placeholder="Inscrição Estadual">
+    </div>
+    <div class="row-inputs">
+      <input type="text" id="telefone" placeholder="Telefone / WhatsApp">
+      <input type="text" id="cep" placeholder="CEP">
+      <input type="text" id="cidade" placeholder="Cidade">
+    </div>
+    <div class="row-inputs">
+      <input type="text" id="endereco" placeholder="Endereço Completo" style="flex: 3;">
+      <button class="primary" onclick="adicionarCliente()" style="flex: 1;">💾 SALVAR</button>
+    </div>
+  </div>
+
+  <datalist id="opcoesCatalogo"></datalist>
+
+  <div class="card admin-only">
+    <h3>🛠️ Lançar Peça / Serviço</h3>
+    <select id="clienteSelect" style="margin-bottom: 10px;"></select>
+    <div class="row-inputs">
+      <input type="text" id="descricao" list="opcoesCatalogo" placeholder="Digite a Peça (Auto-completa)" style="flex: 3;" oninput="preencherValorCat()">
+      <input type="number" id="quantidade" placeholder="Qtd" style="flex: 1;">
+      <input type="number" id="valor" placeholder="Valor R$" style="flex: 1;">
+    </div>
+    <div class="row-inputs">
+      <label style="padding:10px;">Entrada:</label><input type="date" id="dataEntrada">
+      <label style="padding:10px;">Vencimento:</label><input type="date" id="dataVenc">
+      <button class="primary" onclick="adicionarItem()" style="flex: 1;">LANÇAR</button>
+    </div>
+  </div>
+
+  <div class="card admin-only">
+    <h3>⚙️ Configuração da Loja</h3>
+    <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+      
+      <div style="flex: 1; min-width: 250px;">
+        <h4>🏢 Dados da Sua Empresa</h4>
+        <input type="text" id="confEmpNome" placeholder="Nome da Empresa">
+        <input type="text" id="confEmpEnd" placeholder="Endereço">
+        <input type="text" id="confEmpTel" placeholder="Telefone">
+        <button class="primary" onclick="salvarDadosEmpresa()" style="width:100%; margin-top:5px;">💾 SALVAR</button>
+      </div>
+
+      <div style="flex: 1; min-width: 250px; border-left: 1px solid #444; padding-left: 15px;">
+         <h4>📦 Catálogo Rápido</h4>
+        <input type="text" id="catNome" placeholder="Peça">
+        <input type="number" id="catValor" placeholder="Preço">
+        <button class="success" onclick="salvarCatalogo()">+ ESTOQUE</button>
+      </div>
+      
+      <div style="flex: 1; min-width: 250px; border-left: 1px solid #444; padding-left: 15px;">
+        <h4>📊 Sistema</h4>
+        <label>Logo:</label> <input type="file" id="logoInput" accept="image/*" style="margin-bottom:15px; font-size: 12px;"><br>
+        <button class="primary" onclick="fazerBackupLocal()" style="width: 100%; margin-bottom: 10px;">💾 BACKUP</button>
+        <button class="dark" onclick="gerarRelatorioMes()" style="width: 100%; margin-bottom: 10px;">📈 RELATÓRIO</button>
+        <button class="warning" onclick="migrarDados()" style="width: 100%;">🔄 SINCRONIZAR</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card clientes">
+    <input type="text" id="searchBox" class="search-box admin-only" placeholder="🔍 Buscar..." onkeyup="render()">
+    <div id="listaClientes">Carregando...</div>
+  </div>
+</div>
+
+<div class="modal" id="editModal">
+  <div class="modal-content">
+    <h3>Editar Item</h3>
+    <label>Descrição:</label><input type="text" id="editDesc">
+    <label>Qtd:</label><input type="number" id="editQtd">
+    <label>Valor Total:</label><input type="number" id="editValor">
+    <label>Data Entrada:</label><input type="date" id="editData">
+    <label>Data Vencimento:</label><input type="date" id="editVenc">
+    <br><br>
+    <button class="success" onclick="salvarEdicao()">Salvar</button>
+    <button class="danger" onclick="fecharModal()">Sair</button>
+  </div>
+</div>
+
+<div class="modal" id="assinaturaModal">
+  <div class="modal-content" style="text-align:center;">
+    <h3>✍️ Assinatura (Presencial)</h3>
+    <canvas id="canvasAssinatura"></canvas>
+    <div class="check-save"><input type="checkbox" id="salvarAssinaturaCheck" checked><span>Salvar assinatura</span></div>
+    <div style="display:flex; gap:10px; justify-content:center; margin-bottom:15px;">
+      <button class="dark" onclick="limparAssinatura()">Limpar</button>
+      <button class="danger" onclick="fecharAssinatura()">Cancelar</button>
+    </div>
+    <button class="success" onclick="finalizarAssinatura('salvar_apenas')" style="width:100%; margin-bottom:10px;">💾 SALVAR SEM IMPRIMIR</button>
+    <button class="wapp" onclick="gerarImagemWhatsApp()" style="width:100%; margin-bottom:10px; background:#25D366;">📱 GERAR IMAGEM P/ ZAP</button>
+    <hr style="border:1px solid #444; margin: 10px 0;">
+    <p>SALVAR E IMPRIMIR:</p>
+    <div style="display:flex; gap:10px; justify-content:center;">
+        <button class="primary" onclick="finalizarAssinatura('extrato')">A4</button>
+        <button class="warning" onclick="finalizarAssinatura('cupom')">CUPOM</button>
+    </div>
+  </div>
+</div>
+
+<div id="hiddenPrintArea"></div>
+
+<script>
+  // 🔴 INSIRA SUAS CHAVES FIREBASE AQUI 🔴
+  const firebaseConfig = {
+    apiKey: "SUA_API_KEY",
+    authDomain: "gestaodeclientes-7f8f0.firebaseapp.com",
+    projectId: "gestaodeclientes-7f8f0",
+    storageBucket: "gestaodeclientes-7f8f0.appspot.com",
+    messagingSenderId: "SEU_SENDER_ID",
+    appId: "SEU_APP_ID"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  
+  let clientes = [];
+  let catalogo = [];
+  let logoBase64 = localStorage.getItem('logoParana') || "";
+  let empDados = { nome: localStorage.getItem('empNome') || "PARANÁ PEÇAS", end: localStorage.getItem('empEnd') || "", tel: localStorage.getItem('empTel') || "" };
+  document.getElementById('confEmpNome').value = empDados.nome;
+  document.getElementById('confEmpEnd').value = empDados.end;
+  document.getElementById('confEmpTel').value = empDados.tel;
+
+  let editRef = {id:null, ii:null};
+  let perfilAtivo = ''; 
+  let signId = null;
+  let isDrawing = false;
+  let lastX = 0; let lastY = 0;
+  
+  // VARIAVEIS CLIENTE REMOTO
+  let isClientMode = false;
+  let remoteClientId = null;
+  const canvasRemoto = document.getElementById('canvasRemoto');
+  const ctxRemoto = canvasRemoto.getContext('2d');
+  const canvas = document.getElementById('canvasAssinatura');
+  const ctx = canvas.getContext('2d');
+
+  // VERIFICAR SE É LINK DE CLIENTE AO INICIAR
+  window.onload = function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const cid = urlParams.get('cliente');
+      
+      if(cid) {
+          // MODO CLIENTE ATIVADO
+          isClientMode = true;
+          remoteClientId = cid;
+          document.body.classList.add('mode-client');
+          document.getElementById('loginOverlay').style.display = 'none'; // Sem senha para cliente assinar
+          
+          // Configurar canvas remoto
+          canvasRemoto.width = canvasRemoto.offsetWidth || 300;
+          canvasRemoto.height = 200;
+          ctxRemoto.lineWidth = 2; ctxRemoto.lineJoin = 'round'; ctxRemoto.lineCap = 'round'; ctxRemoto.strokeStyle = '#000';
+          
+          // Configurar eventos do canvas remoto
+          setupCanvasEvents(canvasRemoto, ctxRemoto);
+
+          // Carregar dados específicos deste cliente
+          db.collection("clientes").doc(cid).onSnapshot((doc) => {
+              if(doc.exists) {
+                  let data = doc.data();
+                  let html = `<b>Olá, ${data.nome}</b><br>Confira seus itens pendentes:<br><br>`;
+                  let total = 0;
+                  data.itens.forEach(i => {
+                      if(!i.pago) {
+                          html += `📦 ${i.desc} - ${formatarMoeda(i.valor)}<br>`;
+                          total += (Number(i.valor)||0);
+                      }
+                  });
+                  html += `<hr><b>TOTAL A PAGAR: ${formatarMoeda(total)}</b>`;
+                  document.getElementById('listaItensRemoto').innerHTML = html;
+              } else {
+                  Swal.fire('Erro', 'Link inválido ou expirado.', 'error');
+              }
+          });
+
+      } else {
+          // MODO NORMAL (DONO)
+          // Nada muda, espera login
+      }
+  };
+
+  function setupCanvasEvents(cvs, cx) {
+      cvs.addEventListener('mousedown', (e) => { isDrawing = true; [lastX, lastY] = [e.offsetX, e.offsetY]; });
+      cvs.addEventListener('mousemove', (e) => { if(!isDrawing) return; cx.beginPath(); cx.moveTo(lastX, lastY); cx.lineTo(e.offsetX, e.offsetY); cx.stroke(); [lastX, lastY] = [e.offsetX, e.offsetY]; });
+      cvs.addEventListener('mouseup', () => isDrawing = false);
+      cvs.addEventListener('mouseout', () => isDrawing = false);
+      cvs.addEventListener('touchstart', (e) => { e.preventDefault(); isDrawing = true; let rect = cvs.getBoundingClientRect(); let touch = e.touches[0]; lastX = touch.clientX - rect.left; lastY = touch.clientY - rect.top; }, {passive: false});
+      cvs.addEventListener('touchmove', (e) => { if(!isDrawing) return; e.preventDefault(); let rect = cvs.getBoundingClientRect(); let touch = e.touches[0]; let x = touch.clientX - rect.left; let y = touch.clientY - rect.top; cx.beginPath(); cx.moveTo(lastX, lastY); cx.lineTo(x, y); cx.stroke(); lastX = x; lastY = y; }, {passive: false});
+      cvs.addEventListener('touchend', () => isDrawing = false);
+  }
+  
+  // INICIA EVENTOS CANVAS LOCAL
+  setupCanvasEvents(canvas, ctx);
+
+  function limparRemoto() { ctxRemoto.clearRect(0, 0, canvasRemoto.width, canvasRemoto.height); }
+  
+  function salvarAssinaturaRemota() {
+      let img = canvasRemoto.toDataURL();
+      db.collection("clientes").doc(remoteClientId).get().then(doc => {
+          let itens = doc.data().itens;
+          // Assina todos os itens pendentes
+          itens.forEach(i => { if(!i.pago) i.assinatura = img; });
+          
+          db.collection("clientes").doc(remoteClientId).update({ itens }).then(() => {
+              Swal.fire({ icon: 'success', title: 'Assinado!', text: 'Sua assinatura foi enviada com sucesso.', showConfirmButton: false });
+              setTimeout(() => { document.body.innerHTML = "<h2 style='text-align:center; padding:50px; color:#fff;'>Obrigado! Pode fechar esta janela.</h2>"; }, 2000);
+          });
+      });
+  }
+
+  function gerarLinkRemoto(id) {
+      // Pega a URL atual (ex: seushost.com) e adiciona o ID
+      let baseUrl = window.location.href.split('?')[0];
+      let link = `${baseUrl}?cliente=${id}`;
+      
+      navigator.clipboard.writeText(link).then(() => {
+          Swal.fire({
+            title: 'Link Copiado!',
+            html: `Envie este link para o cliente assinar no celular dele:<br><br><b>${link}</b><br><br>Quando ele assinar lá, aparecerá aqui automaticamente!`,
+            icon: 'success'
+          });
+      });
+  }
+
+  function salvarDadosEmpresa() {
+      empDados = { nome: document.getElementById('confEmpNome').value, end: document.getElementById('confEmpEnd').value, tel: document.getElementById('confEmpTel').value };
+      localStorage.setItem('empNome', empDados.nome); localStorage.setItem('empEnd', empDados.end); localStorage.setItem('empTel', empDados.tel);
+      Swal.fire({ icon: 'success', title: 'Sucesso!', text: 'Dados atualizados.', timer: 1500, showConfirmButton: false });
+  }
+
+  function verificarSenha() {
+    if(isClientMode) return; // Se for cliente, ignora
+    let s = document.getElementById('senhaInput').value;
+    if(s === '7755') { perfilAtivo = 'admin'; document.body.classList.remove('func-mode'); } 
+    else if (s === '1234') { perfilAtivo = 'func'; document.body.classList.add('func-mode'); } 
+    else { Swal.fire({ icon: 'error', title: 'Erro', text: 'Senha Incorreta!' }); return; }
+    document.getElementById('loginOverlay').style.display = 'none';
+  }
+
+  function logout() {
+    document.getElementById('loginOverlay').style.display = 'flex'; document.getElementById('senhaInput').value = '';
+    document.body.classList.remove('func-mode'); perfilAtivo = '';
+  }
+  document.getElementById('senhaInput').addEventListener('keypress', function (e) { if (e.key === 'Enter') verificarSenha(); });
+
+  db.collection("clientes").onSnapshot((snapshot) => {
+    if(isClientMode) return; // Se for cliente remoto, não carrega lista geral
+    clientes = [];
+    snapshot.forEach((doc) => { clientes.push({ id: doc.id, ...doc.data() }); });
+    atualizarSelect(); atualizarDashboard(); render(); aplicarLogo();
+  });
+  
+  // ... (RESTANTE DAS FUNÇÕES IGUAIS: salvarCatalogo, adicionarCliente, etc) ...
+  // MANTENHA AS FUNÇÕES ANTERIORES AQUI (adicionarCliente, salvarCatalogo, etc)
+  // VOU RESUMIR PARA CABER, MAS VOCÊ MANTÉM O CÓDIGO DA VERSÃO ANTERIOR NESSA PARTE
+  function salvarCatalogo() { let n=document.getElementById('catNome').value,v=Number(document.getElementById('catValor').value); if(n&&v){db.collection("catalogo").add({nome:n.toUpperCase(),valor:v});document.getElementById('catNome').value='';document.getElementById('catValor').value='';} }
+  function apagarCat(id){db.collection("catalogo").doc(id).delete();}
+  db.collection("catalogo").onSnapshot((s)=>{catalogo=[];let d=document.getElementById('opcoesCatalogo'),v=document.getElementById('listaCatalogoVis');d.innerHTML='';v.innerHTML='';s.forEach((doc)=>{let k=doc.data();catalogo.push({id:doc.id,...k});d.innerHTML+=`<option value="${k.nome}">R$ ${k.valor}</option>`;v.innerHTML+=`📦 ${k.nome} - R$ ${k.valor} <button onclick="apagarCat('${doc.id}')" style="color:red;border:none;background:none;cursor:pointer">x</button><br>`;});});
+  function preencherValorCat(){let t=document.getElementById('descricao').value.toUpperCase(),a=catalogo.find(c=>c.nome===t);if(a)document.getElementById('valor').value=a.valor;}
+  function atualizarSelect(){let s=document.getElementById('clienteSelect'),c=s.value;s.innerHTML='<option value="">Selecione...</option>';clientes.sort((a,b)=>a.nome.localeCompare(b.nome)).forEach((k)=>{let o=document.createElement('option');o.value=k.id;o.textContent=k.nome;s.appendChild(o)});if(c)s.value=c;}
+  function adicionarCliente(){let n=document.getElementById('nome').value.trim();if(!n)return Swal.fire('Erro','Nome obrigatório','error');db.collection("clientes").add({nome:n,cpf_cnpj:document.getElementById('cpf_cnpj').value,ie:document.getElementById('ie').value,telefone:document.getElementById('telefone').value,cep:document.getElementById('cep').value,cidade:document.getElementById('cidade').value,endereco:document.getElementById('endereco').value,itens:[]});Swal.fire('Sucesso','Cliente salvo','success');}
+  function adicionarItem(){let id=document.getElementById('clienteSelect').value;if(!id)return Swal.fire('Erro','Selecione cliente','error');let item={desc:document.getElementById('descricao').value.toUpperCase(),qtd:Number(document.getElementById('quantidade').value)||1,valor:Number(document.getElementById('valor').value),data:document.getElementById('dataEntrada').value||new Date().toISOString().split('T')[0],venc:document.getElementById('dataVenc').value,pago:false,pagoValor:0,img:null};db.collection("clientes").doc(id).update({itens:firebase.firestore.FieldValue.arrayUnion(item)}).then(()=>{Swal.fire({icon:'success',title:'Lançado',toast:true,position:'top-end',timer:1500,showConfirmButton:false});});}
+  function toggleAll(id,s){document.querySelectorAll(`.sel-${id}`).forEach(c=>c.checked=s.checked);}
+  function formatarMoeda(v){return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
+  function formatarDataBR(i){if(!i)return'';let p=i.split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:i;}
+  function aplicarLogo(){if(logoBase64){document.getElementById('logoLeft').src=logoBase64;document.getElementById('logoRight').src=logoBase64;document.getElementById('logoLogin').src=logoBase64;document.getElementById('logoLogin').style.display='inline-block';}}
+  document.getElementById('logoInput').addEventListener('change',e=>{let r=new FileReader();r.onload=ev=>{logoBase64=ev.target.result;localStorage.setItem('logoParana',logoBase64);aplicarLogo();};r.readAsDataURL(e.target.files[0]);});
+
+  // RENDERIZAÇÃO DA LISTA DE CLIENTES (COM O NOVO BOTÃO DE LINK)
+  function render(){
+    let div = document.getElementById('listaClientes'); div.innerHTML = '';
+    let termo = document.getElementById('searchBox').value.toLowerCase();
+    let hoje = new Date().toISOString().split('T')[0];
+
+    clientes.forEach((c) => {
+      if(termo && !c.nome.toLowerCase().includes(termo) && !(c.cpf_cnpj || '').includes(termo)) return;
+      let saldoCli = c.itens.reduce((acc, i) => acc + (Number(i.valor)||0) - (Number(i.pagoValor)||0), 0);
+      
+      let html = `<div class="client-card">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start">
+          <div><b style="font-size:18px; color:#0d47a1">${c.nome}</b><br><span style="font-size:12px; color:#555">${c.cpf_cnpj ? 'CPF: '+c.cpf_cnpj : ''} ${c.telefone ? '| '+c.telefone : ''}<br>${c.endereco ? c.endereco : ''}</span></div>
+          <div style="text-align:right">Saldo Devedor<br><span style="color:red; font-size:20px; font-weight:bold">${formatarMoeda(saldoCli)}</span></div>
+        </div>
+        
+        <div class="top-actions">
+            <button class="primary" onclick="imprimirSelecionados('${c.id}', 'extrato')">📄 A4</button>
+            <button class="warning" onclick="imprimirSelecionados('${c.id}', 'cupom')">🖨️ CUPOM</button>
+            <button class="dark" onclick="abrirAssinatura('${c.id}')" style="background:#5e35b1;">✍️ PRESENCIAL</button>
+            <button class="primary" style="background:#0277bd" onclick="gerarLinkRemoto('${c.id}')">🔗 LINK REMOTO</button>
+            <button class="primary" style="background:#006064" onclick="imprimirExtratoGeral('${c.id}')">📋 EXTRATO</button>
+            <button class="wapp" onclick="cobrarWhatsApp('${c.id}', ${saldoCli})">💬 COBRAR</button>
+            <button class="danger admin-only" onclick="excluirCliente('${c.id}')">🗑️ EXCLUIR</button>
+        </div>
+        
+        <table>
+          <thead><tr><th><input type="checkbox" onchange="toggleAll('${c.id}', this)"></th><th>Peça</th><th>Qtd</th><th>Valor</th><th>Data</th><th>Situação</th><th>Ações</th></tr></thead>
+          <tbody>
+            ${c.itens.map((i, ii) => {
+              let isVencido = (!i.pago && i.venc && i.venc < hoje);
+              let rowClass = isVencido ? 'class="vencido"' : '';
+              let sit = i.pago ? '<span style="color:green;font-weight:bold">PAGO</span>' : (i.pagoValor > 0 ? `<span style="color:#fbc02d;font-weight:bold">Parcial</span>` : `<span style="font-weight:bold">${isVencido?'VENCIDO':'Aberto'}</span>`);
+              let iconAssinado = i.assinatura ? ' <span title="Assinado" style="cursor:help;font-size:14px">✍️✅</span>' : '';
+
+              return `<tr ${rowClass}>
+                <td><input type="checkbox" class="sel-${c.id}" value="${ii}" style="width:18px; height:18px;"></td>
+                <td style="text-align:left"><b>${i.desc}${iconAssinado}</b></td>
+                <td>${i.qtd||1}</td><td><b>${formatarMoeda(i.valor)}</b></td><td>${formatarDataBR(i.data)}</td><td>${sit}</td>
+                <td><div class="table-actions">
+                    <button class="success" onclick="pagar('${c.id}',${ii})">$</button>
+                    <button class="primary admin-only" onclick="abrirEditar('${c.id}',${ii})">✏️</button>
+                    <button class="danger admin-only" onclick="excluirLançamento('${c.id}',${ii})">X</button>
+                  </div></td></tr>`}).join('')}
+          </tbody></table></div>`;
+      div.innerHTML += html;
+    });
+  }
+
+  // --- FUNÇÕES DE ASSINATURA LOCAL E GERAÇÃO DE IMAGEM ZAP ---
+  function abrirAssinatura(id) {
+    const checks = document.querySelectorAll(`.sel-${id}:checked`);
+    if(checks.length === 0) return Swal.fire('Atenção', "Selecione os itens.", 'warning');
+    signId = id; document.getElementById('assinaturaModal').style.display = 'flex';
+    canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
+    ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.strokeStyle = '#000';
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+  }
+  function fecharAssinatura() { document.getElementById('assinaturaModal').style.display = 'none'; signId = null; }
+  function limparAssinatura() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+
+  function finalizarAssinatura(tipo) {
+    let imgAssinatura = canvas.toDataURL();
+    let salvar = document.getElementById('salvarAssinaturaCheck').checked;
+    if (salvar && signId) {
+       let c = clientes.find(x => x.id === signId); let itens = [...c.itens]; let checks = document.querySelectorAll(`.sel-${signId}:checked`);
+       checks.forEach(cb => { let idx = parseInt(cb.value); if(itens[idx]) itens[idx].assinatura = imgAssinatura; });
+       db.collection("clientes").doc(signId).update({ itens });
+    }
+    if (tipo === 'salvar_apenas') { Swal.fire({icon:'success',title:'Salvo!',timer:1000,showConfirmButton:false}); fecharAssinatura(); return; }
+    imprimirSelecionados(signId, tipo, imgAssinatura); fecharAssinatura();
+  }
+
+  function gerarImagemWhatsApp() {
+      let c = clientes.find(x => x.id === signId); const checks = document.querySelectorAll(`.sel-${signId}:checked`);
+      const indices = Array.from(checks).map(cb => parseInt(cb.value)); const selecionados = indices.map(idx => c.itens[idx]);
+      const totalS = selecionados.reduce((a, i) => a + (Number(i.valor) || 0), 0);
+      const totalPago = selecionados.reduce((a, i) => a + (Number(i.pagoValor) || 0), 0);
+      const assinatura = canvas.toDataURL();
+
+      let html = `<div style="background:#fff; font-family:'Courier New'; padding:15px; border:1px solid #ccc; width:350px;">
+           <div style="text-align:center; font-weight:bold; margin-bottom:10px;">${empDados.nome}<br><span style="font-size:10px">${empDados.end}</span><br><span style="font-size:10px">${empDados.tel}</span></div><hr>
+           <div style="font-size:12px; margin-bottom:10px;">CLIENTE: ${c.nome.toUpperCase()}</div>
+           <table style="width:100%; font-size:11px; border-collapse:collapse;">${selecionados.map(i => `<tr><td style="text-align:left;">${i.desc}</td><td style="text-align:right;">${formatarMoeda(i.valor)}</td></tr>`).join('')}</table>
+           <hr><div style="text-align:right; font-size:14px; font-weight:bold;">TOTAL: ${formatarMoeda(totalS)}</div>
+           <div style="text-align:right; font-size:12px;">PAGO: ${formatarMoeda(totalPago)}</div>
+           <div style="text-align:right; font-size:14px; font-weight:bold; color:red;">RESTANTE: ${formatarMoeda(totalS-totalPago)}</div>
+           <div style="margin-top:20px; text-align:center;"><img src="${assinatura}" style="max-height:50px;"><br><span style="font-size:10px;">Assinado Digitalmente</span></div></div>`;
+      
+      let area = document.getElementById('hiddenPrintArea'); area.innerHTML = html;
+      html2canvas(area).then(canvasImg => {
+          Swal.fire({ title: 'Imagem Gerada!', text: 'Copie e cole no WhatsApp.', imageUrl: canvasImg.toDataURL("image/jpeg"), imageWidth: 300, confirmButtonText: 'Fechar' });
+          area.innerHTML = ''; fecharAssinatura();
+      });
+  }
+
+  // --- FUNÇÕES DE PAGAMENTO, EDIÇÃO E EXCLUSÃO ---
+  function pagar(id, ii){let c=clientes.find(x=>x.id===id),itens=[...c.itens],v=Number(prompt(`Resta: ${formatarMoeda(itens[ii].valor-itens[ii].pagoValor)}\nQuanto pagou?`));if(v>0){itens[ii].pagoValor+=v;if(itens[ii].pagoValor>=itens[ii].valor)itens[ii].pago=true;db.collection("clientes").doc(id).update({itens});Swal.fire({icon:'success',title:'Pago',toast:true,position:'top-end',timer:1000,showConfirmButton:false});}}
+  function abrirEditar(id,ii){let c=clientes.find(x=>x.id===id),i=c.itens[ii];editRef={id,ii};document.getElementById('editDesc').value=i.desc;document.getElementById('editQtd').value=i.qtd||1;document.getElementById('editValor').value=i.valor;document.getElementById('editData').value=i.data||"";document.getElementById('editVenc').value=i.venc||"";document.getElementById('editModal').style.display='flex';}
+  function salvarEdicao(){let {id,ii}=editRef,c=clientes.find(x=>x.id===id),itens=[...c.itens];itens[ii].desc=document.getElementById('editDesc').value;itens[ii].qtd=Number(document.getElementById('editQtd').value);itens[ii].valor=Number(document.getElementById('editValor').value);itens[ii].data=document.getElementById('editData').value;itens[ii].venc=document.getElementById('editVenc').value;db.collection("clientes").doc(id).update({itens}).then(()=>fecharModal());}
+  function fecharModal(){document.getElementById('editModal').style.display='none';}
+  function excluirLançamento(id,ii){Swal.fire({title:'Excluir item?',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33',confirmButtonText:'Sim'}).then((r)=>{if(r.isConfirmed){let c=clientes.find(x=>x.id===id),itens=[...c.itens];itens.splice(ii,1);db.collection("clientes").doc(id).update({itens});}});}
+  function excluirCliente(id){Swal.fire({title:'Excluir Cliente?',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33',confirmButtonText:'Excluir Tudo'}).then((r)=>{if(r.isConfirmed)db.collection("clientes").doc(id).delete();});}
+  
+  function cobrarWhatsApp(id, saldo) {
+    let c = clientes.find(x => x.id === id); if(saldo<=0) return Swal.fire('Info','Sem débito','info'); if(!c.telefone) return Swal.fire('Erro','Sem telefone','error');
+    let t = `Olá *${c.nome}*, aqui é da *${empDados.nome}*.\nConsta saldo aberto de *${formatarMoeda(saldo)}*. Podemos acertar?`;
+    window.open(`https://wa.me/55${c.telefone.replace(/\D/g,'')}?text=${encodeURIComponent(t)}`,'_blank');
+  }
+
+  // --- FUNÇÕES DE IMPRESSÃO ---
+  function imprimirSelecionados(id, tipo, assinaturaImg = null) {
+    const c = clientes.find(x => x.id === id); const checks = document.querySelectorAll(`.sel-${id}:checked`);
+    const indices = Array.from(checks).map(cb => parseInt(cb.value));
+    if (indices.length === 0) return Swal.fire('Aviso', "Selecione itens", 'warning');
+    const selecionados = indices.map(idx => c.itens[idx]); const totalS = selecionados.reduce((a, i) => a + (Number(i.valor) || 0), 0);
+    gerarImpressao(c, selecionados, totalS, tipo, "COMPROVANTE", assinaturaImg);
+  }
+  function imprimirExtratoGeral(id){ let c = clientes.find(x => x.id === id); if(!c.itens.length)return; let t = c.itens.reduce((a, i) => a + (Number(i.valor) || 0), 0); gerarImpressao(c, c.itens, t, 'extrato', "EXTRATO GERAL"); }
+
+  function gerarImpressao(c, itens, total, tipo, titulo, assinaturaNova = null) {
+    const logoHtml = logoBase64 ? `<img src="${logoBase64}" style="max-height:60px; display:block; margin:0 auto 5px auto;">` : '';
+    let totalPago = itens.reduce((acc, i) => acc + (Number(i.pagoValor) || 0), 0);
+    let saldoDevedor = total - totalPago;
+    let imgFinal = assinaturaNova || (itens.find(i=>i.assinatura)?.assinatura);
+    const campoAssinatura = imgFinal ? `<div style="margin-top:20px;"><img src="${imgFinal}" style="max-height:60px; border-bottom:1px solid #000;"><br><span style="font-size:10px">Assinado Digitalmente</span></div>` : `<br><div style="font-size:12px;">Assinatura</div><div style="border-bottom:1px solid #000; width:80%; margin:30px auto 0 auto;"></div>`;
+    let larguraBody = tipo === 'cupom' ? '70mm' : '95%'; let fonteBase = tipo === 'cupom' ? '11px' : '14px';
+    
+    let h = `<html><head><style>@media print{@page{margin:0;size:auto}body{margin:0;padding:5px}}body{font-family:'Courier New';width:${larguraBody};margin:0 auto;text-align:center;font-size:${fonteBase}}table{width:100%;border-collapse:collapse;margin-top:5px}th,td{border-bottom:1px dashed #000;padding:3px 0;text-align:center;font-size:${fonteBase}}th{border-top:1px dashed #000}.text-left{text-align:left}.text-right{text-align:right}.total-final{text-align:right;margin-top:10px;font-weight:bold;font-size:${parseInt(fonteBase)+2}px;border-top:1px dashed #000}</style></head>
+    <body>${logoHtml}<div style="font-weight:bold;margin-bottom:5px;font-size:${parseInt(fonteBase)+2}px;">${empDados.nome}</div><div style="margin-bottom:10px;font-size:${fonteBase}">${empDados.end}<br>${empDados.tel}</div>
+    <div style="border-bottom:1px solid #000;"></div><h3 style="margin:5px 0;">${titulo}</h3><div style="border-bottom:1px dashed #000;padding-bottom:5px;margin-bottom:5px;text-align:left"><b>CLI: ${c.nome.toUpperCase()}</b><br>${c.cpf_cnpj||''}<br>${c.endereco||''}</div>
+    <table><thead><tr><th>Data</th><th class="text-left">Peça</th><th class="text-right">Valor</th></tr></thead><tbody>${itens.map(i=>`<tr><td>${formatarDataBR(i.data).substring(0,5)}</td><td class="text-left">${i.desc.toUpperCase()}</td><td class="text-right">${formatarMoeda(i.valor)}</td></tr>`).join('')}</tbody></table>
+    <div style="text-align:right;margin-top:10px">TOTAL: <b>${formatarMoeda(total)}</b></div><div style="text-align:right">PAGO: <b>${formatarMoeda(totalPago)}</b></div><div class="total-final">SALDO: ${formatarMoeda(saldoDevedor)}</div>${campoAssinatura}<br><p style="font-size:10px">Emitido: ${new Date().toLocaleString('pt-BR')}</p></body></html>`;
+    let win = window.open('', '_blank'); win.document.write(h); win.document.close(); setTimeout(() => { win.print(); }, 800);
+  }
+  
+  function fazerBackupLocal() { if(!clientes.length)return Swal.fire('Erro','Vazio','error'); let b=new Blob([JSON.stringify(clientes)],{type:"application/json"}),l=document.createElement("a");l.href=URL.createObjectURL(b);l.download=`backup_${new Date().toISOString().split('T')[0]}.json`;document.body.appendChild(l);l.click();document.body.removeChild(l);Swal.fire('Sucesso','Backup salvo','success'); }
+  function gerarRelatorioMes() { let h=new Date(),m=h.toISOString().slice(0,7),t=0,r=0;clientes.forEach(c=>{c.itens.forEach(i=>{if(i.data&&i.data.startsWith(m)){t+=(Number(i.valor)||0);r+=(Number(i.pagoValor)||0)}})});let w=window.open('','_blank');w.document.write(`<html><body style="font-family:Arial;text-align:center"><h2>FECHAMENTO (${m})</h2><p>Vendido: <b>${formatarMoeda(t)}</b></p><p>Recebido: <b>${formatarMoeda(r)}</b></p><p>A Receber: <b>${formatarMoeda(t-r)}</b></p></body></html>`);w.document.close();setTimeout(()=>{w.print()},800);}
+  function atualizarDashboard(){let t=0,r=0;clientes.forEach(c=>c.itens.forEach(i=>{t+=(Number(i.valor)||0);r+=(Number(i.pagoValor)||0)}));document.getElementById('dashTotal').innerText=formatarMoeda(t);document.getElementById('dashRecebido').innerText=formatarMoeda(r);document.getElementById('dashDevedor').innerText=formatarMoeda(t-r);}
+  function migrarDados(){let l=JSON.parse(localStorage.getItem('clientesParana'))||[];l.forEach(c=>db.collection("clientes").add(c));Swal.fire('OK','Sincronizado','success');}
+</script>
+</body>
+</html>
