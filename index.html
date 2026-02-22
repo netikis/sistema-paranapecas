@@ -185,7 +185,7 @@
   </div>
 
   <div class="card admin-only">
-    <h3>⚙️ Configuração da Loja</h3>
+    <h3>⚙️ Configuração da Loja (Sincronizado na Nuvem ☁️)</h3>
     <div style="display: flex; flex-wrap: wrap; gap: 20px;">
       
       <div style="flex: 1; min-width: 250px;">
@@ -193,7 +193,7 @@
         <input type="text" id="confEmpNome" placeholder="Nome da Empresa">
         <input type="text" id="confEmpEnd" placeholder="Endereço">
         <input type="text" id="confEmpTel" placeholder="Telefone">
-        <button class="primary" onclick="salvarDadosEmpresa()" style="width:100%; margin-top:5px;">💾 SALVAR</button>
+        <button class="primary" onclick="salvarDadosEmpresa()" style="width:100%; margin-top:5px;">💾 SALVAR (SYNC)</button>
       </div>
 
       <div style="flex: 1; min-width: 250px; border-left: 1px solid #444; padding-left: 15px;">
@@ -272,10 +272,39 @@
   let clientes = [];
   let catalogo = [];
   let logoBase64 = localStorage.getItem('logoParana') || "";
-  let empDados = { nome: localStorage.getItem('empNome') || "PARANÁ PEÇAS", end: localStorage.getItem('empEnd') || "", tel: localStorage.getItem('empTel') || "" };
-  document.getElementById('confEmpNome').value = empDados.nome;
-  document.getElementById('confEmpEnd').value = empDados.end;
-  document.getElementById('confEmpTel').value = empDados.tel;
+  
+  // DADOS DA EMPRESA (AGORA SINCRONIZADOS NO FIREBASE)
+  let empDados = { nome: "PARANÁ PEÇAS", end: "", tel: "" };
+
+  // 1. CARREGAR DADOS DA EMPRESA DO FIREBASE AO INICIAR
+  db.collection("config").doc("empresa").onSnapshot((doc) => {
+      if (doc.exists) {
+          let d = doc.data();
+          empDados = { nome: d.nome, end: d.end, tel: d.tel };
+          // Atualiza os campos na tela se existirem
+          if(document.getElementById('confEmpNome')) {
+              document.getElementById('confEmpNome').value = empDados.nome;
+              document.getElementById('confEmpEnd').value = empDados.end;
+              document.getElementById('confEmpTel').value = empDados.tel;
+          }
+      }
+  });
+
+  // 2. FUNÇÃO PARA SALVAR DADOS DA EMPRESA NO FIREBASE
+  function salvarDadosEmpresa() {
+      let n = document.getElementById('confEmpNome').value;
+      let e = document.getElementById('confEmpEnd').value;
+      let t = document.getElementById('confEmpTel').value;
+      
+      // Salva no Firestore (Nuvem)
+      db.collection("config").doc("empresa").set({ nome: n, end: e, tel: t })
+      .then(() => {
+          Swal.fire({ icon: 'success', title: 'Sucesso!', text: 'Dados sincronizados na nuvem!', timer: 1500, showConfirmButton: false });
+      })
+      .catch((error) => {
+          Swal.fire('Erro', 'Erro ao salvar: ' + error, 'error');
+      });
+  }
 
   let editRef = {id:null, ii:null};
   let perfilAtivo = ''; 
@@ -379,12 +408,6 @@
       });
   }
 
-  function salvarDadosEmpresa() {
-      empDados = { nome: document.getElementById('confEmpNome').value, end: document.getElementById('confEmpEnd').value, tel: document.getElementById('confEmpTel').value };
-      localStorage.setItem('empNome', empDados.nome); localStorage.setItem('empEnd', empDados.end); localStorage.setItem('empTel', empDados.tel);
-      Swal.fire({ icon: 'success', title: 'Sucesso!', text: 'Dados atualizados.', timer: 1500, showConfirmButton: false });
-  }
-
   function verificarSenha() {
     if(isClientMode) return; // Se for cliente, ignora
     let s = document.getElementById('senhaInput').value;
@@ -407,9 +430,7 @@
     atualizarSelect(); atualizarDashboard(); render(); aplicarLogo();
   });
   
-  // ... (RESTANTE DAS FUNÇÕES IGUAIS: salvarCatalogo, adicionarCliente, etc) ...
-  // MANTENHA AS FUNÇÕES ANTERIORES AQUI (adicionarCliente, salvarCatalogo, etc)
-  // VOU RESUMIR PARA CABER, MAS VOCÊ MANTÉM O CÓDIGO DA VERSÃO ANTERIOR NESSA PARTE
+  // FUNÇÕES PADRÃO DO SISTEMA
   function salvarCatalogo() { let n=document.getElementById('catNome').value,v=Number(document.getElementById('catValor').value); if(n&&v){db.collection("catalogo").add({nome:n.toUpperCase(),valor:v});document.getElementById('catNome').value='';document.getElementById('catValor').value='';} }
   function apagarCat(id){db.collection("catalogo").doc(id).delete();}
   db.collection("catalogo").onSnapshot((s)=>{catalogo=[];let d=document.getElementById('opcoesCatalogo'),v=document.getElementById('listaCatalogoVis');d.innerHTML='';v.innerHTML='';s.forEach((doc)=>{let k=doc.data();catalogo.push({id:doc.id,...k});d.innerHTML+=`<option value="${k.nome}">R$ ${k.valor}</option>`;v.innerHTML+=`📦 ${k.nome} - R$ ${k.valor} <button onclick="apagarCat('${doc.id}')" style="color:red;border:none;background:none;cursor:pointer">x</button><br>`;});});
@@ -423,7 +444,7 @@
   function aplicarLogo(){if(logoBase64){document.getElementById('logoLeft').src=logoBase64;document.getElementById('logoRight').src=logoBase64;document.getElementById('logoLogin').src=logoBase64;document.getElementById('logoLogin').style.display='inline-block';}}
   document.getElementById('logoInput').addEventListener('change',e=>{let r=new FileReader();r.onload=ev=>{logoBase64=ev.target.result;localStorage.setItem('logoParana',logoBase64);aplicarLogo();};r.readAsDataURL(e.target.files[0]);});
 
-  // RENDERIZAÇÃO DA LISTA DE CLIENTES (COM O NOVO BOTÃO DE LINK)
+  // RENDERIZAÇÃO DA LISTA DE CLIENTES
   function render(){
     let div = document.getElementById('listaClientes'); div.innerHTML = '';
     let termo = document.getElementById('searchBox').value.toLowerCase();
@@ -551,11 +572,24 @@
     const campoAssinatura = imgFinal ? `<div style="margin-top:20px;"><img src="${imgFinal}" style="max-height:60px; border-bottom:1px solid #000;"><br><span style="font-size:10px">Assinado Digitalmente</span></div>` : `<br><div style="font-size:12px;">Assinatura</div><div style="border-bottom:1px solid #000; width:80%; margin:30px auto 0 auto;"></div>`;
     let larguraBody = tipo === 'cupom' ? '70mm' : '95%'; let fonteBase = tipo === 'cupom' ? '11px' : '14px';
     
+    // CABEÇALHO DA EMPRESA SINCRONIZADO
+    let cabecalhoEmpresa = `
+      <div style="font-weight:bold;margin-bottom:5px;font-size:${parseInt(fonteBase)+2}px;">${empDados.nome}</div>
+      <div style="margin-bottom:10px;font-size:${fonteBase}">
+         ${empDados.end}<br>
+         ${empDados.tel}
+      </div>
+      <div style="border-bottom:1px solid #000;"></div>
+    `;
+
     let h = `<html><head><style>@media print{@page{margin:0;size:auto}body{margin:0;padding:5px}}body{font-family:'Courier New';width:${larguraBody};margin:0 auto;text-align:center;font-size:${fonteBase}}table{width:100%;border-collapse:collapse;margin-top:5px}th,td{border-bottom:1px dashed #000;padding:3px 0;text-align:center;font-size:${fonteBase}}th{border-top:1px dashed #000}.text-left{text-align:left}.text-right{text-align:right}.total-final{text-align:right;margin-top:10px;font-weight:bold;font-size:${parseInt(fonteBase)+2}px;border-top:1px dashed #000}</style></head>
-    <body>${logoHtml}<div style="font-weight:bold;margin-bottom:5px;font-size:${parseInt(fonteBase)+2}px;">${empDados.nome}</div><div style="margin-bottom:10px;font-size:${fonteBase}">${empDados.end}<br>${empDados.tel}</div>
-    <div style="border-bottom:1px solid #000;"></div><h3 style="margin:5px 0;">${titulo}</h3><div style="border-bottom:1px dashed #000;padding-bottom:5px;margin-bottom:5px;text-align:left"><b>CLI: ${c.nome.toUpperCase()}</b><br>${c.cpf_cnpj||''}<br>${c.endereco||''}</div>
-    <table><thead><tr><th>Data</th><th class="text-left">Peça</th><th class="text-right">Valor</th></tr></thead><tbody>${itens.map(i=>`<tr><td>${formatarDataBR(i.data).substring(0,5)}</td><td class="text-left">${i.desc.toUpperCase()}</td><td class="text-right">${formatarMoeda(i.valor)}</td></tr>`).join('')}</tbody></table>
-    <div style="text-align:right;margin-top:10px">TOTAL: <b>${formatarMoeda(total)}</b></div><div style="text-align:right">PAGO: <b>${formatarMoeda(totalPago)}</b></div><div class="total-final">SALDO: ${formatarMoeda(saldoDevedor)}</div>${campoAssinatura}<br><p style="font-size:10px">Emitido: ${new Date().toLocaleString('pt-BR')}</p></body></html>`;
+    <body>
+      ${logoHtml}
+      ${cabecalhoEmpresa}
+      <h3 style="margin:5px 0;">${titulo}</h3>
+      <div style="border-bottom:1px dashed #000;padding-bottom:5px;margin-bottom:5px;text-align:left"><b>CLI: ${c.nome.toUpperCase()}</b><br>${c.cpf_cnpj||''}<br>${c.endereco||''}</div>
+      <table><thead><tr><th>Data</th><th class="text-left">Peça</th><th class="text-right">Valor</th></tr></thead><tbody>${itens.map(i=>`<tr><td>${formatarDataBR(i.data).substring(0,5)}</td><td class="text-left">${i.desc.toUpperCase()}</td><td class="text-right">${formatarMoeda(i.valor)}</td></tr>`).join('')}</tbody></table>
+      <div style="text-align:right;margin-top:10px">TOTAL: <b>${formatarMoeda(total)}</b></div><div style="text-align:right">PAGO: <b>${formatarMoeda(totalPago)}</b></div><div class="total-final">SALDO: ${formatarMoeda(saldoDevedor)}</div>${campoAssinatura}<br><p style="font-size:10px">Emitido: ${new Date().toLocaleString('pt-BR')}</p></body></html>`;
     let win = window.open('', '_blank'); win.document.write(h); win.document.close(); setTimeout(() => { win.print(); }, 800);
   }
   
