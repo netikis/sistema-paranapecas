@@ -14,32 +14,17 @@
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <style>
   body { font-family: 'Segoe UI', Arial, sans-serif; background: #000; margin: 0; color: #fff; overflow-x: hidden; }
   
-  /* LOGIN OTIMIZADO */
-  #loginOverlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: linear-gradient(135deg, #000000 0%, #0d47a1 150%);
-    z-index: 9999;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-  }
-  .login-box {
-    background: rgba(20, 20, 20, 0.95); padding: 40px; border-radius: 15px; border: 1px solid #333;
-    text-align: center; width: 320px; box-shadow: 0 10px 40px rgba(0,0,0,0.8);
-  }
-  .login-box input {
-      background: #222; border: 1px solid #444; color: #fff; margin-bottom: 15px;
-      font-size: 16px; padding: 15px; width: 100%; border-radius: 8px; box-sizing: border-box; text-align: center;
-  }
+  /* LOGIN */
+  #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #000000 0%, #0d47a1 150%); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .login-box { background: rgba(20, 20, 20, 0.95); padding: 40px; border-radius: 15px; border: 1px solid #333; text-align: center; width: 320px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
+  .login-box input { background: #222; border: 1px solid #444; color: #fff; margin-bottom: 15px; font-size: 16px; padding: 15px; width: 100%; border-radius: 8px; box-sizing: border-box; text-align: center; }
   
-  /* BOTÕES DE PERFIL */
-  .btn-perfil {
-      width: 100%; padding: 15px; margin: 10px 0; border: none; border-radius: 8px;
-      font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
-      transition: transform 0.2s;
-  }
+  .btn-perfil { width: 100%; padding: 15px; margin: 10px 0; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: transform 0.2s; }
   .btn-perfil:active { transform: scale(0.98); }
   .btn-admin { background: linear-gradient(135deg, #1565c0, #0d47a1); color: #fff; }
   .btn-balcao { background: linear-gradient(135deg, #424242, #616161); color: #fff; }
@@ -49,7 +34,6 @@
   .header img { height: 40px; max-width: 100px; object-fit: contain; }
   .container { width: 98%; padding: 10px; margin: 0 auto; box-sizing: border-box; }
   
-  /* PERMISSÕES */
   body.role-func .admin-only { display: none !important; }
   body.mode-client .admin-only, body.mode-client .header button, body.mode-client .card:not(#areaClienteRemoto) { display: none !important; }
   body.mode-client #areaClienteRemoto { display: block !important; }
@@ -59,48 +43,36 @@
   .dash-card { flex: 1; padding: 15px 5px; border-radius: 10px; text-align: center; border: 1px solid #333; min-width: 100px; }
   .dash-card h3 { margin: 0 0 5px 0; font-size: 12px; text-transform: uppercase; }
   .dash-card div { font-size: 16px !important; font-weight: bold; }
-  
   .bg-blue { background: linear-gradient(135deg, #1e3c72, #2a5298); } 
   .bg-green { background: linear-gradient(135deg, #11998e, #38ef7d); color: #000; } 
   .bg-red { background: linear-gradient(135deg, #cb2d3e, #ef473a); } 
   
   .card { background: #111; padding: 15px; margin-bottom: 20px; border-radius: 10px; border: 1px solid #333; }
   .card.clientes { background: #fff; color: #000; width: 100%; box-sizing: border-box; overflow-x: auto; }
-  
   .row-inputs { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
   .row-inputs input { flex: 1; min-width: 140px; }
   input, select { padding: 10px; border-radius: 5px; border: 1px solid #555; background: #222; color: #fff; width: 100%; box-sizing: border-box; }
-  
   button { padding: 10px 15px; margin: 2px; border-radius: 5px; cursor: pointer; font-weight: bold; border: none; color: #fff; text-transform: uppercase; font-size: 11px; }
   .primary { background: #1565c0; } .success { background: #2e7d32; } .danger { background: #c62828; } .warning { background: #f57c00; } .dark { background: #333; } .wapp { background: #25D366; color: #fff; }
-  
   table { width: 100%; border-collapse: collapse; margin-top: 15px; background: #fff; color: #000; border-radius: 8px; overflow: hidden; }
   th { background: #444; color: #fff; padding: 10px; font-size: 11px; }
   td { border-bottom: 1px solid #eee; padding: 8px; text-align: center; font-size: 12px; }
   .vencido { color: #c62828 !important; font-weight: bold; background-color: #ffebee; }
   .search-box { width: 100%; padding: 12px; font-size: 16px; border: 2px solid #0d47a1; border-radius: 8px; margin-bottom: 20px; background: #f0f8ff; color: #000; font-weight: bold; box-sizing: border-box; }
-
   .client-card { background: #f9f9f9; color: #000; padding: 15px; margin-top: 20px; margin-bottom: 30px; border-radius: 15px; border: 3px solid #333; box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
   .top-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 15px; align-items: center; }
   .table-actions { display: flex; justify-content: center; align-items: center; gap: 5px; flex-wrap: nowrap; }
   .table-actions button, .table-actions label { margin: 0; padding: 0 10px; height: 32px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; font-size: 12px; border-radius: 5px; font-weight: bold; cursor: pointer; color: #fff; }
-  
   .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 1000; }
   .modal-content { background: #222; padding: 25px; border-radius: 10px; width: 90%; max-width: 450px; color: #fff; border: 1px solid #555; }
   .modal-content input, .modal-content select { width: 95%; margin-bottom: 10px; }
-
   #canvasAssinatura, #canvasRemoto { background: #fff; border: 2px dashed #555; cursor: crosshair; touch-action: none; width: 100%; height: 200px; border-radius: 5px; margin-bottom: 10px; }
   .check-save { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; font-size: 14px; background: #333; padding: 10px; border-radius: 5px; }
   #hiddenPrintArea { position: absolute; top: -9999px; left: -9999px; width: 350px; background: #fff; color: #000; padding: 10px; }
-  
   #userInfo { position: absolute; top: 10px; left: 10px; font-size: 10px; color: #aaa; z-index: 10001; }
 
   @media (max-width: 768px) {
-    .container { padding: 10px; width: 100%; }
-    .header { padding: 10px; }
-    .titulo { font-size: 16px; }
-    .dash-card { padding: 10px 2px; }
-    .top-actions button { flex: 1; min-width: 120px; }
+    .container { padding: 10px; width: 100%; } .header { padding: 10px; } .titulo { font-size: 16px; } .dash-card { padding: 10px 2px; } .top-actions button { flex: 1; min-width: 120px; }
   }
 </style>
 </head>
@@ -109,14 +81,12 @@
 <div id="loginOverlay">
   <div class="login-box">
     <img id="logoLogin" src="" style="max-height: 60px; margin-bottom: 10px; display:none;">
-    
     <div id="step-1">
         <h2 style="color: #fff; margin-top: 0;">QUEM É VOCÊ?</h2>
         <p style="color: #aaa; font-size: 12px; margin-bottom:20px;">Selecione seu perfil</p>
         <button class="btn-perfil btn-admin" onclick="selecionarPerfil('admin')">🛡️ ADMINISTRADOR</button>
         <button class="btn-perfil btn-balcao" onclick="selecionarPerfil('func')">👤 BALCÃO / VENDAS</button>
     </div>
-
     <div id="step-2" style="display:none;">
         <h3 id="tituloLogin" style="color: #fff; margin-top: 0;">SENHA</h3>
         <br>
@@ -126,8 +96,7 @@
             <button type="submit" class="primary" id="btnLogin" style="width: 100%; padding: 12px; font-size: 14px;">ENTRAR</button>
         </form>
         <div id="msgLogin" style="color: #ff5252; margin-top: 15px; font-size: 13px;"></div>
-        <br>
-        <button class="dark" onclick="voltarLogin()" style="width: 100%; margin-top:10px; background: transparent; color: #888;">⬅ Voltar</button>
+        <br><button class="dark" onclick="voltarLogin()" style="width: 100%; margin-top:10px; background: transparent; color: #888;">⬅ Voltar</button>
     </div>
   </div>
 </div>
@@ -269,7 +238,7 @@
     <p>IMPRIMIR:</p>
     <div style="display:flex; gap:10px; justify-content:center;">
         <button class="primary" onclick="finalizarAssinatura('extrato')">A4</button>
-        <button class="warning" onclick="finalizarAssinatura('cupom')">CUPOM</button>
+        <button class="warning" onclick="finalizarAssinatura('cupom')">NOTA (CUPOM)</button>
     </div>
   </div>
 </div>
@@ -277,7 +246,6 @@
 <div id="hiddenPrintArea"></div>
 
 <script>
-  // 🔴 SUAS CHAVES INSERIDAS 🔴
   const firebaseConfig = {
     apiKey: "AIzaSyDx0wGiH9IdMH6_8RSi-2upT-UnZqZ_UmE",
     authDomain: "gestaodeclientes-7f8f0.firebaseapp.com",
@@ -302,7 +270,6 @@
   let unsubscribeCatalogo = null;
   let unsubscribeEmpresa = null;
 
-  // --- MÁSCARAS JQUERY ---
   $(document).ready(function(){
       $('#cep').mask('00000-000');
       $('#telefone').mask('(00) 00000-0000');
@@ -311,7 +278,6 @@
       }});
   });
 
-  // --- BUSCA CEP AUTOMÁTICA (VIACEP) ---
   function buscarCep() {
       let cep = document.getElementById('cep').value.replace(/\D/g, '');
       if (cep.length !== 8) return;
@@ -324,15 +290,11 @@
                 document.getElementById('cidade').value = `${data.localidade} - ${data.uf}`;
                 document.getElementById('endereco').value = data.logradouro;
                 document.getElementById('telefone').focus();
-            } else {
-                Swal.fire('Atenção', 'CEP não encontrado.', 'warning');
-                document.getElementById('cidade').value = ""; document.getElementById('endereco').value = "";
-            }
+            } else { Swal.fire('Atenção', 'CEP não encontrado.', 'warning'); document.getElementById('cidade').value = ""; document.getElementById('endereco').value = ""; }
         })
         .catch(() => { Swal.fire('Erro', 'Falha ao buscar CEP.', 'error'); document.getElementById('cidade').value = ""; document.getElementById('endereco').value = ""; });
   }
 
-  // --- LOGICA DE LOGIN ---
   auth.onAuthStateChanged((user) => {
       const isClientMode = document.body.classList.contains('mode-client');
       if (isClientMode) return; 
@@ -356,53 +318,13 @@
       }
   });
 
-  function selecionarPerfil(role) {
-      roleSelected = role;
-      document.getElementById('step-1').style.display = 'none';
-      document.getElementById('step-2').style.display = 'block';
-      let titulo = role === 'admin' ? 'ÁREA ADMINISTRATIVA' : 'ÁREA DE BALCÃO';
-      document.getElementById('tituloLogin').innerText = titulo;
-      document.getElementById('emailInput').focus();
-  }
-
-  function voltarLogin() {
-      roleSelected = '';
-      document.getElementById('step-1').style.display = 'block';
-      document.getElementById('step-2').style.display = 'none';
-      document.getElementById('senhaInput').value = '';
-  }
-
-  function fazerLogin() {
-      const email = document.getElementById('emailInput').value;
-      const pass = document.getElementById('senhaInput').value;
-      const msg = document.getElementById('msgLogin');
-      document.getElementById('btnLogin').innerText = "Verificando...";
-      msg.innerText = "";
-      auth.signInWithEmailAndPassword(email, pass).catch((error) => {
-          document.getElementById('btnLogin').innerText = "ENTRAR";
-          if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') { msg.innerText = "E-mail ou senha incorretos."; } else { msg.innerText = "Erro: " + error.message; }
-      });
-  }
-
+  function selecionarPerfil(role) { roleSelected = role; document.getElementById('step-1').style.display = 'none'; document.getElementById('step-2').style.display = 'block'; let titulo = role === 'admin' ? 'ÁREA ADMINISTRATIVA' : 'ÁREA DE BALCÃO'; document.getElementById('tituloLogin').innerText = titulo; document.getElementById('emailInput').focus(); }
+  function voltarLogin() { roleSelected = ''; document.getElementById('step-1').style.display = 'block'; document.getElementById('step-2').style.display = 'none'; document.getElementById('senhaInput').value = ''; }
+  function fazerLogin() { const email = document.getElementById('emailInput').value; const pass = document.getElementById('senhaInput').value; const msg = document.getElementById('msgLogin'); document.getElementById('btnLogin').innerText = "Verificando..."; msg.innerText = ""; auth.signInWithEmailAndPassword(email, pass).catch((error) => { document.getElementById('btnLogin').innerText = "ENTRAR"; if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') { msg.innerText = "E-mail ou senha incorretos."; } else { msg.innerText = "Erro: " + error.message; } }); }
   function logout() { auth.signOut(); }
-
-  // --- CADASTRO DE USUÁRIO (SECUNDÁRIO) ---
   function abrirModalUsuario() { document.getElementById('modalUsuario').style.display = 'flex'; }
-  
-  function criarUsuario() {
-      const nome = document.getElementById('novoUserNome').value;
-      const email = document.getElementById('novoUserEmail').value;
-      const senha = document.getElementById('novoUserSenha').value;
-      const perfil = document.getElementById('novoUserPerfil').value;
-      if(!email || !senha || !nome) return Swal.fire('Erro', 'Preencha tudo!', 'error');
-      const secondaryApp = firebase.initializeApp(firebaseConfig, "Secondary");
-      secondaryApp.auth().createUserWithEmailAndPassword(email, senha)
-          .then((userCredential) => { return db.collection("usuarios").doc(userCredential.user.uid).set({ nome: nome, email: email, perfil: perfil }); })
-          .then(() => { secondaryApp.auth().signOut(); secondaryApp.delete(); document.getElementById('modalUsuario').style.display = 'none'; document.getElementById('novoUserNome').value = ''; document.getElementById('novoUserEmail').value = ''; document.getElementById('novoUserSenha').value = ''; Swal.fire('Sucesso', 'Usuário criado com sucesso!', 'success'); })
-          .catch((error) => { Swal.fire('Erro', error.message, 'error'); secondaryApp.delete(); });
-  }
+  function criarUsuario() { const nome = document.getElementById('novoUserNome').value; const email = document.getElementById('novoUserEmail').value; const senha = document.getElementById('novoUserSenha').value; const perfil = document.getElementById('novoUserPerfil').value; if(!email || !senha || !nome) return Swal.fire('Erro', 'Preencha tudo!', 'error'); const secondaryApp = firebase.initializeApp(firebaseConfig, "Secondary"); secondaryApp.auth().createUserWithEmailAndPassword(email, senha).then((userCredential) => { return db.collection("usuarios").doc(userCredential.user.uid).set({ nome: nome, email: email, perfil: perfil }); }).then(() => { secondaryApp.auth().signOut(); secondaryApp.delete(); document.getElementById('modalUsuario').style.display = 'none'; document.getElementById('novoUserNome').value = ''; document.getElementById('novoUserEmail').value = ''; document.getElementById('novoUserSenha').value = ''; Swal.fire('Sucesso', 'Usuário criado com sucesso!', 'success'); }).catch((error) => { Swal.fire('Erro', error.message, 'error'); secondaryApp.delete(); }); }
 
-  // --- SINCRONIZAÇÃO OTIMIZADA ---
   function iniciarSincronizacao() {
       if(unsubscribeClientes) return; 
       unsubscribeClientes = db.collection("clientes").onSnapshot((snapshot) => { clientes = []; snapshot.forEach((doc) => { clientes.push({ id: doc.id, ...doc.data() }); }); atualizarSelect(); atualizarDashboard(); render(); });
@@ -412,40 +334,26 @@
               let d = doc.data(); 
               empDados = { nome: d.nome, end: d.end, tel: d.tel }; 
               if(document.getElementById('confEmpNome')) { document.getElementById('confEmpNome').value = empDados.nome; document.getElementById('confEmpEnd').value = empDados.end; document.getElementById('confEmpTel').value = empDados.tel; }
-              // SE TIVER LOGO NO BANCO, USA ELA
               if(d.logo) { logoBase64 = d.logo; aplicarLogo(); }
           }
       });
       aplicarLogo();
   }
 
-  function pararSincronizacao() {
-      if(unsubscribeClientes) { unsubscribeClientes(); unsubscribeClientes = null; }
-      if(unsubscribeCatalogo) { unsubscribeCatalogo(); unsubscribeCatalogo = null; }
-      if(unsubscribeEmpresa) { unsubscribeEmpresa(); unsubscribeEmpresa = null; }
-      clientes = []; catalogo = [];
-  }
+  function pararSincronizacao() { if(unsubscribeClientes) { unsubscribeClientes(); unsubscribeClientes = null; } if(unsubscribeCatalogo) { unsubscribeCatalogo(); unsubscribeCatalogo = null; } if(unsubscribeEmpresa) { unsubscribeEmpresa(); unsubscribeEmpresa = null; } clientes = []; catalogo = []; }
 
-  // --- LOGO NA NUVEM (UPLOAD) ---
   document.getElementById('logoInput').addEventListener('change', e => {
     let file = e.target.files[0];
     if (!file) return;
-    if (file.size > 700 * 1024) { // Limite de 700KB
-        Swal.fire('Erro', 'A imagem é muito grande! Use um arquivo menor que 700KB.', 'error');
-        return;
-    }
+    if (file.size > 700 * 1024) { Swal.fire('Erro', 'A imagem é muito grande! Use um arquivo menor que 700KB.', 'error'); return; }
     let r = new FileReader();
     r.onload = ev => {
         let base64 = ev.target.result;
-        // Salvar no Firestore (mesmo doc da empresa)
-        db.collection("config").doc("empresa").set({ logo: base64 }, { merge: true })
-            .then(() => Swal.fire('Sucesso', 'Logo salva na nuvem!', 'success'))
-            .catch(err => Swal.fire('Erro', 'Erro ao salvar logo: ' + err.message, 'error'));
+        db.collection("config").doc("empresa").set({ logo: base64 }, { merge: true }).then(() => Swal.fire('Sucesso', 'Logo salva na nuvem!', 'success')).catch(err => Swal.fire('Erro', 'Erro ao salvar logo: ' + err.message, 'error'));
     };
     r.readAsDataURL(file);
   });
 
-  // --- RESTO DO CÓDIGO ---
   let isClientMode = false; let remoteClientId = null;
   const canvasRemoto = document.getElementById('canvasRemoto'); const ctxRemoto = canvasRemoto.getContext('2d');
   const canvas = document.getElementById('canvasAssinatura'); const ctx = canvas.getContext('2d');
@@ -486,7 +394,6 @@
   function limparRemoto() { ctxRemoto.clearRect(0, 0, canvasRemoto.width, canvasRemoto.height); }
   function salvarAssinaturaRemota() { let img = canvasRemoto.toDataURL(); db.collection("clientes").doc(remoteClientId).get().then(doc => { let itens = doc.data().itens; itens.forEach(i => { if(!i.pago) i.assinatura = img; }); db.collection("clientes").doc(remoteClientId).update({ itens }).then(() => { Swal.fire({ icon: 'success', title: 'Assinado!', text: 'Assinatura enviada.', showConfirmButton: false }); setTimeout(() => { document.body.innerHTML = "<h2 style='text-align:center; padding:50px; color:#fff;'>Obrigado! Pode fechar esta janela.</h2>"; }, 2000); }); }); }
   function gerarLinkRemoto(id) { let l = `${window.location.href.split('?')[0]}?cliente=${id}`; navigator.clipboard.writeText(l).then(() => Swal.fire({title: 'Link Copiado!', html: `Envie para o cliente:<br><b>${l}</b>`, icon: 'success'})); }
-  
   function salvarDadosEmpresa() { let n=document.getElementById('confEmpNome').value, e=document.getElementById('confEmpEnd').value, t=document.getElementById('confEmpTel').value; db.collection("config").doc("empresa").set({ nome: n, end: e, tel: t }, {merge: true}).then(() => Swal.fire({ icon: 'success', title: 'Sucesso!', text: 'Dados sincronizados!', timer: 1500, showConfirmButton: false })); }
   function salvarCatalogo() { let n=document.getElementById('catNome').value,v=Number(document.getElementById('catValor').value); if(n&&v){db.collection("catalogo").add({nome:n.toUpperCase(),valor:v});document.getElementById('catNome').value='';document.getElementById('catValor').value='';} }
   function apagarCat(id){db.collection("catalogo").doc(id).delete();}
@@ -515,36 +422,63 @@
     });
   }
 
-  function abrirAssinatura(id) { const checks = document.querySelectorAll(`.sel-${id}:checked`); if(checks.length === 0) return Swal.fire('Atenção', "Selecione itens", 'warning'); signId = id; document.getElementById('assinaturaModal').style.display = 'flex'; canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.strokeStyle = '#000'; ctx.clearRect(0,0,canvas.width,canvas.height); }
-  function fecharAssinatura() { document.getElementById('assinaturaModal').style.display = 'none'; signId = null; }
-  function limparAssinatura() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
-  function finalizarAssinatura(tipo) { let imgAssinatura = canvas.toDataURL(); let salvar = document.getElementById('salvarAssinaturaCheck').checked; if (salvar && signId) { let c = clientes.find(x => x.id === signId); let itens = [...c.itens]; let checks = document.querySelectorAll(`.sel-${signId}:checked`); checks.forEach(cb => { let idx = parseInt(cb.value); if(itens[idx]) itens[idx].assinatura = imgAssinatura; }); db.collection("clientes").doc(signId).update({ itens }); } if (tipo === 'salvar_apenas') { Swal.fire({icon:'success',title:'Salvo!',timer:1000,showConfirmButton:false}); fecharAssinatura(); return; } imprimirSelecionados(signId, tipo, imgAssinatura); fecharAssinatura(); }
-  
-  function gerarImagemWhatsApp() {
-      if (!empDados.end || empDados.end === "") { Swal.fire({ title: 'Aguarde...', text: 'Carregando dados da empresa...', icon: 'info', timer: 3000 }); db.collection("config").doc("empresa").get().then(doc => { if(doc.exists) { let d = doc.data(); empDados = { nome: d.nome, end: d.end, tel: d.tel }; } }); return; }
-      let c = clientes.find(x => x.id === signId); const checks = document.querySelectorAll(`.sel-${signId}:checked`);
-      const indices = Array.from(checks).map(cb => parseInt(cb.value)); const selecionados = indices.map(idx => c.itens[idx]);
-      const totalS = selecionados.reduce((a, i) => a + (Number(i.valor) || 0), 0); const totalPago = selecionados.reduce((a, i) => a + (Number(i.pagoValor) || 0), 0); const assinatura = canvas.toDataURL();
-      let html = `<div style="background:#fff; font-family:'Courier New'; padding:15px; border:1px solid #ccc; width:350px;"><div style="text-align:center; font-weight:bold; margin-bottom:5px; font-size:16px;">${empDados.nome}</div><div style="text-align:center; font-size:11px; margin-bottom:10px; color:#333;">${empDados.end}<br>${empDados.tel}</div><hr style="border:0; border-top:1px dashed #000;"><div style="font-size:12px; margin-bottom:10px;"><b>CLIENTE:</b> ${c.nome.toUpperCase()}</div><table style="width:100%; font-size:11px; border-collapse:collapse; margin-bottom:10px;"><tr style="border-bottom:1px solid #000;"><th style="text-align:left;">Peça</th><th style="text-align:right;">Valor</th></tr>${selecionados.map(i => `<tr><td style="text-align:left; padding:3px 0;">${i.desc}</td><td style="text-align:right; padding:3px 0;">${formatarMoeda(i.valor)}</td></tr>`).join('')}</table><hr style="border:0; border-top:1px dashed #000;"><div style="text-align:right; font-size:14px; font-weight:bold;">TOTAL: ${formatarMoeda(totalS)}</div><div style="text-align:right; font-size:12px;">PAGO: ${formatarMoeda(totalPago)}</div><div style="text-align:right; font-size:14px; font-weight:bold; color:red;">RESTANTE: ${formatarMoeda(totalS-totalPago)}</div><div style="margin-top:20px; text-align:center;"><img src="${assinatura}" style="max-height:50px;"><br><span style="font-size:10px; color:#555;">Assinado Digitalmente</span></div><div style="margin-top:10px; text-align:center; font-size:9px; color:#aaa;">Emitido em: ${new Date().toLocaleString('pt-BR')}</div></div>`;
-      let area = document.getElementById('hiddenPrintArea'); area.innerHTML = html;
-      setTimeout(() => { html2canvas(area, { scale: 2 }).then(canvasImg => { Swal.fire({ title: 'Imagem Gerada!', text: 'Segure na imagem para copiar.', imageUrl: canvasImg.toDataURL("image/jpeg", 0.9), imageWidth: 300, confirmButtonText: 'Fechar' }); area.innerHTML = ''; fecharAssinatura(); }); }, 500);
-  }
-
-  function pagar(id, ii){let c=clientes.find(x=>x.id===id),itens=[...c.itens],v=Number(prompt(`Resta: ${formatarMoeda(itens[ii].valor-itens[ii].pagoValor)}\nQuanto pagou?`));if(v>0){itens[ii].pagoValor+=v;if(itens[ii].pagoValor>=itens[ii].valor)itens[ii].pago=true;db.collection("clientes").doc(id).update({itens});Swal.fire({icon:'success',title:'Pago',toast:true,position:'top-end',timer:1000,showConfirmButton:false});}}
-  function abrirEditar(id,ii){let c=clientes.find(x=>x.id===id),i=c.itens[ii];editRef={id,ii};document.getElementById('editDesc').value=i.desc;document.getElementById('editQtd').value=i.qtd||1;document.getElementById('editValor').value=i.valor;document.getElementById('editData').value=i.data||"";document.getElementById('editVenc').value=i.venc||"";document.getElementById('editModal').style.display='flex';}
-  function salvarEdicao(){let {id,ii}=editRef,c=clientes.find(x=>x.id===id),itens=[...c.itens];itens[ii].desc=document.getElementById('editDesc').value;itens[ii].qtd=Number(document.getElementById('editQtd').value);itens[ii].valor=Number(document.getElementById('editValor').value);itens[ii].data=document.getElementById('editData').value;itens[ii].venc=document.getElementById('editVenc').value;db.collection("clientes").doc(id).update({itens}).then(()=>fecharModal());}
-  function fecharModal(){document.getElementById('editModal').style.display='none';}
-  function excluirLançamento(id,ii){Swal.fire({title:'Excluir item?',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33',confirmButtonText:'Sim'}).then((r)=>{if(r.isConfirmed){let c=clientes.find(x=>x.id===id),itens=[...c.itens];itens.splice(ii,1);db.collection("clientes").doc(id).update({itens});}});}
-  function excluirCliente(id){Swal.fire({title:'Excluir Cliente?',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33',confirmButtonText:'Excluir Tudo'}).then((r)=>{if(r.isConfirmed)db.collection("clientes").doc(id).delete();});}
-  function cobrarWhatsApp(id, saldo) { let c = clientes.find(x => x.id === id); if(saldo<=0) return Swal.fire('Info','Sem débito','info'); if(!c.telefone) return Swal.fire('Erro','Sem telefone','error'); let t = `Olá *${c.nome}*, aqui é da *${empDados.nome}*.\nConsta saldo aberto de *${formatarMoeda(saldo)}*. Podemos acertar?`; window.open(`https://wa.me/55${c.telefone.replace(/\D/g,'')}?text=${encodeURIComponent(t)}`,'_blank'); }
-  function imprimirSelecionados(id, tipo, assinaturaImg = null) { const c = clientes.find(x => x.id === id); const checks = document.querySelectorAll(`.sel-${id}:checked`); const indices = Array.from(checks).map(cb => parseInt(cb.value)); if (indices.length === 0) return Swal.fire('Aviso', "Selecione itens", 'warning'); const selecionados = indices.map(idx => c.itens[idx]); const totalS = selecionados.reduce((a, i) => a + (Number(i.valor) || 0), 0); gerarImpressao(c, selecionados, totalS, tipo, "COMPROVANTE", assinaturaImg); }
-  function imprimirExtratoGeral(id){ let c = clientes.find(x => x.id === id); if(!c.itens.length)return; let t = c.itens.reduce((a, i) => a + (Number(i.valor) || 0), 0); gerarImpressao(c, c.itens, t, 'extrato', "EXTRATO GERAL"); }
   function gerarImpressao(c, itens, total, tipo, titulo, assinaturaNova = null) {
-    const logoHtml = logoBase64 ? `<img src="${logoBase64}" style="max-height:60px; display:block; margin:0 auto 5px auto;">` : ''; let totalPago = itens.reduce((acc, i) => acc + (Number(i.pagoValor) || 0), 0); let saldoDevedor = total - totalPago; let imgFinal = assinaturaNova || (itens.find(i=>i.assinatura)?.assinatura); const campoAssinatura = imgFinal ? `<div style="margin-top:20px;"><img src="${imgFinal}" style="max-height:60px; border-bottom:1px solid #000;"><br><span style="font-size:10px">Assinado Digitalmente</span></div>` : `<br><div style="font-size:12px;">Assinatura</div><div style="border-bottom:1px solid #000; width:80%; margin:30px auto 0 auto;"></div>`; let larguraBody = tipo === 'cupom' ? '70mm' : '95%'; let fonteBase = tipo === 'cupom' ? '11px' : '14px';
-    let cabecalhoEmpresa = `<div style="font-weight:bold;margin-bottom:5px;font-size:${parseInt(fonteBase)+2}px;">${empDados.nome}</div><div style="margin-bottom:10px;font-size:${fonteBase}">${empDados.end}<br>${empDados.tel}</div><div style="border-bottom:1px solid #000;"></div>`;
-    let h = `<html><head><style>@media print{@page{margin:0;size:auto}body{margin:0;padding:5px}}body{font-family:'Courier New';width:${larguraBody};margin:0 auto;text-align:center;font-size:${fonteBase}}table{width:100%;border-collapse:collapse;margin-top:5px}th,td{border-bottom:1px dashed #000;padding:3px 0;text-align:center;font-size:${fonteBase}}th{border-top:1px dashed #000}.text-left{text-align:left}.text-right{text-align:right}.total-final{text-align:right;margin-top:10px;font-weight:bold;font-size:${parseInt(fonteBase)+2}px;border-top:1px dashed #000}</style></head><body>${logoHtml}${cabecalhoEmpresa}<h3 style="margin:5px 0;">${titulo}</h3><div style="border-bottom:1px dashed #000;padding-bottom:5px;margin-bottom:5px;text-align:left"><b>CLI: ${c.nome.toUpperCase()}</b><br>${c.cpf_cnpj||''}<br>${c.endereco||''}</div><table><thead><tr><th>Data</th><th class="text-left">Peça</th><th class="text-right">Valor</th></tr></thead><tbody>${itens.map(i=>`<tr><td>${formatarDataBR(i.data).substring(0,5)}</td><td class="text-left">${i.desc.toUpperCase()}</td><td class="text-right">${formatarMoeda(i.valor)}</td></tr>`).join('')}</tbody></table><div style="text-align:right;margin-top:10px">TOTAL: <b>${formatarMoeda(total)}</b></div><div style="text-align:right">PAGO: <b>${formatarMoeda(totalPago)}</b></div><div class="total-final">SALDO: ${formatarMoeda(saldoDevedor)}</div>${campoAssinatura}<br><p style="font-size:10px">Emitido: ${new Date().toLocaleString('pt-BR')}</p></body></html>`;
+    const logoHtml = logoBase64 ? `<img src="${logoBase64}" style="max-height:60px; display:block; margin:0 auto 5px auto;">` : '';
+    let totalPago = itens.reduce((acc, i) => acc + (Number(i.pagoValor) || 0), 0);
+    let saldoDevedor = total - totalPago;
+    let imgFinal = assinaturaNova || (itens.find(i=>i.assinatura)?.assinatura);
+    
+    // LAYOUT TIPO "CUPOM" (NFC-e Fake)
+    if (tipo === 'cupom') {
+        // Gerar QR Code temporário
+        let qrContainer = document.createElement('div');
+        new QRCode(qrContainer, { text: "https://seusite.com/validar?id="+c.id, width: 80, height: 80 });
+        let qrCodeImg = qrContainer.querySelector('img').src;
+
+        let h = `<html><head><style>
+            @media print { @page { margin: 0; size: auto; } body { margin: 0; padding: 5px; } }
+            body { font-family: 'Courier New', monospace; width: 70mm; margin: 0 auto; text-align: center; font-size: 11px; color: #000; }
+            .sep { border-bottom: 1px dashed #000; margin: 5px 0; }
+            .text-left { text-align: left; } .text-right { text-align: right; }
+            .bold { font-weight: bold; }
+        </style></head><body>
+            ${logoHtml}
+            <div class="bold" style="font-size:14px">${empDados.nome}</div>
+            <div>${empDados.end}</div>
+            <div>${empDados.tel}</div>
+            <div class="sep"></div>
+            <div class="bold">DOCUMENTO AUXILIAR DE VENDA</div>
+            <div style="font-size:10px">NÃO É DOCUMENTO FISCAL</div>
+            <div class="sep"></div>
+            <table style="width:100%; font-size:11px;">
+                <tr><th class="text-left">ITEM</th><th class="text-right">VALOR</th></tr>
+                ${itens.map((i,idx) => `<tr><td class="text-left">${i.qtd}x ${i.desc.toUpperCase()}</td><td class="text-right">${formatarMoeda(i.valor)}</td></tr>`).join('')}
+            </table>
+            <div class="sep"></div>
+            <div class="text-right bold">TOTAL: ${formatarMoeda(total)}</div>
+            <div class="text-right">PAGO: ${formatarMoeda(totalPago)}</div>
+            <div class="text-right bold" style="font-size:14px">A PAGAR: ${formatarMoeda(saldoDevedor)}</div>
+            <div class="sep"></div>
+            <div class="text-left">CONSUMIDOR:</div>
+            <div class="text-left">${c.nome.toUpperCase()}</div>
+            <div class="text-left">CPF/CNPJ: ${c.cpf_cnpj || 'NÃO INFORMADO'}</div>
+            <div class="sep"></div>
+            ${imgFinal ? `<div style="text-align:center"><img src="${imgFinal}" style="max-height:50px"><br>Assinado Digitalmente</div>` : ''}
+            <br>
+            <div style="text-align:center"><img src="${qrCodeImg}" style="width:80px"></div>
+            <div style="font-size:9px; margin-top:5px">EMISSÃO: ${new Date().toLocaleString('pt-BR')}</div>
+        </body></html>`;
+        
+        let win = window.open('', '_blank'); win.document.write(h); win.document.close(); setTimeout(() => { win.print(); }, 800);
+        return;
+    }
+
+    // LAYOUT PADRÃO A4
+    let cabecalhoEmpresa = `<div style="font-weight:bold;margin-bottom:5px;font-size:16px;">${empDados.nome}</div><div style="margin-bottom:10px;font-size:14px">${empDados.end}<br>${empDados.tel}</div><div style="border-bottom:1px solid #000;"></div>`;
+    let h = `<html><head><style>@media print{@page{margin:0;size:auto}body{margin:0;padding:5px}}body{font-family:'Courier New';width:95%;margin:0 auto;text-align:center;font-size:14px}table{width:100%;border-collapse:collapse;margin-top:5px}th,td{border-bottom:1px dashed #000;padding:3px 0;text-align:center;font-size:14px}th{border-top:1px dashed #000}.text-left{text-align:left}.text-right{text-align:right}.total-final{text-align:right;margin-top:10px;font-weight:bold;font-size:16px;border-top:1px dashed #000}</style></head><body>${logoHtml}${cabecalhoEmpresa}<h3 style="margin:5px 0;">${titulo}</h3><div style="border-bottom:1px dashed #000;padding-bottom:5px;margin-bottom:5px;text-align:left"><b>CLI: ${c.nome.toUpperCase()}</b><br>${c.cpf_cnpj||''}<br>${c.endereco||''}</div><table><thead><tr><th>Data</th><th class="text-left">Peça</th><th class="text-right">Valor</th></tr></thead><tbody>${itens.map(i=>`<tr><td>${formatarDataBR(i.data).substring(0,5)}</td><td class="text-left">${i.desc.toUpperCase()}</td><td class="text-right">${formatarMoeda(i.valor)}</td></tr>`).join('')}</tbody></table><div style="text-align:right;margin-top:10px">TOTAL: <b>${formatarMoeda(total)}</b></div><div style="text-align:right">PAGO: <b>${formatarMoeda(totalPago)}</b></div><div class="total-final">SALDO: ${formatarMoeda(saldoDevedor)}</div>${imgFinal ? `<br><img src="${imgFinal}" style="max-height:60px"><br>Assinado Digitalmente` : '<br><br>__________________________<br>Assinatura'}</body></html>`;
     let win = window.open('', '_blank'); win.document.write(h); win.document.close(); setTimeout(() => { win.print(); }, 800);
   }
+
   function fazerBackupLocal() { if(!clientes.length)return Swal.fire('Erro','Vazio','error'); let b=new Blob([JSON.stringify(clientes)],{type:"application/json"}),l=document.createElement("a");l.href=URL.createObjectURL(b);l.download=`backup_${new Date().toISOString().split('T')[0]}.json`;document.body.appendChild(l);l.click();document.body.removeChild(l);Swal.fire('Sucesso','Backup salvo','success'); }
   function gerarRelatorioMes() { let h=new Date(),m=h.toISOString().slice(0,7),t=0,r=0;clientes.forEach(c=>{c.itens.forEach(i=>{if(i.data&&i.data.startsWith(m)){t+=(Number(i.valor)||0);r+=(Number(i.pagoValor)||0)}})});let w=window.open('','_blank');w.document.write(`<html><body style="font-family:Arial;text-align:center"><h2>FECHAMENTO (${m})</h2><p>Vendido: <b>${formatarMoeda(t)}</b></p><p>Recebido: <b>${formatarMoeda(r)}</b></p><p>A Receber: <b>${formatarMoeda(t-r)}</b></p></body></html>`);w.document.close();setTimeout(()=>{w.print()},800);}
   function atualizarDashboard(){let t=0,r=0;clientes.forEach(c=>c.itens.forEach(i=>{t+=(Number(i.valor)||0);r+=(Number(i.pagoValor)||0)}));document.getElementById('dashTotal').innerText=formatarMoeda(t);document.getElementById('dashRecebido').innerText=formatarMoeda(r);document.getElementById('dashDevedor').innerText=formatarMoeda(t-r);}
