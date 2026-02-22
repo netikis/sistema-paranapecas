@@ -20,12 +20,23 @@
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: #000; z-index: 9999;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
+    transition: all 0.3s;
   }
   .login-box {
-    background: #111; padding: 40px; border-radius: 10px; border: 1px solid #333;
-    text-align: center; width: 320px; box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    background: #111; padding: 40px; border-radius: 15px; border: 1px solid #333;
+    text-align: center; width: 320px; box-shadow: 0 0 30px rgba(0,0,0,0.8);
   }
   
+  /* BOTÕES DE PERFIL */
+  .btn-perfil {
+      width: 100%; padding: 15px; margin: 10px 0; border: none; border-radius: 8px;
+      font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
+      transition: transform 0.2s;
+  }
+  .btn-perfil:active { transform: scale(0.98); }
+  .btn-admin { background: linear-gradient(135deg, #1565c0, #0d47a1); color: #fff; }
+  .btn-balcao { background: linear-gradient(135deg, #424242, #616161); color: #fff; }
+
   .header { display: flex; align-items: center; justify-content: space-between; background: #0d47a1; color: #fff; padding: 15px 30px; }
   .header .titulo { flex: 1; text-align: center; font-size: 20px; font-weight: bold; text-transform: uppercase; }
   .header img { height: 40px; max-width: 100px; object-fit: contain; }
@@ -108,13 +119,31 @@
 
 <div id="loginOverlay">
   <div class="login-box">
-    <img id="logoLogin" src="" style="max-height: 80px; margin-bottom: 20px; display:none;">
-    <h2 style="color: #1565c0; margin-top: 0;">ACESSO RESTRITO</h2>
-    <p style="color: #aaa; font-size: 12px;">SISTEMA DE GESTÃO</p>
-    <br>
-    <input type="password" id="senhaInput" placeholder="Digite a Senha" style="width: 90%; text-align: center; font-size: 18px;">
-    <br><br>
-    <button class="primary" onclick="verificarSenha()" style="width: 100%; padding: 12px; font-size: 14px;">ENTRAR</button>
+    <img id="logoLogin" src="" style="max-height: 60px; margin-bottom: 10px; display:none;">
+    
+    <div id="step-1">
+        <h2 style="color: #fff; margin-top: 0;">QUEM É VOCÊ?</h2>
+        <p style="color: #aaa; font-size: 12px; margin-bottom:20px;">Selecione seu perfil de acesso</p>
+        
+        <button class="btn-perfil btn-admin" onclick="selecionarPerfil('admin')">
+            🛡️ ADMINISTRADOR
+        </button>
+        
+        <button class="btn-perfil btn-balcao" onclick="selecionarPerfil('func')">
+            👤 BALCÃO / VENDAS
+        </button>
+    </div>
+
+    <div id="step-2" style="display:none;">
+        <h3 id="tituloLogin" style="color: #fff; margin-top: 0;">SENHA</h3>
+        <br>
+        <input type="password" id="senhaInput" placeholder="Digite a Senha" style="width: 100%; text-align: center; font-size: 18px; padding: 12px;">
+        <br><br>
+        <button class="primary" onclick="verificarSenha()" style="width: 100%; padding: 12px; font-size: 14px;">ENTRAR</button>
+        <br>
+        <button class="dark" onclick="voltarLogin()" style="width: 100%; margin-top:10px; background: transparent; color: #888;">⬅ Voltar</button>
+    </div>
+
   </div>
 </div>
 
@@ -272,16 +301,13 @@
   let clientes = [];
   let catalogo = [];
   let logoBase64 = localStorage.getItem('logoParana') || "";
-  
-  // DADOS DA EMPRESA (AGORA SINCRONIZADOS NO FIREBASE)
   let empDados = { nome: "PARANÁ PEÇAS", end: "", tel: "" };
 
-  // 1. CARREGAR DADOS DA EMPRESA DO FIREBASE AO INICIAR
+  // DADOS DA EMPRESA
   db.collection("config").doc("empresa").onSnapshot((doc) => {
       if (doc.exists) {
           let d = doc.data();
           empDados = { nome: d.nome, end: d.end, tel: d.tel };
-          // Atualiza os campos na tela se existirem
           if(document.getElementById('confEmpNome')) {
               document.getElementById('confEmpNome').value = empDados.nome;
               document.getElementById('confEmpEnd').value = empDados.end;
@@ -290,21 +316,66 @@
       }
   });
 
-  // 2. FUNÇÃO PARA SALVAR DADOS DA EMPRESA NO FIREBASE
   function salvarDadosEmpresa() {
       let n = document.getElementById('confEmpNome').value;
       let e = document.getElementById('confEmpEnd').value;
       let t = document.getElementById('confEmpTel').value;
-      
-      // Salva no Firestore (Nuvem)
-      db.collection("config").doc("empresa").set({ nome: n, end: e, tel: t })
-      .then(() => {
-          Swal.fire({ icon: 'success', title: 'Sucesso!', text: 'Dados sincronizados na nuvem!', timer: 1500, showConfirmButton: false });
-      })
-      .catch((error) => {
-          Swal.fire('Erro', 'Erro ao salvar: ' + error, 'error');
-      });
+      db.collection("config").doc("empresa").set({ nome: n, end: e, tel: t }).then(() => Swal.fire({ icon: 'success', title: 'Sucesso!', text: 'Dados sincronizados!', timer: 1500, showConfirmButton: false }));
   }
+
+  // --- LOGICA DE LOGIN (NOVO) ---
+  let roleSelected = '';
+
+  function selecionarPerfil(role) {
+      roleSelected = role;
+      document.getElementById('step-1').style.display = 'none';
+      document.getElementById('step-2').style.display = 'block';
+      
+      // Muda o título e foco
+      let titulo = role === 'admin' ? 'ÁREA ADMINISTRATIVA' : 'ÁREA DE BALCÃO';
+      document.getElementById('tituloLogin').innerText = titulo;
+      document.getElementById('senhaInput').focus();
+  }
+
+  function voltarLogin() {
+      roleSelected = '';
+      document.getElementById('step-1').style.display = 'block';
+      document.getElementById('step-2').style.display = 'none';
+      document.getElementById('senhaInput').value = '';
+  }
+
+  function verificarSenha() {
+    if(isClientMode) return;
+    let s = document.getElementById('senhaInput').value;
+    
+    // Verifica a senha com base no perfil escolhido
+    if (roleSelected === 'admin') {
+        if (s === '7755') {
+            perfilAtivo = 'admin';
+            document.body.classList.remove('func-mode');
+            document.getElementById('loginOverlay').style.display = 'none';
+        } else {
+            Swal.fire({ icon: 'error', title: 'Acesso Negado', text: 'Senha de Administrador Incorreta!' });
+        }
+    } else if (roleSelected === 'func') {
+        if (s === '1234') {
+            perfilAtivo = 'func';
+            document.body.classList.add('func-mode');
+            document.getElementById('loginOverlay').style.display = 'none';
+        } else {
+            Swal.fire({ icon: 'error', title: 'Acesso Negado', text: 'Senha de Balcão Incorreta!' });
+        }
+    }
+  }
+  
+  function logout() {
+    document.getElementById('loginOverlay').style.display = 'flex';
+    voltarLogin(); // Reseta para a tela de escolha
+    document.body.classList.remove('func-mode');
+    perfilAtivo = '';
+  }
+  document.getElementById('senhaInput').addEventListener('keypress', function (e) { if (e.key === 'Enter') verificarSenha(); });
+  // -----------------------------
 
   let editRef = {id:null, ii:null};
   let perfilAtivo = ''; 
@@ -312,7 +383,6 @@
   let isDrawing = false;
   let lastX = 0; let lastY = 0;
   
-  // VARIAVEIS CLIENTE REMOTO
   let isClientMode = false;
   let remoteClientId = null;
   const canvasRemoto = document.getElementById('canvasRemoto');
@@ -320,117 +390,45 @@
   const canvas = document.getElementById('canvasAssinatura');
   const ctx = canvas.getContext('2d');
 
-  // VERIFICAR SE É LINK DE CLIENTE AO INICIAR
   window.onload = function() {
       const urlParams = new URLSearchParams(window.location.search);
       const cid = urlParams.get('cliente');
-      
       if(cid) {
-          // MODO CLIENTE ATIVADO
           isClientMode = true;
           remoteClientId = cid;
           document.body.classList.add('mode-client');
-          document.getElementById('loginOverlay').style.display = 'none'; // Sem senha para cliente assinar
-          
-          // Configurar canvas remoto
-          canvasRemoto.width = canvasRemoto.offsetWidth || 300;
-          canvasRemoto.height = 200;
+          document.getElementById('loginOverlay').style.display = 'none';
+          canvasRemoto.width = canvasRemoto.offsetWidth || 300; canvasRemoto.height = 200;
           ctxRemoto.lineWidth = 2; ctxRemoto.lineJoin = 'round'; ctxRemoto.lineCap = 'round'; ctxRemoto.strokeStyle = '#000';
-          
-          // Configurar eventos do canvas remoto
           setupCanvasEvents(canvasRemoto, ctxRemoto);
-
-          // Carregar dados específicos deste cliente
           db.collection("clientes").doc(cid).onSnapshot((doc) => {
               if(doc.exists) {
                   let data = doc.data();
                   let html = `<b>Olá, ${data.nome}</b><br>Confira seus itens pendentes:<br><br>`;
                   let total = 0;
-                  data.itens.forEach(i => {
-                      if(!i.pago) {
-                          html += `📦 ${i.desc} - ${formatarMoeda(i.valor)}<br>`;
-                          total += (Number(i.valor)||0);
-                      }
-                  });
+                  data.itens.forEach(i => { if(!i.pago) { html += `📦 ${i.desc} - ${formatarMoeda(i.valor)}<br>`; total += (Number(i.valor)||0); } });
                   html += `<hr><b>TOTAL A PAGAR: ${formatarMoeda(total)}</b>`;
                   document.getElementById('listaItensRemoto').innerHTML = html;
-              } else {
-                  Swal.fire('Erro', 'Link inválido ou expirado.', 'error');
-              }
+              } else Swal.fire('Erro', 'Link inválido.', 'error');
           });
-
-      } else {
-          // MODO NORMAL (DONO)
-          // Nada muda, espera login
       }
   };
 
   function setupCanvasEvents(cvs, cx) {
       cvs.addEventListener('mousedown', (e) => { isDrawing = true; [lastX, lastY] = [e.offsetX, e.offsetY]; });
       cvs.addEventListener('mousemove', (e) => { if(!isDrawing) return; cx.beginPath(); cx.moveTo(lastX, lastY); cx.lineTo(e.offsetX, e.offsetY); cx.stroke(); [lastX, lastY] = [e.offsetX, e.offsetY]; });
-      cvs.addEventListener('mouseup', () => isDrawing = false);
-      cvs.addEventListener('mouseout', () => isDrawing = false);
-      cvs.addEventListener('touchstart', (e) => { e.preventDefault(); isDrawing = true; let rect = cvs.getBoundingClientRect(); let touch = e.touches[0]; lastX = touch.clientX - rect.left; lastY = touch.clientY - rect.top; }, {passive: false});
-      cvs.addEventListener('touchmove', (e) => { if(!isDrawing) return; e.preventDefault(); let rect = cvs.getBoundingClientRect(); let touch = e.touches[0]; let x = touch.clientX - rect.left; let y = touch.clientY - rect.top; cx.beginPath(); cx.moveTo(lastX, lastY); cx.lineTo(x, y); cx.stroke(); lastX = x; lastY = y; }, {passive: false});
+      cvs.addEventListener('mouseup', () => isDrawing = false); cvs.addEventListener('mouseout', () => isDrawing = false);
+      cvs.addEventListener('touchstart', (e) => { e.preventDefault(); isDrawing = true; let r = cvs.getBoundingClientRect(); let t = e.touches[0]; lastX = t.clientX - r.left; lastY = t.clientY - r.top; }, {passive: false});
+      cvs.addEventListener('touchmove', (e) => { if(!isDrawing) return; e.preventDefault(); let r = cvs.getBoundingClientRect(); let t = e.touches[0]; let x = t.clientX - r.left; let y = t.clientY - r.top; cx.beginPath(); cx.moveTo(lastX, lastY); cx.lineTo(x, y); cx.stroke(); lastX = x; lastY = y; }, {passive: false});
       cvs.addEventListener('touchend', () => isDrawing = false);
   }
-  
-  // INICIA EVENTOS CANVAS LOCAL
   setupCanvasEvents(canvas, ctx);
-
   function limparRemoto() { ctxRemoto.clearRect(0, 0, canvasRemoto.width, canvasRemoto.height); }
+  function salvarAssinaturaRemota() { let img = canvasRemoto.toDataURL(); db.collection("clientes").doc(remoteClientId).get().then(doc => { let itens = doc.data().itens; itens.forEach(i => { if(!i.pago) i.assinatura = img; }); db.collection("clientes").doc(remoteClientId).update({ itens }).then(() => { Swal.fire({ icon: 'success', title: 'Assinado!', text: 'Assinatura enviada.', showConfirmButton: false }); setTimeout(() => { document.body.innerHTML = "<h2 style='text-align:center; padding:50px; color:#fff;'>Obrigado! Pode fechar esta janela.</h2>"; }, 2000); }); }); }
+  function gerarLinkRemoto(id) { let l = `${window.location.href.split('?')[0]}?cliente=${id}`; navigator.clipboard.writeText(l).then(() => Swal.fire({title: 'Link Copiado!', html: `Envie para o cliente:<br><b>${l}</b>`, icon: 'success'})); }
+
+  db.collection("clientes").onSnapshot((snapshot) => { if(isClientMode) return; clientes = []; snapshot.forEach((doc) => { clientes.push({ id: doc.id, ...doc.data() }); }); atualizarSelect(); atualizarDashboard(); render(); aplicarLogo(); });
   
-  function salvarAssinaturaRemota() {
-      let img = canvasRemoto.toDataURL();
-      db.collection("clientes").doc(remoteClientId).get().then(doc => {
-          let itens = doc.data().itens;
-          // Assina todos os itens pendentes
-          itens.forEach(i => { if(!i.pago) i.assinatura = img; });
-          
-          db.collection("clientes").doc(remoteClientId).update({ itens }).then(() => {
-              Swal.fire({ icon: 'success', title: 'Assinado!', text: 'Sua assinatura foi enviada com sucesso.', showConfirmButton: false });
-              setTimeout(() => { document.body.innerHTML = "<h2 style='text-align:center; padding:50px; color:#fff;'>Obrigado! Pode fechar esta janela.</h2>"; }, 2000);
-          });
-      });
-  }
-
-  function gerarLinkRemoto(id) {
-      // Pega a URL atual (ex: seushost.com) e adiciona o ID
-      let baseUrl = window.location.href.split('?')[0];
-      let link = `${baseUrl}?cliente=${id}`;
-      
-      navigator.clipboard.writeText(link).then(() => {
-          Swal.fire({
-            title: 'Link Copiado!',
-            html: `Envie este link para o cliente assinar no celular dele:<br><br><b>${link}</b><br><br>Quando ele assinar lá, aparecerá aqui automaticamente!`,
-            icon: 'success'
-          });
-      });
-  }
-
-  function verificarSenha() {
-    if(isClientMode) return; // Se for cliente, ignora
-    let s = document.getElementById('senhaInput').value;
-    if(s === '7755') { perfilAtivo = 'admin'; document.body.classList.remove('func-mode'); } 
-    else if (s === '1234') { perfilAtivo = 'func'; document.body.classList.add('func-mode'); } 
-    else { Swal.fire({ icon: 'error', title: 'Erro', text: 'Senha Incorreta!' }); return; }
-    document.getElementById('loginOverlay').style.display = 'none';
-  }
-
-  function logout() {
-    document.getElementById('loginOverlay').style.display = 'flex'; document.getElementById('senhaInput').value = '';
-    document.body.classList.remove('func-mode'); perfilAtivo = '';
-  }
-  document.getElementById('senhaInput').addEventListener('keypress', function (e) { if (e.key === 'Enter') verificarSenha(); });
-
-  db.collection("clientes").onSnapshot((snapshot) => {
-    if(isClientMode) return; // Se for cliente remoto, não carrega lista geral
-    clientes = [];
-    snapshot.forEach((doc) => { clientes.push({ id: doc.id, ...doc.data() }); });
-    atualizarSelect(); atualizarDashboard(); render(); aplicarLogo();
-  });
-  
-  // FUNÇÕES PADRÃO DO SISTEMA
   function salvarCatalogo() { let n=document.getElementById('catNome').value,v=Number(document.getElementById('catValor').value); if(n&&v){db.collection("catalogo").add({nome:n.toUpperCase(),valor:v});document.getElementById('catNome').value='';document.getElementById('catValor').value='';} }
   function apagarCat(id){db.collection("catalogo").doc(id).delete();}
   db.collection("catalogo").onSnapshot((s)=>{catalogo=[];let d=document.getElementById('opcoesCatalogo'),v=document.getElementById('listaCatalogoVis');d.innerHTML='';v.innerHTML='';s.forEach((doc)=>{let k=doc.data();catalogo.push({id:doc.id,...k});d.innerHTML+=`<option value="${k.nome}">R$ ${k.valor}</option>`;v.innerHTML+=`📦 ${k.nome} - R$ ${k.valor} <button onclick="apagarCat('${doc.id}')" style="color:red;border:none;background:none;cursor:pointer">x</button><br>`;});});
@@ -444,155 +442,65 @@
   function aplicarLogo(){if(logoBase64){document.getElementById('logoLeft').src=logoBase64;document.getElementById('logoRight').src=logoBase64;document.getElementById('logoLogin').src=logoBase64;document.getElementById('logoLogin').style.display='inline-block';}}
   document.getElementById('logoInput').addEventListener('change',e=>{let r=new FileReader();r.onload=ev=>{logoBase64=ev.target.result;localStorage.setItem('logoParana',logoBase64);aplicarLogo();};r.readAsDataURL(e.target.files[0]);});
 
-  // RENDERIZAÇÃO DA LISTA DE CLIENTES
   function render(){
     let div = document.getElementById('listaClientes'); div.innerHTML = '';
     let termo = document.getElementById('searchBox').value.toLowerCase();
     let hoje = new Date().toISOString().split('T')[0];
-
     clientes.forEach((c) => {
       if(termo && !c.nome.toLowerCase().includes(termo) && !(c.cpf_cnpj || '').includes(termo)) return;
       let saldoCli = c.itens.reduce((acc, i) => acc + (Number(i.valor)||0) - (Number(i.pagoValor)||0), 0);
-      
-      let html = `<div class="client-card">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start">
-          <div><b style="font-size:18px; color:#0d47a1">${c.nome}</b><br><span style="font-size:12px; color:#555">${c.cpf_cnpj ? 'CPF: '+c.cpf_cnpj : ''} ${c.telefone ? '| '+c.telefone : ''}<br>${c.endereco ? c.endereco : ''}</span></div>
-          <div style="text-align:right">Saldo Devedor<br><span style="color:red; font-size:20px; font-weight:bold">${formatarMoeda(saldoCli)}</span></div>
-        </div>
-        
-        <div class="top-actions">
-            <button class="primary" onclick="imprimirSelecionados('${c.id}', 'extrato')">📄 A4</button>
-            <button class="warning" onclick="imprimirSelecionados('${c.id}', 'cupom')">🖨️ CUPOM</button>
-            <button class="dark" onclick="abrirAssinatura('${c.id}')" style="background:#5e35b1;">✍️ PRESENCIAL</button>
-            <button class="primary" style="background:#0277bd" onclick="gerarLinkRemoto('${c.id}')">🔗 LINK REMOTO</button>
-            <button class="primary" style="background:#006064" onclick="imprimirExtratoGeral('${c.id}')">📋 EXTRATO</button>
-            <button class="wapp" onclick="cobrarWhatsApp('${c.id}', ${saldoCli})">💬 COBRAR</button>
-            <button class="danger admin-only" onclick="excluirCliente('${c.id}')">🗑️ EXCLUIR</button>
-        </div>
-        
-        <table>
-          <thead><tr><th><input type="checkbox" onchange="toggleAll('${c.id}', this)"></th><th>Peça</th><th>Qtd</th><th>Valor</th><th>Data</th><th>Situação</th><th>Ações</th></tr></thead>
-          <tbody>
-            ${c.itens.map((i, ii) => {
-              let isVencido = (!i.pago && i.venc && i.venc < hoje);
-              let rowClass = isVencido ? 'class="vencido"' : '';
-              let sit = i.pago ? '<span style="color:green;font-weight:bold">PAGO</span>' : (i.pagoValor > 0 ? `<span style="color:#fbc02d;font-weight:bold">Parcial</span>` : `<span style="font-weight:bold">${isVencido?'VENCIDO':'Aberto'}</span>`);
-              let iconAssinado = i.assinatura ? ' <span title="Assinado" style="cursor:help;font-size:14px">✍️✅</span>' : '';
-
-              return `<tr ${rowClass}>
-                <td><input type="checkbox" class="sel-${c.id}" value="${ii}" style="width:18px; height:18px;"></td>
-                <td style="text-align:left"><b>${i.desc}${iconAssinado}</b></td>
-                <td>${i.qtd||1}</td><td><b>${formatarMoeda(i.valor)}</b></td><td>${formatarDataBR(i.data)}</td><td>${sit}</td>
-                <td><div class="table-actions">
-                    <button class="success" onclick="pagar('${c.id}',${ii})">$</button>
-                    <button class="primary admin-only" onclick="abrirEditar('${c.id}',${ii})">✏️</button>
-                    <button class="danger admin-only" onclick="excluirLançamento('${c.id}',${ii})">X</button>
-                  </div></td></tr>`}).join('')}
-          </tbody></table></div>`;
+      let html = `<div class="client-card"><div style="display:flex; justify-content:space-between; align-items:flex-start"><div><b style="font-size:18px; color:#0d47a1">${c.nome}</b><br><span style="font-size:12px; color:#555">${c.cpf_cnpj ? 'CPF: '+c.cpf_cnpj : ''} ${c.telefone ? '| '+c.telefone : ''}<br>${c.endereco ? c.endereco : ''}</span></div><div style="text-align:right">Saldo Devedor<br><span style="color:red; font-size:20px; font-weight:bold">${formatarMoeda(saldoCli)}</span></div></div>
+      <div class="top-actions"><button class="primary" onclick="imprimirSelecionados('${c.id}', 'extrato')">📄 A4</button><button class="warning" onclick="imprimirSelecionados('${c.id}', 'cupom')">🖨️ CUPOM</button><button class="dark" onclick="abrirAssinatura('${c.id}')" style="background:#5e35b1;">✍️ PRESENCIAL</button><button class="primary" style="background:#0277bd" onclick="gerarLinkRemoto('${c.id}')">🔗 LINK REMOTO</button><button class="primary" style="background:#006064" onclick="imprimirExtratoGeral('${c.id}')">📋 EXTRATO</button><button class="wapp" onclick="cobrarWhatsApp('${c.id}', ${saldoCli})">💬 COBRAR</button><button class="danger admin-only" onclick="excluirCliente('${c.id}')">🗑️ EXCLUIR</button></div>
+      <table><thead><tr><th><input type="checkbox" onchange="toggleAll('${c.id}', this)"></th><th>Peça</th><th>Qtd</th><th>Valor</th><th>Data</th><th>Situação</th><th>Ações</th></tr></thead><tbody>${c.itens.map((i, ii) => {
+      let isVencido = (!i.pago && i.venc && i.venc < hoje); let rowClass = isVencido ? 'class="vencido"' : ''; let sit = i.pago ? '<span style="color:green;font-weight:bold">PAGO</span>' : (i.pagoValor > 0 ? `<span style="color:#fbc02d;font-weight:bold">Parcial</span>` : `<span style="font-weight:bold">${isVencido?'VENCIDO':'Aberto'}</span>`); let iconAssinado = i.assinatura ? ' <span title="Assinado" style="cursor:help;font-size:14px">✍️✅</span>' : '';
+      return `<tr ${rowClass}><td><input type="checkbox" class="sel-${c.id}" value="${ii}" style="width:18px; height:18px;"></td><td style="text-align:left"><b>${i.desc}${iconAssinado}</b></td><td>${i.qtd||1}</td><td><b>${formatarMoeda(i.valor)}</b></td><td>${formatarDataBR(i.data)}</td><td>${sit}</td><td><div class="table-actions"><button class="success" onclick="pagar('${c.id}',${ii})">$</button><button class="primary admin-only" onclick="abrirEditar('${c.id}',${ii})">✏️</button><button class="danger admin-only" onclick="excluirLançamento('${c.id}',${ii})">X</button></div></td></tr>`}).join('')}</tbody></table></div>`;
       div.innerHTML += html;
     });
   }
 
-  // --- FUNÇÕES DE ASSINATURA LOCAL E GERAÇÃO DE IMAGEM ZAP ---
   function abrirAssinatura(id) {
-    const checks = document.querySelectorAll(`.sel-${id}:checked`);
-    if(checks.length === 0) return Swal.fire('Atenção', "Selecione os itens.", 'warning');
-    signId = id; document.getElementById('assinaturaModal').style.display = 'flex';
-    canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
-    ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.strokeStyle = '#000';
-    ctx.clearRect(0,0,canvas.width,canvas.height);
+    const checks = document.querySelectorAll(`.sel-${id}:checked`); if(checks.length === 0) return Swal.fire('Atenção', "Selecione itens", 'warning');
+    signId = id; document.getElementById('assinaturaModal').style.display = 'flex'; canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.strokeStyle = '#000'; ctx.clearRect(0,0,canvas.width,canvas.height);
   }
   function fecharAssinatura() { document.getElementById('assinaturaModal').style.display = 'none'; signId = null; }
   function limparAssinatura() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
-
   function finalizarAssinatura(tipo) {
-    let imgAssinatura = canvas.toDataURL();
-    let salvar = document.getElementById('salvarAssinaturaCheck').checked;
-    if (salvar && signId) {
-       let c = clientes.find(x => x.id === signId); let itens = [...c.itens]; let checks = document.querySelectorAll(`.sel-${signId}:checked`);
-       checks.forEach(cb => { let idx = parseInt(cb.value); if(itens[idx]) itens[idx].assinatura = imgAssinatura; });
-       db.collection("clientes").doc(signId).update({ itens });
-    }
+    let imgAssinatura = canvas.toDataURL(); let salvar = document.getElementById('salvarAssinaturaCheck').checked;
+    if (salvar && signId) { let c = clientes.find(x => x.id === signId); let itens = [...c.itens]; let checks = document.querySelectorAll(`.sel-${signId}:checked`); checks.forEach(cb => { let idx = parseInt(cb.value); if(itens[idx]) itens[idx].assinatura = imgAssinatura; }); db.collection("clientes").doc(signId).update({ itens }); }
     if (tipo === 'salvar_apenas') { Swal.fire({icon:'success',title:'Salvo!',timer:1000,showConfirmButton:false}); fecharAssinatura(); return; }
     imprimirSelecionados(signId, tipo, imgAssinatura); fecharAssinatura();
   }
 
   function gerarImagemWhatsApp() {
-      let c = clientes.find(x => x.id === signId); const checks = document.querySelectorAll(`.sel-${signId}:checked`);
-      const indices = Array.from(checks).map(cb => parseInt(cb.value)); const selecionados = indices.map(idx => c.itens[idx]);
-      const totalS = selecionados.reduce((a, i) => a + (Number(i.valor) || 0), 0);
-      const totalPago = selecionados.reduce((a, i) => a + (Number(i.pagoValor) || 0), 0);
-      const assinatura = canvas.toDataURL();
-
-      let html = `<div style="background:#fff; font-family:'Courier New'; padding:15px; border:1px solid #ccc; width:350px;">
-           <div style="text-align:center; font-weight:bold; margin-bottom:10px;">${empDados.nome}<br><span style="font-size:10px">${empDados.end}</span><br><span style="font-size:10px">${empDados.tel}</span></div><hr>
-           <div style="font-size:12px; margin-bottom:10px;">CLIENTE: ${c.nome.toUpperCase()}</div>
-           <table style="width:100%; font-size:11px; border-collapse:collapse;">${selecionados.map(i => `<tr><td style="text-align:left;">${i.desc}</td><td style="text-align:right;">${formatarMoeda(i.valor)}</td></tr>`).join('')}</table>
-           <hr><div style="text-align:right; font-size:14px; font-weight:bold;">TOTAL: ${formatarMoeda(totalS)}</div>
-           <div style="text-align:right; font-size:12px;">PAGO: ${formatarMoeda(totalPago)}</div>
-           <div style="text-align:right; font-size:14px; font-weight:bold; color:red;">RESTANTE: ${formatarMoeda(totalS-totalPago)}</div>
-           <div style="margin-top:20px; text-align:center;"><img src="${assinatura}" style="max-height:50px;"><br><span style="font-size:10px;">Assinado Digitalmente</span></div></div>`;
-      
-      let area = document.getElementById('hiddenPrintArea'); area.innerHTML = html;
-      html2canvas(area).then(canvasImg => {
-          Swal.fire({ title: 'Imagem Gerada!', text: 'Copie e cole no WhatsApp.', imageUrl: canvasImg.toDataURL("image/jpeg"), imageWidth: 300, confirmButtonText: 'Fechar' });
-          area.innerHTML = ''; fecharAssinatura();
-      });
+    if (!empDados.end || empDados.end === "") { Swal.fire({ title: 'Aguarde...', text: 'Carregando dados da empresa...', icon: 'info', timer: 3000 }); db.collection("config").doc("empresa").get().then(doc => { if(doc.exists) { let d = doc.data(); empDados = { nome: d.nome, end: d.end, tel: d.tel }; } }); return; }
+    let c = clientes.find(x => x.id === signId); const checks = document.querySelectorAll(`.sel-${signId}:checked`);
+    const indices = Array.from(checks).map(cb => parseInt(cb.value)); const selecionados = indices.map(idx => c.itens[idx]);
+    const totalS = selecionados.reduce((a, i) => a + (Number(i.valor) || 0), 0); const totalPago = selecionados.reduce((a, i) => a + (Number(i.pagoValor) || 0), 0); const assinatura = canvas.toDataURL();
+    let html = `<div style="background:#fff; font-family:'Courier New'; padding:15px; border:1px solid #ccc; width:350px;">
+    <div style="text-align:center; font-weight:bold; margin-bottom:5px; font-size:16px;">${empDados.nome}</div><div style="text-align:center; font-size:11px; margin-bottom:10px; color:#333;">${empDados.end}<br>${empDados.tel}</div><hr style="border:0; border-top:1px dashed #000;">
+    <div style="font-size:12px; margin-bottom:10px;"><b>CLIENTE:</b> ${c.nome.toUpperCase()}</div>
+    <table style="width:100%; font-size:11px; border-collapse:collapse; margin-bottom:10px;"><tr style="border-bottom:1px solid #000;"><th style="text-align:left;">Peça</th><th style="text-align:right;">Valor</th></tr>${selecionados.map(i => `<tr><td style="text-align:left; padding:3px 0;">${i.desc}</td><td style="text-align:right; padding:3px 0;">${formatarMoeda(i.valor)}</td></tr>`).join('')}</table>
+    <hr style="border:0; border-top:1px dashed #000;"><div style="text-align:right; font-size:14px; font-weight:bold;">TOTAL: ${formatarMoeda(totalS)}</div><div style="text-align:right; font-size:12px;">PAGO: ${formatarMoeda(totalPago)}</div><div style="text-align:right; font-size:14px; font-weight:bold; color:red;">RESTANTE: ${formatarMoeda(totalS-totalPago)}</div>
+    <div style="margin-top:20px; text-align:center;"><img src="${assinatura}" style="max-height:50px;"><br><span style="font-size:10px; color:#555;">Assinado Digitalmente</span></div><div style="margin-top:10px; text-align:center; font-size:9px; color:#aaa;">Emitido em: ${new Date().toLocaleString('pt-BR')}</div></div>`;
+    let area = document.getElementById('hiddenPrintArea'); area.innerHTML = html;
+    setTimeout(() => { html2canvas(area, { scale: 2 }).then(canvasImg => { Swal.fire({ title: 'Imagem Gerada!', text: 'Segure na imagem para copiar.', imageUrl: canvasImg.toDataURL("image/jpeg", 0.9), imageWidth: 300, confirmButtonText: 'Fechar' }); area.innerHTML = ''; fecharAssinatura(); }); }, 500);
   }
 
-  // --- FUNÇÕES DE PAGAMENTO, EDIÇÃO E EXCLUSÃO ---
   function pagar(id, ii){let c=clientes.find(x=>x.id===id),itens=[...c.itens],v=Number(prompt(`Resta: ${formatarMoeda(itens[ii].valor-itens[ii].pagoValor)}\nQuanto pagou?`));if(v>0){itens[ii].pagoValor+=v;if(itens[ii].pagoValor>=itens[ii].valor)itens[ii].pago=true;db.collection("clientes").doc(id).update({itens});Swal.fire({icon:'success',title:'Pago',toast:true,position:'top-end',timer:1000,showConfirmButton:false});}}
   function abrirEditar(id,ii){let c=clientes.find(x=>x.id===id),i=c.itens[ii];editRef={id,ii};document.getElementById('editDesc').value=i.desc;document.getElementById('editQtd').value=i.qtd||1;document.getElementById('editValor').value=i.valor;document.getElementById('editData').value=i.data||"";document.getElementById('editVenc').value=i.venc||"";document.getElementById('editModal').style.display='flex';}
   function salvarEdicao(){let {id,ii}=editRef,c=clientes.find(x=>x.id===id),itens=[...c.itens];itens[ii].desc=document.getElementById('editDesc').value;itens[ii].qtd=Number(document.getElementById('editQtd').value);itens[ii].valor=Number(document.getElementById('editValor').value);itens[ii].data=document.getElementById('editData').value;itens[ii].venc=document.getElementById('editVenc').value;db.collection("clientes").doc(id).update({itens}).then(()=>fecharModal());}
   function fecharModal(){document.getElementById('editModal').style.display='none';}
   function excluirLançamento(id,ii){Swal.fire({title:'Excluir item?',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33',confirmButtonText:'Sim'}).then((r)=>{if(r.isConfirmed){let c=clientes.find(x=>x.id===id),itens=[...c.itens];itens.splice(ii,1);db.collection("clientes").doc(id).update({itens});}});}
   function excluirCliente(id){Swal.fire({title:'Excluir Cliente?',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33',confirmButtonText:'Excluir Tudo'}).then((r)=>{if(r.isConfirmed)db.collection("clientes").doc(id).delete();});}
-  
-  function cobrarWhatsApp(id, saldo) {
-    let c = clientes.find(x => x.id === id); if(saldo<=0) return Swal.fire('Info','Sem débito','info'); if(!c.telefone) return Swal.fire('Erro','Sem telefone','error');
-    let t = `Olá *${c.nome}*, aqui é da *${empDados.nome}*.\nConsta saldo aberto de *${formatarMoeda(saldo)}*. Podemos acertar?`;
-    window.open(`https://wa.me/55${c.telefone.replace(/\D/g,'')}?text=${encodeURIComponent(t)}`,'_blank');
-  }
-
-  // --- FUNÇÕES DE IMPRESSÃO ---
-  function imprimirSelecionados(id, tipo, assinaturaImg = null) {
-    const c = clientes.find(x => x.id === id); const checks = document.querySelectorAll(`.sel-${id}:checked`);
-    const indices = Array.from(checks).map(cb => parseInt(cb.value));
-    if (indices.length === 0) return Swal.fire('Aviso', "Selecione itens", 'warning');
-    const selecionados = indices.map(idx => c.itens[idx]); const totalS = selecionados.reduce((a, i) => a + (Number(i.valor) || 0), 0);
-    gerarImpressao(c, selecionados, totalS, tipo, "COMPROVANTE", assinaturaImg);
-  }
+  function cobrarWhatsApp(id, saldo) { let c = clientes.find(x => x.id === id); if(saldo<=0) return Swal.fire('Info','Sem débito','info'); if(!c.telefone) return Swal.fire('Erro','Sem telefone','error'); let t = `Olá *${c.nome}*, aqui é da *${empDados.nome}*.\nConsta saldo aberto de *${formatarMoeda(saldo)}*. Podemos acertar?`; window.open(`https://wa.me/55${c.telefone.replace(/\D/g,'')}?text=${encodeURIComponent(t)}`,'_blank'); }
+  function imprimirSelecionados(id, tipo, assinaturaImg = null) { const c = clientes.find(x => x.id === id); const checks = document.querySelectorAll(`.sel-${id}:checked`); const indices = Array.from(checks).map(cb => parseInt(cb.value)); if (indices.length === 0) return Swal.fire('Aviso', "Selecione itens", 'warning'); const selecionados = indices.map(idx => c.itens[idx]); const totalS = selecionados.reduce((a, i) => a + (Number(i.valor) || 0), 0); gerarImpressao(c, selecionados, totalS, tipo, "COMPROVANTE", assinaturaImg); }
   function imprimirExtratoGeral(id){ let c = clientes.find(x => x.id === id); if(!c.itens.length)return; let t = c.itens.reduce((a, i) => a + (Number(i.valor) || 0), 0); gerarImpressao(c, c.itens, t, 'extrato', "EXTRATO GERAL"); }
-
   function gerarImpressao(c, itens, total, tipo, titulo, assinaturaNova = null) {
-    const logoHtml = logoBase64 ? `<img src="${logoBase64}" style="max-height:60px; display:block; margin:0 auto 5px auto;">` : '';
-    let totalPago = itens.reduce((acc, i) => acc + (Number(i.pagoValor) || 0), 0);
-    let saldoDevedor = total - totalPago;
-    let imgFinal = assinaturaNova || (itens.find(i=>i.assinatura)?.assinatura);
-    const campoAssinatura = imgFinal ? `<div style="margin-top:20px;"><img src="${imgFinal}" style="max-height:60px; border-bottom:1px solid #000;"><br><span style="font-size:10px">Assinado Digitalmente</span></div>` : `<br><div style="font-size:12px;">Assinatura</div><div style="border-bottom:1px solid #000; width:80%; margin:30px auto 0 auto;"></div>`;
-    let larguraBody = tipo === 'cupom' ? '70mm' : '95%'; let fonteBase = tipo === 'cupom' ? '11px' : '14px';
-    
-    // CABEÇALHO DA EMPRESA SINCRONIZADO
-    let cabecalhoEmpresa = `
-      <div style="font-weight:bold;margin-bottom:5px;font-size:${parseInt(fonteBase)+2}px;">${empDados.nome}</div>
-      <div style="margin-bottom:10px;font-size:${fonteBase}">
-         ${empDados.end}<br>
-         ${empDados.tel}
-      </div>
-      <div style="border-bottom:1px solid #000;"></div>
-    `;
-
-    let h = `<html><head><style>@media print{@page{margin:0;size:auto}body{margin:0;padding:5px}}body{font-family:'Courier New';width:${larguraBody};margin:0 auto;text-align:center;font-size:${fonteBase}}table{width:100%;border-collapse:collapse;margin-top:5px}th,td{border-bottom:1px dashed #000;padding:3px 0;text-align:center;font-size:${fonteBase}}th{border-top:1px dashed #000}.text-left{text-align:left}.text-right{text-align:right}.total-final{text-align:right;margin-top:10px;font-weight:bold;font-size:${parseInt(fonteBase)+2}px;border-top:1px dashed #000}</style></head>
-    <body>
-      ${logoHtml}
-      ${cabecalhoEmpresa}
-      <h3 style="margin:5px 0;">${titulo}</h3>
-      <div style="border-bottom:1px dashed #000;padding-bottom:5px;margin-bottom:5px;text-align:left"><b>CLI: ${c.nome.toUpperCase()}</b><br>${c.cpf_cnpj||''}<br>${c.endereco||''}</div>
-      <table><thead><tr><th>Data</th><th class="text-left">Peça</th><th class="text-right">Valor</th></tr></thead><tbody>${itens.map(i=>`<tr><td>${formatarDataBR(i.data).substring(0,5)}</td><td class="text-left">${i.desc.toUpperCase()}</td><td class="text-right">${formatarMoeda(i.valor)}</td></tr>`).join('')}</tbody></table>
-      <div style="text-align:right;margin-top:10px">TOTAL: <b>${formatarMoeda(total)}</b></div><div style="text-align:right">PAGO: <b>${formatarMoeda(totalPago)}</b></div><div class="total-final">SALDO: ${formatarMoeda(saldoDevedor)}</div>${campoAssinatura}<br><p style="font-size:10px">Emitido: ${new Date().toLocaleString('pt-BR')}</p></body></html>`;
+    const logoHtml = logoBase64 ? `<img src="${logoBase64}" style="max-height:60px; display:block; margin:0 auto 5px auto;">` : ''; let totalPago = itens.reduce((acc, i) => acc + (Number(i.pagoValor) || 0), 0); let saldoDevedor = total - totalPago; let imgFinal = assinaturaNova || (itens.find(i=>i.assinatura)?.assinatura); const campoAssinatura = imgFinal ? `<div style="margin-top:20px;"><img src="${imgFinal}" style="max-height:60px; border-bottom:1px solid #000;"><br><span style="font-size:10px">Assinado Digitalmente</span></div>` : `<br><div style="font-size:12px;">Assinatura</div><div style="border-bottom:1px solid #000; width:80%; margin:30px auto 0 auto;"></div>`; let larguraBody = tipo === 'cupom' ? '70mm' : '95%'; let fonteBase = tipo === 'cupom' ? '11px' : '14px';
+    let cabecalhoEmpresa = `<div style="font-weight:bold;margin-bottom:5px;font-size:${parseInt(fonteBase)+2}px;">${empDados.nome}</div><div style="margin-bottom:10px;font-size:${fonteBase}">${empDados.end}<br>${empDados.tel}</div><div style="border-bottom:1px solid #000;"></div>`;
+    let h = `<html><head><style>@media print{@page{margin:0;size:auto}body{margin:0;padding:5px}}body{font-family:'Courier New';width:${larguraBody};margin:0 auto;text-align:center;font-size:${fonteBase}}table{width:100%;border-collapse:collapse;margin-top:5px}th,td{border-bottom:1px dashed #000;padding:3px 0;text-align:center;font-size:${fonteBase}}th{border-top:1px dashed #000}.text-left{text-align:left}.text-right{text-align:right}.total-final{text-align:right;margin-top:10px;font-weight:bold;font-size:${parseInt(fonteBase)+2}px;border-top:1px dashed #000}</style></head><body>${logoHtml}${cabecalhoEmpresa}<h3 style="margin:5px 0;">${titulo}</h3><div style="border-bottom:1px dashed #000;padding-bottom:5px;margin-bottom:5px;text-align:left"><b>CLI: ${c.nome.toUpperCase()}</b><br>${c.cpf_cnpj||''}<br>${c.endereco||''}</div><table><thead><tr><th>Data</th><th class="text-left">Peça</th><th class="text-right">Valor</th></tr></thead><tbody>${itens.map(i=>`<tr><td>${formatarDataBR(i.data).substring(0,5)}</td><td class="text-left">${i.desc.toUpperCase()}</td><td class="text-right">${formatarMoeda(i.valor)}</td></tr>`).join('')}</tbody></table><div style="text-align:right;margin-top:10px">TOTAL: <b>${formatarMoeda(total)}</b></div><div style="text-align:right">PAGO: <b>${formatarMoeda(totalPago)}</b></div><div class="total-final">SALDO: ${formatarMoeda(saldoDevedor)}</div>${campoAssinatura}<br><p style="font-size:10px">Emitido: ${new Date().toLocaleString('pt-BR')}</p></body></html>`;
     let win = window.open('', '_blank'); win.document.write(h); win.document.close(); setTimeout(() => { win.print(); }, 800);
   }
-  
   function fazerBackupLocal() { if(!clientes.length)return Swal.fire('Erro','Vazio','error'); let b=new Blob([JSON.stringify(clientes)],{type:"application/json"}),l=document.createElement("a");l.href=URL.createObjectURL(b);l.download=`backup_${new Date().toISOString().split('T')[0]}.json`;document.body.appendChild(l);l.click();document.body.removeChild(l);Swal.fire('Sucesso','Backup salvo','success'); }
   function gerarRelatorioMes() { let h=new Date(),m=h.toISOString().slice(0,7),t=0,r=0;clientes.forEach(c=>{c.itens.forEach(i=>{if(i.data&&i.data.startsWith(m)){t+=(Number(i.valor)||0);r+=(Number(i.pagoValor)||0)}})});let w=window.open('','_blank');w.document.write(`<html><body style="font-family:Arial;text-align:center"><h2>FECHAMENTO (${m})</h2><p>Vendido: <b>${formatarMoeda(t)}</b></p><p>Recebido: <b>${formatarMoeda(r)}</b></p><p>A Receber: <b>${formatarMoeda(t-r)}</b></p></body></html>`);w.document.close();setTimeout(()=>{w.print()},800);}
   function atualizarDashboard(){let t=0,r=0;clientes.forEach(c=>c.itens.forEach(i=>{t+=(Number(i.valor)||0);r+=(Number(i.pagoValor)||0)}));document.getElementById('dashTotal').innerText=formatarMoeda(t);document.getElementById('dashRecebido').innerText=formatarMoeda(r);document.getElementById('dashDevedor').innerText=formatarMoeda(t-r);}
