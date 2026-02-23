@@ -69,17 +69,19 @@
   
   /* BOTÕES FORTES */
   button { padding: 10px 15px; margin: 2px; border-radius: 5px; cursor: pointer; font-weight: 800; border: none; color: #fff; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
-  .primary { background: #1565c0; } .success { background: #2e7d32; } .danger { background: #c62828; } .warning { background: #f57c00; } .dark { background: #333; } .wapp { background: #25D366; color: #fff; } .fiscal { background: #fb8c00; color: #fff; }
+  .primary { background: #1565c0; } .success { background: #2e7d32; } .danger { background: #c62828; } .warning { background: #f57c00; } .dark { background: #333; } .wapp { background: #25D366; color: #fff; } .fiscal { background: #fb8c00; color: #fff; } .share { background: #00bcd4; color: #fff; }
   
   table { width: 100%; border-collapse: collapse; margin-top: 15px; background: #fff; color: #000; border-radius: 8px; overflow: hidden; }
-  th { background: #444; color: #fff; padding: 10px; font-size: 11px; font-weight: bold; }
-  td { border-bottom: 1px solid #eee; padding: 8px; text-align: center; font-size: 12px; }
+  th { background: #444; color: #fff; padding: 10px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+  td { border-bottom: 1px solid #eee; padding: 8px; text-align: center; font-size: 13px; }
   .vencido { color: #c62828 !important; font-weight: bold; background-color: #ffebee; }
   .search-box { width: 100%; padding: 12px; font-size: 16px; border: 2px solid #0d47a1; border-radius: 8px; margin-bottom: 20px; background: #f0f8ff; color: #000; font-weight: bold; box-sizing: border-box; }
+  
   .client-card { background: #f9f9f9; color: #000; padding: 15px; margin-top: 20px; margin-bottom: 30px; border-radius: 15px; border: 3px solid #333; box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
   .top-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 15px; align-items: center; }
   .table-actions { display: flex; justify-content: center; align-items: center; gap: 5px; flex-wrap: nowrap; }
   .table-actions button, .table-actions label { margin: 0; padding: 0 10px; height: 32px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; font-size: 12px; border-radius: 5px; font-weight: bold; cursor: pointer; color: #fff; }
+  
   .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 1000; }
   .modal-content { background: #222; padding: 25px; border-radius: 10px; width: 90%; max-width: 450px; color: #fff; border: 1px solid #555; }
   .modal-content input, .modal-content select { width: 95%; margin-bottom: 10px; }
@@ -87,7 +89,7 @@
   #canvasAssinatura, #canvasRemoto { background: #fff; border: 2px dashed #555; cursor: crosshair; touch-action: none; width: 100%; height: 200px; border-radius: 5px; margin-bottom: 10px; display: block; }
   
   .check-save { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; font-size: 14px; background: #333; padding: 10px; border-radius: 5px; }
-  #hiddenPrintArea { position: absolute; top: -9999px; left: -9999px; width: 350px; background: #fff; color: #000; padding: 10px; }
+  #hiddenPrintArea { position: absolute; top: -9999px; left: -9999px; width: 794px; background: #fff; color: #000; padding: 20px; } /* A4 width aprox */
   #userInfo { position: absolute; top: 10px; left: 10px; font-size: 10px; color: #aaa; z-index: 10001; }
 
   @media (max-width: 768px) {
@@ -134,11 +136,9 @@
   <div id="areaClienteRemoto" class="card">
       <h3 style="color:#38ef7d">✍️ ÁREA DE ASSINATURA</h3>
       <div id="listaItensRemoto" style="text-align:left; background:#222; padding:10px; border-radius:5px; margin-bottom:20px; font-size:14px;">Carregando...</div>
-      
       <div style="background:#fff; padding:5px; border-radius:5px;">
         <canvas id="canvasRemoto"></canvas>
       </div>
-      
       <button class="dark" onclick="limparRemoto()">Limpar</button>
       <button class="success" onclick="salvarAssinaturaRemota()" style="width:100%; margin-top:10px; padding:15px; font-size:16px;">✅ ENVIAR ASSINATURA</button>
   </div>
@@ -313,71 +313,34 @@
   let paginaAtual = 1; const itensPorPagina = 10;
   let unsubscribeClientes = null; let unsubscribeCatalogo = null; let unsubscribeEmpresa = null;
 
-  // --- INICIALIZAÇÃO CORRETA DA ASSINATURA ---
   function setupCanvasEvents(canvas) {
       if(!canvas) return;
       const ctx = canvas.getContext('2d');
-      let isDrawing = false;
-      let lastX = 0;
-      let lastY = 0;
-
-      // Eventos Mouse
+      let isDrawing = false; let lastX = 0; let lastY = 0;
       canvas.addEventListener('mousedown', (e) => { isDrawing = true; [lastX, lastY] = [e.offsetX, e.offsetY]; });
-      canvas.addEventListener('mousemove', (e) => {
-          if (!isDrawing) return;
-          ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(e.offsetX, e.offsetY);
-          ctx.stroke(); [lastX, lastY] = [e.offsetX, e.offsetY];
-      });
-      canvas.addEventListener('mouseup', () => isDrawing = false);
-      canvas.addEventListener('mouseout', () => isDrawing = false);
-
-      // Eventos Touch (Celular)
-      canvas.addEventListener('touchstart', (e) => {
-          e.preventDefault(); isDrawing = true;
-          const rect = canvas.getBoundingClientRect();
-          const t = e.touches[0];
-          lastX = t.clientX - rect.left; lastY = t.clientY - rect.top;
-      }, {passive: false});
-      
-      canvas.addEventListener('touchmove', (e) => {
-          e.preventDefault(); if (!isDrawing) return;
-          const rect = canvas.getBoundingClientRect();
-          const t = e.touches[0];
-          const x = t.clientX - rect.left; const y = t.clientY - rect.top;
-          ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(x, y);
-          ctx.stroke(); lastX = x; lastY = y;
-      }, {passive: false});
-      
+      canvas.addEventListener('mousemove', (e) => { if (!isDrawing) return; ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(e.offsetX, e.offsetY); ctx.stroke(); [lastX, lastY] = [e.offsetX, e.offsetY]; });
+      canvas.addEventListener('mouseup', () => isDrawing = false); canvas.addEventListener('mouseout', () => isDrawing = false);
+      canvas.addEventListener('touchstart', (e) => { e.preventDefault(); isDrawing = true; const r = canvas.getBoundingClientRect(); const t = e.touches[0]; lastX = t.clientX - r.left; lastY = t.clientY - r.top; }, {passive: false});
+      canvas.addEventListener('touchmove', (e) => { e.preventDefault(); if (!isDrawing) return; const r = canvas.getBoundingClientRect(); const t = e.touches[0]; const x = t.clientX - r.left; const y = t.clientY - r.top; ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(x, y); ctx.stroke(); lastX = x; lastY = y; }, {passive: false});
       canvas.addEventListener('touchend', () => isDrawing = false);
   }
 
-  // --- LÓGICA DO LINK REMOTO ---
   const urlParams = new URLSearchParams(window.location.search);
   const clienteIdUrl = urlParams.get('cliente');
-
-  // Se tiver ID na URL, ativa modo Cliente IMEDIATAMENTE
   if(clienteIdUrl) {
       document.body.classList.add('mode-client');
-      const style = document.createElement('style');
-      style.innerHTML = '#loginOverlay { display: none !important; }';
-      document.head.appendChild(style);
+      const style = document.createElement('style'); style.innerHTML = '#loginOverlay { display: none !important; }'; document.head.appendChild(style);
   }
 
   $(document).ready(function(){
       $('#cep, #editCliCep').mask('00000-000'); 
       $('#telefone, #editCliTel').mask('(00) 00000-0000');
       $('#cpf_cnpj, #editCliCpf').mask('000.000.000-00', {onKeyPress: function(val, e, field, options) { field.mask(val.length > 14 ? '00.000.000/0000-00' : '000.000.000-000'); }});
-      
-      // Se for modo cliente, inicializa canvas remoto
       if(clienteIdUrl) {
           const cvsRemoto = document.getElementById('canvasRemoto');
-          cvsRemoto.width = cvsRemoto.offsetWidth;
-          cvsRemoto.height = 200;
-          const ctxR = cvsRemoto.getContext('2d');
-          ctxR.lineWidth = 2; ctxR.strokeStyle = '#000';
+          cvsRemoto.width = cvsRemoto.offsetWidth; cvsRemoto.height = 200;
+          const ctxR = cvsRemoto.getContext('2d'); ctxR.lineWidth = 2; ctxR.strokeStyle = '#000';
           setupCanvasEvents(cvsRemoto);
-          
-          // Carrega dados
           db.collection("clientes").doc(clienteIdUrl).onSnapshot((doc) => {
               if(doc.exists) {
                   let data = doc.data();
@@ -391,10 +354,8 @@
       }
   });
 
-  // --- AUTH ---
   auth.onAuthStateChanged((user) => {
       if (document.body.classList.contains('mode-client')) return; 
-      
       if (user) {
           db.collection("usuarios").doc(user.uid).get().then((doc) => {
               let role = (doc.exists) ? doc.data().perfil : 'admin';
@@ -412,33 +373,21 @@
       }
   });
 
-  // --- FUNCOES PRINCIPAIS ---
   function abrirAssinatura(id) { 
       const checks = document.querySelectorAll(`.sel-${id}:checked`); 
       if(checks.length === 0) return Swal.fire('Atenção', "Selecione itens", 'warning'); 
-      
       signId = id; 
       document.getElementById('assinaturaModal').style.display = 'flex'; 
-      
-      // IMPORTANTE: Redimensionar Canvas ao abrir
       const cvs = document.getElementById('canvasAssinatura');
-      cvs.width = cvs.parentElement.offsetWidth;
-      cvs.height = 200;
-      
-      const ctx = cvs.getContext('2d');
-      ctx.lineWidth = 2; 
-      ctx.strokeStyle = '#000';
-      ctx.clearRect(0,0,cvs.width,cvs.height);
-      
+      cvs.width = cvs.parentElement.offsetWidth; cvs.height = 200;
+      const ctx = cvs.getContext('2d'); ctx.lineWidth = 2; ctx.strokeStyle = '#000'; ctx.clearRect(0,0,cvs.width,cvs.height);
       setupCanvasEvents(cvs); 
   }
   
   function salvarAssinaturaRemota() { 
-      let cvs = document.getElementById('canvasRemoto');
-      let img = cvs.toDataURL(); 
+      let cvs = document.getElementById('canvasRemoto'); let img = cvs.toDataURL(); 
       db.collection("clientes").doc(clienteIdUrl).get().then(doc => { 
-          let itens = doc.data().itens; 
-          itens.forEach(i => { if(!i.pago) i.assinatura = img; }); 
+          let itens = doc.data().itens; itens.forEach(i => { if(!i.pago) i.assinatura = img; }); 
           db.collection("clientes").doc(clienteIdUrl).update({ itens }).then(() => { 
               Swal.fire({ icon: 'success', title: 'Assinado!', text: 'Obrigado!', showConfirmButton: false }); 
               setTimeout(() => document.body.innerHTML = "<h2 style='text-align:center;padding:50px;color:#fff;'>Tudo certo! Pode fechar.</h2>", 2000);
@@ -446,18 +395,11 @@
       }); 
   }
 
-  // --- FUNÇÃO PARA GERAR LINK ---
   function gerarLinkRemoto(id) { 
-      // Detecta URL base (localhost ou github)
-      let baseUrl = window.location.href.split('?')[0];
-      let link = `${baseUrl}?cliente=${id}`;
-      
-      navigator.clipboard.writeText(link).then(() => {
-          Swal.fire({title: 'Link Copiado!', html: `Envie para o cliente:<br><br><b>${link}</b>`, icon: 'success'});
-      }); 
+      let baseUrl = window.location.href.split('?')[0]; let link = `${baseUrl}?cliente=${id}`;
+      navigator.clipboard.writeText(link).then(() => { Swal.fire({title: 'Link Copiado!', html: `Envie para o cliente:<br><br><b>${link}</b>`, icon: 'success'}); }); 
   }
 
-  // --- RESTO DO CÓDIGO PADRÃO ---
   function buscarCep() {
       let cep = document.getElementById('cep').value.replace(/\D/g, ''); if (cep.length !== 8) return;
       document.getElementById('cidade').value = "Buscando..."; document.getElementById('endereco').value = "Buscando...";
@@ -492,9 +434,7 @@
   function render(){
     let div = document.getElementById('listaClientes'); div.innerHTML = '';
     let termo = document.getElementById('searchBox').value.toLowerCase();
-    
     let listaFiltrada = clientes.filter(c => !termo || c.nome.toLowerCase().includes(termo) || (c.cpf_cnpj && c.cpf_cnpj.includes(termo)));
-    
     let totalPaginas = Math.ceil(listaFiltrada.length / itensPorPagina);
     if(paginaAtual > totalPaginas && totalPaginas > 0) paginaAtual = totalPaginas; if(totalPaginas === 0) paginaAtual = 1;
     let itensDaPagina = listaFiltrada.slice((paginaAtual - 1) * itensPorPagina, paginaAtual * itensPorPagina);
@@ -504,11 +444,12 @@
 
     itensDaPagina.forEach((c) => {
       let saldoCli = c.itens.reduce((acc, i) => acc + (Number(i.valor)||0) - (Number(i.pagoValor)||0), 0);
-      let html = `<div class="client-card"><div style="display:flex; justify-content:space-between; align-items:flex-start"><div><b style="font-size:18px; color:#0d47a1">${c.nome}</b><br><span style="font-size:12px; color:#555">${c.cpf_cnpj ? 'CPF: '+c.cpf_cnpj : ''} ${c.telefone ? '| '+c.telefone : ''}<br>${c.endereco ? c.endereco : ''}</span></div><div style="text-align:right">Saldo Devedor<br><span style="color:red; font-size:20px; font-weight:bold">${formatarMoeda(saldoCli)}</span></div></div>
+      let html = `<div class="client-card"><div style="display:flex; justify-content:space-between; align-items:flex-start"><div><b style="font-size:24px; font-weight:900; color:#0d47a1; text-transform:uppercase;">${c.nome}</b><br><span style="font-size:14px; color:#333; font-weight:bold">${c.cpf_cnpj ? 'CPF: '+c.cpf_cnpj : ''} ${c.telefone ? '| '+c.telefone : ''}<br>${c.endereco ? c.endereco : ''}</span></div><div style="text-align:right">Saldo Devedor<br><span style="color:red; font-size:24px; font-weight:900">${formatarMoeda(saldoCli)}</span></div></div>
       <div class="top-actions">
         <button class="warning" onclick="editarDadosCliente('${c.id}')" style="background:#f9a825; color:#000;">✏️ EDITAR DADOS</button>
         <button class="primary" onclick="imprimirSelecionados('${c.id}', 'extrato')">📄 IMPRIMIR A4</button>
         <button class="warning" onclick="imprimirSelecionados('${c.id}', 'cupom')">🖨️ IMPRIMIR CUPOM</button>
+        <button class="share" onclick="compartilharComprovanteImagem('${c.id}')">📤 ENVIAR DOC</button>
         <button class="fiscal" onclick="gerarNotaFiscal('${c.id}')">🧾 N. FISCAL</button>
         <button class="dark" onclick="abrirAssinatura('${c.id}')">✍️ ASSINAR PRESENCIAL</button>
         <button class="primary" style="background:#0277bd" onclick="gerarLinkRemoto('${c.id}')">🔗 LINK PARA ASSINAR</button>
@@ -517,87 +458,141 @@
       </div>
       <table><thead><tr><th><input type="checkbox" onchange="toggleAll('${c.id}', this)"></th><th>Peça</th><th>Qtd</th><th>Valor</th><th>Data</th><th>Situação</th><th>Ações</th></tr></thead><tbody>${c.itens.map((i, ii) => {
       let isVencido = (!i.pago && i.venc && i.venc < new Date().toISOString().split('T')[0]);
-      let sit = i.pago ? '<span style="color:green;font-weight:bold">PAGO</span>' : (i.pagoValor > 0 ? `<span style="color:#fbc02d;font-weight:bold">Parcial</span>` : `<span style="font-weight:bold">${isVencido?'VENCIDO':'Aberto'}</span>`);
-      return `<tr ${isVencido?'class="vencido"':''}><td><input type="checkbox" class="sel-${c.id}" value="${ii}" style="width:18px; height:18px;"></td><td style="text-align:left; font-weight:bold">${i.desc}${i.assinatura?' ✍️':''}</td><td style="font-weight:bold">${i.qtd||1}</td><td style="font-weight:bold">${formatarMoeda(i.valor)}</td><td style="font-weight:bold">${formatarDataBR(i.data)}</td><td style="font-weight:bold">${sit}</td><td><div class="table-actions"><button class="success" onclick="pagar('${c.id}',${ii})">$</button><button class="primary admin-only" onclick="abrirEditar('${c.id}',${ii})">✏️</button><button class="danger admin-only" onclick="excluirLançamento('${c.id}',${ii})">X</button></div></td></tr>`}).join('')}</tbody></table></div>`;
+      let sit = i.pago ? '<span style="color:green;font-weight:900">PAGO</span>' : (i.pagoValor > 0 ? `<span style="color:#fbc02d;font-weight:900">PARCIAL<br><small style="color:#000">Pago: ${formatarMoeda(i.pagoValor)}</small></span>` : `<span style="font-weight:900">${isVencido?'VENCIDO':'Aberto'}</span>`);
+      return `<tr ${isVencido?'class="vencido"':''}><td><input type="checkbox" class="sel-${c.id}" value="${ii}" style="width:18px; height:18px;"></td><td style="text-align:left; font-weight:900; font-size:14px;">${i.desc}${i.assinatura?' ✍️':''}</td><td style="font-weight:900; font-size:14px;">${i.qtd||1}</td><td style="font-weight:900; font-size:14px;">${formatarMoeda(i.valor)}</td><td style="font-weight:900; font-size:14px;">${formatarDataBR(i.data)}</td><td style="font-weight:900; font-size:14px;">${sit}</td><td><div class="table-actions"><button class="success" onclick="pagar('${c.id}',${ii})">$</button><button class="primary admin-only" onclick="abrirEditar('${c.id}',${ii})">✏️</button><button class="danger admin-only" onclick="excluirLançamento('${c.id}',${ii})">X</button></div></td></tr>`}).join('')}</tbody></table></div>`;
       div.innerHTML += html;
     });
   }
   function mudarPagina(delta) { paginaAtual += delta; render(); }
 
-  // --- NOVA FUNÇÃO DE EDITAR CLIENTE ---
-  function editarDadosCliente(id) {
-      let c = clientes.find(x => x.id === id);
-      if(!c) return;
-      document.getElementById('editCliId').value = id;
-      document.getElementById('editCliNome').value = c.nome;
-      document.getElementById('editCliCpf').value = c.cpf_cnpj || '';
-      document.getElementById('editCliIe').value = c.ie || '';
-      document.getElementById('editCliTel').value = c.telefone || '';
-      document.getElementById('editCliCep').value = c.cep || '';
-      document.getElementById('editCliCidade').value = c.cidade || '';
-      document.getElementById('editCliEnd').value = c.endereco || '';
-      document.getElementById('modalEditarCliente').style.display = 'flex';
-  }
+  function editarDadosCliente(id) { let c = clientes.find(x => x.id === id); if(!c) return; document.getElementById('editCliId').value = id; document.getElementById('editCliNome').value = c.nome; document.getElementById('editCliCpf').value = c.cpf_cnpj || ''; document.getElementById('editCliIe').value = c.ie || ''; document.getElementById('editCliTel').value = c.telefone || ''; document.getElementById('editCliCep').value = c.cep || ''; document.getElementById('editCliCidade').value = c.cidade || ''; document.getElementById('editCliEnd').value = c.endereco || ''; document.getElementById('modalEditarCliente').style.display = 'flex'; }
+  function confirmarEdicaoCliente() { let id = document.getElementById('editCliId').value; let dados = { nome: document.getElementById('editCliNome').value, cpf_cnpj: document.getElementById('editCliCpf').value, ie: document.getElementById('editCliIe').value, telefone: document.getElementById('editCliTel').value, cep: document.getElementById('editCliCep').value, cidade: document.getElementById('editCliCidade').value, endereco: document.getElementById('editCliEnd').value }; db.collection("clientes").doc(id).update(dados).then(() => { Swal.fire('Sucesso', 'Dados atualizados!', 'success'); document.getElementById('modalEditarCliente').style.display = 'none'; }).catch(err => Swal.fire('Erro', err.message, 'error')); }
 
-  function confirmarEdicaoCliente() {
-      let id = document.getElementById('editCliId').value;
-      let dados = {
-          nome: document.getElementById('editCliNome').value,
-          cpf_cnpj: document.getElementById('editCliCpf').value,
-          ie: document.getElementById('editCliIe').value,
-          telefone: document.getElementById('editCliTel').value,
-          cep: document.getElementById('editCliCep').value,
-          cidade: document.getElementById('editCliCidade').value,
-          endereco: document.getElementById('editCliEnd').value
-      };
-      
-      db.collection("clientes").doc(id).update(dados).then(() => {
-          Swal.fire('Sucesso', 'Dados atualizados!', 'success');
-          document.getElementById('modalEditarCliente').style.display = 'none';
-      }).catch(err => Swal.fire('Erro', err.message, 'error'));
-  }
+  document.getElementById('logoInput').addEventListener('change', e => { let file = e.target.files[0]; if (!file) return; let reader = new FileReader(); reader.onload = event => { let img = new Image(); img.onload = () => { let canvas = document.createElement('canvas'); let ctx = canvas.getContext('2d'); let maxWidth = 400; let scale = maxWidth / img.width; if (scale > 1) scale = 1; canvas.width = img.width * scale; canvas.height = img.height * scale; ctx.drawImage(img, 0, 0, canvas.width, canvas.height); let base64 = canvas.toDataURL('image/jpeg', 0.7); db.collection("config").doc("empresa").set({ logo: base64 }, { merge: true }).then(() => Swal.fire('Sucesso', 'Logo salva!', 'success')).catch(err => Swal.fire('Erro', 'Erro ao salvar: ' + err.message, 'error')); }; img.src = event.target.result; }; reader.readAsDataURL(file); });
 
-  // --- LOGO COMPRESSOR ---
-  document.getElementById('logoInput').addEventListener('change', e => {
-    let file = e.target.files[0];
-    if (!file) return;
-    
-    // Compressor simples via Canvas
-    let reader = new FileReader();
-    reader.onload = event => {
-        let img = new Image();
-        img.onload = () => {
-            let canvas = document.createElement('canvas');
-            let ctx = canvas.getContext('2d');
-            let maxWidth = 400; // Limita largura
-            let scale = maxWidth / img.width;
-            if (scale > 1) scale = 1;
-            canvas.width = img.width * scale;
-            canvas.height = img.height * scale;
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            
-            // Salva comprimido (0.7 qualidade)
-            let base64 = canvas.toDataURL('image/jpeg', 0.7);
-            
-            db.collection("config").doc("empresa").set({ logo: base64 }, { merge: true })
-                .then(() => Swal.fire('Sucesso', 'Logo salva!', 'success'))
-                .catch(err => Swal.fire('Erro', 'Erro ao salvar: ' + err.message, 'error'));
-        };
-        img.src = event.target.result;
-    };
-    reader.readAsDataURL(file);
-  });
-
-  // --- FUNÇÕES DE IMPRESSÃO ---
-  function gerarNotaFiscal(id) { const c = clientes.find(x => x.id === id); const checks = document.querySelectorAll(`.sel-${id}:checked`); const indices = Array.from(checks).map(cb => parseInt(cb.value)); const selecionados = (indices.length > 0) ? indices.map(idx => c.itens[idx]) : c.itens; const total = selecionados.reduce((a, i) => a + (Number(i.valor)||0), 0); const chaveFake = "412502" + empDados.cnpj.replace(/\D/g,'') + "65001000000001100000001"; let cvsBar = document.createElement('canvas'); JsBarcode(cvsBar, chaveFake.substring(0,20), {format:"CODE128", displayValue:false, width:1, height:30}); let barImg = cvsBar.toDataURL(); let itensHtml = selecionados.map((i, idx) => `<tr><td style="font-weight:bold;">${(idx+1).toString().padStart(3,'0')}</td><td style="font-weight:bold;">${i.desc.toUpperCase()}</td><td style="text-align:right;font-weight:bold;">${i.qtd||1}</td><td style="text-align:right;">UN</td><td style="text-align:right;">${formatarMoeda((i.valor/(i.qtd||1)))}</td><td style="text-align:right;font-weight:bold;">${formatarMoeda(i.valor)}</td></tr>`).join(''); let h = `<html><head><title>DANFE NFC-e</title><style>body{margin:0;padding:5px;font-family:'Arial',sans-serif;font-size:12px;width:72mm;color:#000;} .center{text-align:center} .right{text-align:right} .bold{font-weight:800} .line{border-bottom:1px dashed #000;margin:5px 0} table{width:100%;font-size:12px} td{padding:2px 0}</style></head><body onload="window.print()"><div class="center bold" style="font-size:14px">${empDados.nome.toUpperCase()}</div><div class="center">CNPJ: ${empDados.cnpj || '00.000.000/0000-00'}</div><div class="center">${empDados.end}</div><div class="line"></div><div class="center bold">DANFE NFC-e - Documento Auxiliar</div><div class="center">da Nota Fiscal de Consumidor Eletrônica</div><div class="center">Não permite aproveitamento de crédito de ICMS</div><div class="line"></div><table><tr><td>CÓD</td><td>DESC</td><td class="right">QTD</td><td class="right">UN</td><td class="right">VL UN</td><td class="right">VL TR</td></tr>${itensHtml}</table><div class="line"></div><div class="right bold" style="font-size:14px">VALOR TOTAL R$ ${total.toFixed(2).replace('.',',')}</div><div class="right">Forma Pagamento: Dinheiro/Pix</div><div class="line"></div><div class="center bold">EMISSÃO EM CONTINGÊNCIA</div><div class="center">Ambiente de Homologação - Sem Valor Fiscal</div><div class="line"></div><div class="center">CONSUMIDOR</div><div class="center bold">${c.nome.toUpperCase()}</div><div class="center">CPF/CNPJ: ${c.cpf_cnpj||'NÃO INFORMADO'}</div><div class="line"></div><div class="center">Nº 000000001 SÉRIE 001<br>Emissão: ${new Date().toLocaleString()}</div><div class="center"><img src="${barImg}" style="width:100%"></div><div class="center">${chaveFake.match(/.{1,4}/g).join(' ')}</div><div class="center"><br>Tributos Totais Incidentes (Lei Federal 12.741/2012): R$ ${(total*0.18).toFixed(2).replace('.',',')}</div></body></html>`; let w = window.open('','_blank','width=400,height=600'); w.document.write(h); w.document.close(); }
-  function imprimirSelecionados(id, tipo, assinaturaImg = null) { const c = clientes.find(x => x.id === id); const checks = document.querySelectorAll(`.sel-${id}:checked`); const indices = Array.from(checks).map(cb => parseInt(cb.value)); if (indices.length === 0) return Swal.fire('Aviso', "Selecione itens", 'warning'); const selecionados = indices.map(idx => c.itens[idx]); const totalS = selecionados.reduce((a, i) => a + (Number(i.valor) || 0), 0); gerarImpressao(c, selecionados, totalS, tipo, "COMPROVANTE", assinaturaImg); }
+  function gerarNotaFiscal(id) { const c = clientes.find(x => x.id === id); const checks = document.querySelectorAll(`.sel-${id}:checked`); const indices = Array.from(checks).map(cb => parseInt(cb.value)); const selecionados = (indices.length > 0) ? indices.map(idx => c.itens[idx]) : c.itens; const total = selecionados.reduce((a, i) => a + (Number(i.valor)||0), 0); const chaveFake = "412502" + empDados.cnpj.replace(/\D/g,'') + "65001000000001100000001"; let cvsBar = document.createElement('canvas'); JsBarcode(cvsBar, chaveFake.substring(0,20), {format:"CODE128", displayValue:false, width:1, height:30}); let barImg = cvsBar.toDataURL(); let itensHtml = selecionados.map((i, idx) => `<tr><td style="font-weight:bold;">${(idx+1).toString().padStart(3,'0')}</td><td style="font-weight:bold;">${i.desc.toUpperCase()}</td><td style="text-align:right;font-weight:bold;">${i.qtd||1}</td><td style="text-align:right;">UN</td><td style="text-align:right;">${formatarMoeda((i.valor/(i.qtd||1)))}</td><td style="text-align:right;font-weight:bold;">${formatarMoeda(i.valor)}</td></tr>`).join(''); let h = `<html><head><title>DANFE NFC-e</title><style>body{margin:0;padding:5px;font-family:'Arial',sans-serif;font-size:12px;width:72mm;color:#000;} .center{text-align:center} .right{text-align:right} .bold{font-weight:800} .line{border-bottom:1px dashed #000;margin:5px 0} table{width:100%;font-size:12px} td{padding:2px 0}</style></head><body onload="window.print()"><div class="center bold" style="font-size:14px">${empDados.nome.toUpperCase()}</div><div class="center">CNPJ: ${empDados.cnpj || '00.000.000/0000-00'}</div><div class="center">${empDados.end}</div><div class="line"></div><div class="center bold">DANFE NFC-e - Documento Auxiliar</div><div class="center">da Nota Fiscal de Consumidor Eletrônica</div><div class="center">Não permite aproveitamento de crédito de ICMS</div><div class="line"></div><table><tr><td>CÓD</td><td>DESC</td><td class="right">QTD</td><td class="right">UN</td><td class="right">VL UN</td><td class="right">VL TR</td></tr>${itensHtml}</table><div class="line"></div><div class="right bold" style="font-size:14px; color:#0000AA">TOTAL R$ ${total.toFixed(2).replace('.',',')}</div><div class="right">Forma Pagamento: Dinheiro/Pix</div><div class="line"></div><div class="center bold">EMISSÃO EM CONTINGÊNCIA</div><div class="center">Ambiente de Homologação - Sem Valor Fiscal</div><div class="line"></div><div class="center">CONSUMIDOR</div><div class="center bold">${c.nome.toUpperCase()}</div><div class="center">CPF/CNPJ: ${c.cpf_cnpj||'NÃO INFORMADO'}</div><div class="line"></div><div class="center">Nº 000000001 SÉRIE 001<br>Emissão: ${new Date().toLocaleString()}</div><div class="center"><img src="${barImg}" style="width:100%"></div><div class="center">${chaveFake.match(/.{1,4}/g).join(' ')}</div><div class="center"><br>Tributos Totais Incidentes (Lei Federal 12.741/2012): R$ ${(total*0.18).toFixed(2).replace('.',',')}</div></body></html>`; let w = window.open('','_blank','width=400,height=600'); w.document.write(h); w.document.close(); }
+  function imprimirSelecionados(id, tipo, assinaturaImg = null) { const c = clientes.find(x => x.id === id); const checks = document.querySelectorAll(`.sel-${id}:checked`); const indices = Array.from(checks).map(cb => parseInt(cb.value)); if (indices.length === 0) return Swal.fire('Aviso', "Selecione itens", 'warning'); const selecionados = indices.map(idx => c.itens[idx]); const totalS = selecionados.reduce((a, i) => a + (Number(i.valor) || 0), 0); gerarImpressao(c, selecionados, totalS, tipo, "COMPROVANTE DE VENDA", assinaturaImg); }
   function imprimirExtratoGeral(id){ let c = clientes.find(x => x.id === id); if(!c.itens.length)return; let t = c.itens.reduce((a, i) => a + (Number(i.valor) || 0), 0); gerarImpressao(c, c.itens, t, 'extrato', "EXTRATO GERAL"); }
   
   function gerarImpressao(c, itens, total, tipo, titulo, assinaturaNova = null) {
     const logoHtml = logoBase64 ? `<img src="${logoBase64}" style="max-height:60px; display:block; margin:0 auto 5px auto;">` : '';
     let totalPago = itens.reduce((acc, i) => acc + (Number(i.pagoValor) || 0), 0); let saldoDevedor = total - totalPago; let imgFinal = assinaturaNova || (itens.find(i=>i.assinatura)?.assinatura);
-    let conteudo = `<html><head><title>Imprimir</title><style>@media print { @page { margin: 0; } body { margin: 5px; } } body { font-family: 'Arial', sans-serif; color: #000; text-align: center; font-size: ${tipo==='cupom'?'12px':'14px'}; width: ${tipo==='cupom'?'72mm':'98%'}; margin: 0 auto; } table { width: 100%; border-collapse: collapse; margin-top: 10px; } th { background-color: #eee; font-weight: 800; border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 5px 0; } td { border-bottom: 1px dashed #444; padding: 5px 0; text-align: right; } .text-left { text-align: left; } .bold { font-weight: 800; } .title-lg { font-size: 16px; font-weight: 800; text-transform: uppercase; }</style></head><body onload="window.print()">${logoHtml}<br><div class="title-lg">${empDados.nome}</div><div>${empDados.end}<br>${empDados.tel}</div><div style="border-bottom: 2px solid #000; margin: 10px 0;"></div><div class="title-lg">${titulo}</div><div class="text-left" style="margin-top:10px;"><b>CLIENTE:</b> ${c.nome.toUpperCase()}<br>${c.cpf_cnpj ? '<b>CPF/CNPJ:</b> '+c.cpf_cnpj : ''}</div><table><tr><th class="text-left">ITEM</th><th>QTD</th><th>VALOR</th></tr>${itens.map(i => `<tr><td class="text-left bold">${i.desc.toUpperCase()}</td><td>${i.qtd||1}</td><td class="bold">${formatarMoeda(i.valor)}</td></tr>`).join('')}</table><div style="margin-top:10px; text-align:right;">TOTAL: <span class="title-lg">${formatarMoeda(total)}</span><br>PAGO: ${formatarMoeda(totalPago)}<br>A PAGAR: <span class="title-lg">${formatarMoeda(saldoDevedor)}</span></div>${imgFinal ? `<div style="margin-top:20px; text-align:center;"><img src="${imgFinal}" style="max-height:60px;"><br>Assinado Digitalmente</div>` : '<br><br>__________________________<br>Assinatura'}<br><div style="font-size:10px;">Emitido: ${new Date().toLocaleString()}</div></body></html>`;
+    
+    // TABELA INVISIVEL PARA ALINHAMENTO PERFEITO DOS TOTAIS
+    let tabelaTotais = `
+    <table class="totals-table">
+        <tr><td class="label blue">TOTAL:</td><td class="value blue">${formatarMoeda(total)}</td></tr>
+        <tr><td class="label green">PAGO:</td><td class="value green">${formatarMoeda(totalPago)}</td></tr>
+        <tr><td class="label red">A RECEBER:</td><td class="value red">${formatarMoeda(saldoDevedor)}</td></tr>
+    </table>`;
+
+    // CSS ESPECIAL PARA ALINHAR TABELA DE ITENS
+    let cssTableItems = `
+        .items-table th:nth-child(1), .items-table td:nth-child(1) { text-align: left !important; padding-left: 5px; }
+        .items-table th:nth-child(2), .items-table td:nth-child(2) { text-align: center !important; }
+        .items-table th:nth-child(3), .items-table td:nth-child(3) { text-align: right !important; }
+    `;
+
+    let conteudo = `<html><head><title>Imprimir</title><style>
+    @media print { @page { margin: 0; } body { margin: 10px; } } 
+    body { font-family: 'Arial', sans-serif; color: #000; text-align: center; font-size: ${tipo==='cupom'?'12px':'13px'}; width: ${tipo==='cupom'?'72mm':'180mm'}; margin: 0 auto; } 
+    .main-table { width: 100%; border-collapse: collapse; margin-top: 10px; } 
+    .main-table th { background-color: #eee; font-weight: bold; border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 4px; font-size: 11px; } 
+    .main-table td { border-bottom: 1px dashed #ccc; padding: 6px 4px; font-weight: bold; font-size: 11px; } 
+    ${cssTableItems}
+    .text-left { text-align: left; } 
+    .bold { font-weight: 800; } 
+    .title-lg { font-size: 16px; font-weight: 800; text-transform: uppercase; } 
+    
+    /* ESTILO DA TABELA DE TOTAIS */
+    .totals-table { width: auto; margin-left: auto; margin-top: 15px; border-collapse: collapse; }
+    .totals-table td { padding: 2px 10px; text-align: right; border: none; font-weight: 900; font-size: 14px; }
+    .label { font-weight: normal; font-size: 11px; text-align: right; }
+    .blue { color: #0000AA; } .green { color: #008000; } .red { color: #FF0000; } 
+    </style></head>
+    <body onload="window.print()">
+        ${logoHtml}<br>
+        <div class="title-lg">${empDados.nome}</div>
+        <div>${empDados.end}<br>${empDados.tel}</div>
+        <div style="border-bottom: 2px solid #000; margin: 10px 0;"></div>
+        <div class="title-lg">${titulo}</div>
+        <div class="text-left" style="margin-top:10px;"><b>CLIENTE:</b> ${c.nome.toUpperCase()}<br>${c.cpf_cnpj ? '<b>CPF/CNPJ:</b> '+c.cpf_cnpj : ''}</div>
+        
+        <table class="main-table items-table">
+            <thead><tr><th>ITEM</th><th>QTD</th><th>VALOR</th></tr></thead>
+            <tbody>${itens.map(i => `<tr><td>${i.desc.toUpperCase()}</td><td>${i.qtd||1}</td><td>${formatarMoeda(i.valor)}</td></tr>`).join('')}</tbody>
+        </table>
+
+        ${tabelaTotais}
+
+        <div style="clear:both"></div>
+        ${imgFinal ? `<div style="margin-top:20px; text-align:center;"><img src="${imgFinal}" style="max-height:60px;"><br>Assinado Digitalmente</div>` : '<br><br>__________________________<br>Assinatura'}
+        <br><div style="font-size:10px;">Emitido: ${new Date().toLocaleString()}</div>
+    </body></html>`;
+    
     let win = window.open('', '_blank'); win.document.write(conteudo); win.document.close();
+  }
+
+  // --- NOVA FUNÇÃO: GERAR IMAGEM DO COMPROVANTE (A4) PARA ZAP ---
+  function compartilharComprovanteImagem(id) {
+      if (!empDados.end) { Swal.fire({ title: 'Aguarde...', text: 'Carregando dados...', icon: 'info', timer: 3000 }); return; } 
+      
+      const c = clientes.find(x => x.id === id); 
+      const checks = document.querySelectorAll(`.sel-${id}:checked`); 
+      const indices = Array.from(checks).map(cb => parseInt(cb.value)); 
+      const itens = (indices.length > 0) ? indices.map(idx => c.itens[idx]) : c.itens;
+      
+      let total = itens.reduce((a, i) => a + (Number(i.valor)||0), 0);
+      let totalPago = itens.reduce((acc, i) => acc + (Number(i.pagoValor) || 0), 0);
+      let saldoDevedor = total - totalPago;
+      const assinatura = c.itens.find(i=>i.assinatura)?.assinatura; 
+
+      // Gera HTML Invisivel para Print
+      let html = `<div style="background:#fff; width:750px; padding:20px; font-family:Arial; text-align:center; color:#000;">
+        <div style="font-size:22px; font-weight:800;">${empDados.nome}</div>
+        <div>${empDados.end}</div>
+        <hr style="border:2px solid #000;">
+        <div style="font-size:20px; font-weight:bold; margin:10px 0;">COMPROVANTE DE VENDA</div>
+        <div style="text-align:left; font-size:16px; margin-bottom:15px;"><b>CLIENTE:</b> ${c.nome.toUpperCase()}</div>
+        <table style="width:100%; border-collapse:collapse;">
+            <tr style="background:#eee; border-top:2px solid #000; border-bottom:2px solid #000;">
+                <th style="text-align:left; padding:8px;">ITEM</th>
+                <th style="text-align:center; padding:8px;">QTD</th>
+                <th style="text-align:right; padding:8px;">VALOR</th>
+            </tr>
+            ${itens.map(i => `<tr>
+                <td style="text-align:left; padding:8px; border-bottom:1px dashed #ccc; font-weight:bold;">${i.desc.toUpperCase()}</td>
+                <td style="text-align:center; padding:8px; border-bottom:1px dashed #ccc; font-weight:bold;">${i.qtd || 1}</td>
+                <td style="text-align:right; padding:8px; border-bottom:1px dashed #ccc; font-weight:bold;">${formatarMoeda(i.valor)}</td>
+            </tr>`).join('')}
+        </table>
+        <div style="margin-top:20px; text-align:right; font-size:18px;">
+            <div style="color:#0000AA; font-weight:900;">TOTAL: ${formatarMoeda(total)}</div>
+            <div style="color:#008000; font-weight:900;">PAGO: ${formatarMoeda(totalPago)}</div>
+            <div style="color:#FF0000; font-weight:900; font-size:22px;">A RECEBER: ${formatarMoeda(saldoDevedor)}</div>
+        </div>
+        ${assinatura ? `<img src="${assinatura}" style="max-height:80px; margin-top:20px;">` : ''}
+        <div style="font-size:12px; margin-top:20px; color:#666;">Gerado em ${new Date().toLocaleString()}</div>
+      </div>`;
+
+      let area = document.getElementById('hiddenPrintArea'); 
+      area.innerHTML = html; 
+      
+      Swal.fire({ title: 'Gerando Imagem...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
+
+      setTimeout(() => { 
+          html2canvas(area, { scale: 1.5 }).then(canvasImg => { 
+              Swal.close();
+              Swal.fire({ 
+                  title: 'Pronto para Enviar!', 
+                  text: 'Segure na imagem para copiar ou compartilhar.', 
+                  imageUrl: canvasImg.toDataURL("image/jpeg", 0.9), 
+                  imageWidth: 400, 
+                  confirmButtonText: 'Fechar' 
+              }); 
+              area.innerHTML = ''; 
+          }); 
+      }, 800);
   }
 
   // --- FUNCOES BASE ---
@@ -627,6 +622,7 @@
   function limparRemoto() { let cvs = document.getElementById('canvasRemoto'); let ctx = cvs.getContext('2d'); ctx.clearRect(0,0,cvs.width,cvs.height); }
   function fecharAssinatura() { document.getElementById('assinaturaModal').style.display = 'none'; signId = null; }
   function finalizarAssinatura(tipo) { let imgAssinatura = document.getElementById('canvasAssinatura').toDataURL(); let salvar = document.getElementById('salvarAssinaturaCheck').checked; if (salvar && signId) { let c = clientes.find(x => x.id === signId); let itens = [...c.itens]; let checks = document.querySelectorAll(`.sel-${signId}:checked`); checks.forEach(cb => { let idx = parseInt(cb.value); if(itens[idx]) itens[idx].assinatura = imgAssinatura; }); db.collection("clientes").doc(signId).update({ itens }); } if (tipo === 'salvar_apenas') { Swal.fire({icon:'success',title:'Salvo!',timer:1000,showConfirmButton:false}); fecharAssinatura(); return; } imprimirSelecionados(signId, tipo, imgAssinatura); fecharAssinatura(); }
+  function gerarLinkRemoto(id) { let l = `${window.location.href.split('?')[0]}?cliente=${id}`; navigator.clipboard.writeText(l).then(() => Swal.fire({title: 'Link Copiado!', html: `Envie para o cliente:<br><br><b>${l}</b>`, icon: 'success'})); }
   function gerarImagemWhatsApp() { if (!empDados.end) { Swal.fire({ title: 'Aguarde...', text: 'Carregando dados...', icon: 'info', timer: 3000 }); return; } let c = clientes.find(x => x.id === signId); const checks = document.querySelectorAll(`.sel-${signId}:checked`); const indices = Array.from(checks).map(cb => parseInt(cb.value)); const selecionados = indices.map(idx => c.itens[idx]); const totalS = selecionados.reduce((a, i) => a + (Number(i.valor) || 0), 0); const totalPago = selecionados.reduce((a, i) => a + (Number(i.pagoValor) || 0), 0); const assinatura = document.getElementById('canvasAssinatura').toDataURL(); let html = `<div style="background:#fff; font-family:'Courier New'; padding:15px; border:1px solid #ccc; width:350px;"><div style="text-align:center; font-weight:bold; margin-bottom:5px; font-size:16px;">${empDados.nome}</div><div style="text-align:center; font-size:11px; margin-bottom:10px; color:#333;">${empDados.end}<br>${empDados.tel}</div><hr style="border:0; border-top:1px dashed #000;"><div style="font-size:12px; margin-bottom:10px;"><b>CLIENTE:</b> ${c.nome.toUpperCase()}</div><table style="width:100%; font-size:11px; border-collapse:collapse; margin-bottom:10px;"><tr style="border-bottom:1px solid #000;"><th style="text-align:left;">Peça</th><th style="text-align:right;">Valor</th></tr>${selecionados.map(i => `<tr><td style="text-align:left; padding:3px 0;">${i.desc}</td><td style="text-align:right; padding:3px 0;">${formatarMoeda(i.valor)}</td></tr>`).join('')}</table><hr style="border:0; border-top:1px dashed #000;"><div style="text-align:right; font-size:14px; font-weight:bold;">TOTAL: ${formatarMoeda(totalS)}</div><div style="text-align:right; font-size:12px;">PAGO: ${formatarMoeda(totalPago)}</div><div style="text-align:right; font-size:14px; font-weight:bold; color:red;">RESTANTE: ${formatarMoeda(totalS-totalPago)}</div><div style="margin-top:20px; text-align:center;"><img src="${assinatura}" style="max-height:50px;"><br><span style="font-size:10px; color:#555;">Assinado Digitalmente</span></div><div style="margin-top:10px; text-align:center; font-size:9px; color:#aaa;">Emitido em: ${new Date().toLocaleString('pt-BR')}</div></div>`; let area = document.getElementById('hiddenPrintArea'); area.innerHTML = html; setTimeout(() => { html2canvas(area, { scale: 2 }).then(canvasImg => { Swal.fire({ title: 'Imagem Gerada!', text: 'Segure na imagem para copiar.', imageUrl: canvasImg.toDataURL("image/jpeg", 0.9), imageWidth: 300, confirmButtonText: 'Fechar' }); area.innerHTML = ''; fecharAssinatura(); }); }, 500); }
 </script>
 </body>
