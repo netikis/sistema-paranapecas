@@ -307,8 +307,9 @@
   const db = firebase.firestore();
   const auth = firebase.auth();
   
+  // DADOS DA EMPRESA COM ACENTOS CORRIGIDOS POR PADRÃO
   let clientes = []; let catalogo = []; let logoBase64 = localStorage.getItem('logoParana') || "";
-  let empDados = { nome: "PARANÁ PEÇAS", end: "", tel: "", cnpj: "" };
+  let empDados = { nome: "PARANÁ PEÇAS - COMÉRCIO DE PEÇAS AUTOMOTIVAS", end: "", tel: "", cnpj: "" };
   let currentUserRole = 'func'; let roleSelected = '';
   let paginaAtual = 1; const itensPorPagina = 10;
   let unsubscribeClientes = null; let unsubscribeCatalogo = null; let unsubscribeEmpresa = null;
@@ -420,9 +421,16 @@
       if(unsubscribeClientes) return; 
       unsubscribeClientes = db.collection("clientes").orderBy("nome").onSnapshot((snapshot) => { clientes = []; snapshot.forEach((doc) => { clientes.push({ id: doc.id, ...doc.data() }); }); atualizarSelect(); atualizarDashboard(); render(); });
       unsubscribeCatalogo = db.collection("catalogo").onSnapshot((s)=>{ catalogo=[]; let d=document.getElementById('opcoesCatalogo'); if(!d) return; d.innerHTML=''; s.forEach((doc)=>{ let k=doc.data(); catalogo.push({id:doc.id,...k}); d.innerHTML+=`<option value="${k.nome}">R$ ${k.valor}</option>`; }); });
+      
+      // AUTO CORREÇÃO DO NOME DA EMPRESA NO BANCO
       unsubscribeEmpresa = db.collection("config").doc("empresa").onSnapshot((doc) => {
           if (doc.exists) { 
-              let d = doc.data(); empDados = { nome: d.nome, end: d.end, tel: d.tel, cnpj: d.cnpj || '' }; 
+              let d = doc.data(); 
+              // Se o nome no banco estiver sem acento, corrige sozinho agora
+              if (d.nome === "PARANA PEÇAS - COMERCIO DE PEÇAS AUTOMOTIVAS" || !d.nome) {
+                  db.collection("config").doc("empresa").set({ nome: "PARANÁ PEÇAS - COMÉRCIO DE PEÇAS AUTOMOTIVAS" }, { merge: true });
+              }
+              empDados = { nome: d.nome, end: d.end, tel: d.tel, cnpj: d.cnpj || '' }; 
               if(document.getElementById('confEmpNome')) { document.getElementById('confEmpNome').value = empDados.nome; document.getElementById('confEmpEnd').value = empDados.end; document.getElementById('confEmpTel').value = empDados.tel; document.getElementById('confEmpCnpj').value = empDados.cnpj; }
               if(d.logo) { logoBase64 = d.logo; aplicarLogo(); }
           }
@@ -470,7 +478,22 @@
 
   document.getElementById('logoInput').addEventListener('change', e => { let file = e.target.files[0]; if (!file) return; let reader = new FileReader(); reader.onload = event => { let img = new Image(); img.onload = () => { let canvas = document.createElement('canvas'); let ctx = canvas.getContext('2d'); let maxWidth = 400; let scale = maxWidth / img.width; if (scale > 1) scale = 1; canvas.width = img.width * scale; canvas.height = img.height * scale; ctx.drawImage(img, 0, 0, canvas.width, canvas.height); let base64 = canvas.toDataURL('image/jpeg', 0.7); db.collection("config").doc("empresa").set({ logo: base64 }, { merge: true }).then(() => Swal.fire('Sucesso', 'Logo salva!', 'success')).catch(err => Swal.fire('Erro', 'Erro ao salvar: ' + err.message, 'error')); }; img.src = event.target.result; }; reader.readAsDataURL(file); });
 
-  function gerarNotaFiscal(id) { const c = clientes.find(x => x.id === id); const checks = document.querySelectorAll(`.sel-${id}:checked`); const indices = Array.from(checks).map(cb => parseInt(cb.value)); const selecionados = (indices.length > 0) ? indices.map(idx => c.itens[idx]) : c.itens; const total = selecionados.reduce((a, i) => a + (Number(i.valor)||0), 0); const chaveFake = "412502" + empDados.cnpj.replace(/\D/g,'') + "65001000000001100000001"; let cvsBar = document.createElement('canvas'); JsBarcode(cvsBar, chaveFake.substring(0,20), {format:"CODE128", displayValue:false, width:1, height:30}); let barImg = cvsBar.toDataURL(); let itensHtml = selecionados.map((i, idx) => `<tr><td style="font-weight:bold;">${(idx+1).toString().padStart(3,'0')}</td><td style="font-weight:bold;">${i.desc.toUpperCase()}</td><td style="text-align:right;font-weight:bold;">${i.qtd||1}</td><td style="text-align:right;">UN</td><td style="text-align:right;">${formatarMoeda((i.valor/(i.qtd||1)))}</td><td style="text-align:right;font-weight:bold;">${formatarMoeda(i.valor)}</td></tr>`).join(''); let h = `<html><head><title>DANFE NFC-e</title><style>body{margin:0;padding:5px;padding-top:30px;font-family:'Arial',sans-serif;font-size:12px;width:72mm;color:#000;} .center{text-align:center} .right{text-align:right} .bold{font-weight:800} .line{border-bottom:1px dashed #000;margin:5px 0} table{width:100%;font-size:12px} td{padding:2px 0}</style></head><body onload="window.print()"><div class="center bold" style="font-size:14px">${empDados.nome.toUpperCase()}</div><div class="center">CNPJ: ${empDados.cnpj || '00.000.000/0000-00'}</div><div class="center">${empDados.end}</div><div class="line"></div><div class="center bold">DANFE NFC-e - Documento Auxiliar</div><div class="center">da Nota Fiscal de Consumidor Eletrônica</div><div class="center">Não permite aproveitamento de crédito de ICMS</div><div class="line"></div><table><tr><td>CÓD</td><td>DESC</td><td class="right">QTD</td><td class="right">UN</td><td class="right">VL UN</td><td class="right">VL TR</td></tr>${itensHtml}</table><div class="line"></div><div class="right bold" style="font-size:14px; color:#0000AA">TOTAL R$ ${total.toFixed(2).replace('.',',')}</div><div class="right">Forma Pagamento: Dinheiro/Pix</div><div class="line"></div><div class="center bold">EMISSÃO EM CONTINGÊNCIA</div><div class="center">Ambiente de Homologação - Sem Valor Fiscal</div><div class="line"></div><div class="center">CONSUMIDOR</div><div class="center bold">${c.nome.toUpperCase()}</div><div class="center">CPF/CNPJ: ${c.cpf_cnpj||'NÃO INFORMADO'}</div><div class="line"></div><div class="center">Nº 000000001 SÉRIE 001<br>Emissão: ${new Date().toLocaleString()}</div><div class="center"><img src="${barImg}" style="width:100%"></div><div class="center">${chaveFake.match(/.{1,4}/g).join(' ')}</div><div class="center"><br>Tributos Totais Incidentes (Lei Federal 12.741/2012): R$ ${(total*0.18).toFixed(2).replace('.',',')}</div></body></html>`; let w = window.open('','_blank','width=400,height=600'); w.document.write(h); w.document.close(); }
+  function gerarNotaFiscal(id) { const c = clientes.find(x => x.id === id); const checks = document.querySelectorAll(`.sel-${id}:checked`); const indices = Array.from(checks).map(cb => parseInt(cb.value)); const selecionados = (indices.length > 0) ? indices.map(idx => c.itens[idx]) : c.itens; const total = selecionados.reduce((a, i) => a + (Number(i.valor)||0), 0); const chaveFake = "412502" + empDados.cnpj.replace(/\D/g,'') + "65001000000001100000001"; let cvsBar = document.createElement('canvas'); JsBarcode(cvsBar, chaveFake.substring(0,20), {format:"CODE128", displayValue:false, width:1, height:30}); let barImg = cvsBar.toDataURL(); let itensHtml = selecionados.map((i, idx) => `<tr><td style="font-weight:bold;">${(idx+1).toString().padStart(3,'0')}</td><td style="font-weight:bold;">${i.desc.toUpperCase()}</td><td style="text-align:right;font-weight:bold;">${i.qtd||1}</td><td style="text-align:right;">UN</td><td style="text-align:right;">${formatarMoeda((i.valor/(i.qtd||1)))}</td><td style="text-align:right;font-weight:bold;">${formatarMoeda(i.valor)}</td></tr>`).join(''); 
+  let headerNF = `
+    <div style="display:flex; align-items:center; border-bottom:2px solid #000; padding-bottom:10px; margin-bottom:10px;">
+        <div style="width:100px; margin-right:15px; text-align:center;"><img src="${logoBase64}" style="max-height:80px;"></div>
+        <div style="flex:1; text-align:left;">
+            <div style="font-size:16px; font-weight:900; color:#000; margin-bottom:5px;">${empDados.nome}</div>
+            <div style="font-size:11px; font-weight:bold; color:#333;">${empDados.end}</div>
+            <div style="font-size:11px; font-weight:bold; color:#333;">${empDados.tel}</div>
+            <div style="font-size:11px; font-weight:bold; color:#333;">CNPJ: ${empDados.cnpj}</div>
+        </div>
+    </div>`;
+  
+  let h = `<html><head><title>DANFE NFC-e</title><style>body{margin:0;padding:5px;padding-top:30px;font-family:'Arial',sans-serif;font-size:12px;width:72mm;color:#000;} .center{text-align:center} .right{text-align:right} .bold{font-weight:800} .line{border-bottom:1px dashed #000;margin:5px 0} table{width:100%;font-size:12px} td{padding:2px 0}</style></head><body onload="window.print()">
+  ${headerNF}
+  <div class="line"></div><div class="center bold">DANFE NFC-e - Documento Auxiliar</div><div class="center">da Nota Fiscal de Consumidor Eletrônica</div><div class="center">Não permite aproveitamento de crédito de ICMS</div><div class="line"></div><table><tr><td>CÓD</td><td>DESC</td><td class="right">QTD</td><td class="right">UN</td><td class="right">VL UN</td><td class="right">VL TR</td></tr>${itensHtml}</table><div class="line"></div><div class="right bold" style="font-size:14px; color:#0000AA">TOTAL R$ ${total.toFixed(2).replace('.',',')}</div><div class="right">Forma Pagamento: Dinheiro/Pix</div><div class="line"></div><div class="center bold">EMISSÃO EM CONTINGÊNCIA</div><div class="center">Ambiente de Homologação - Sem Valor Fiscal</div><div class="line"></div><div class="center">CONSUMIDOR</div><div class="center bold">${c.nome.toUpperCase()}</div><div class="center">CPF/CNPJ: ${c.cpf_cnpj||'NÃO INFORMADO'}</div><div class="line"></div><div class="center">Nº 000000001 SÉRIE 001<br>Emissão: ${new Date().toLocaleString()}</div><div class="center"><img src="${barImg}" style="width:100%"></div><div class="center">${chaveFake.match(/.{1,4}/g).join(' ')}</div><div class="center"><br>Tributos Totais Incidentes (Lei Federal 12.741/2012): R$ ${(total*0.18).toFixed(2).replace('.',',')}</div></body></html>`; let w = window.open('','_blank','width=400,height=600'); w.document.write(h); w.document.close(); }
+  
   function imprimirSelecionados(id, tipo, assinaturaImg = null) { const c = clientes.find(x => x.id === id); const checks = document.querySelectorAll(`.sel-${id}:checked`); const indices = Array.from(checks).map(cb => parseInt(cb.value)); if (indices.length === 0) return Swal.fire('Aviso', "Selecione itens", 'warning'); const selecionados = indices.map(idx => c.itens[idx]); const totalS = selecionados.reduce((a, i) => a + (Number(i.valor) || 0), 0); gerarImpressao(c, selecionados, totalS, tipo, "COMPROVANTE DE VENDA", assinaturaImg); }
   function imprimirExtratoGeral(id){ let c = clientes.find(x => x.id === id); if(!c.itens.length)return; let t = c.itens.reduce((a, i) => a + (Number(i.valor) || 0), 0); gerarImpressao(c, c.itens, t, 'extrato', "EXTRATO GERAL"); }
   
@@ -478,7 +501,6 @@
     const logoHtml = logoBase64 ? `<img src="${logoBase64}" style="max-height:60px; display:block; margin:0 auto 5px auto;">` : '';
     let totalPago = itens.reduce((acc, i) => acc + (Number(i.pagoValor) || 0), 0); let saldoDevedor = total - totalPago; let imgFinal = assinaturaNova || (itens.find(i=>i.assinatura)?.assinatura);
     
-    // TABELA INVISIVEL PARA ALINHAMENTO PERFEITO DOS TOTAIS
     let tabelaTotais = `
     <table class="totals-table">
         <tr><td class="label blue">TOTAL:</td><td class="value blue">${formatarMoeda(total)}</td></tr>
@@ -486,15 +508,32 @@
         <tr><td class="label red">A RECEBER:</td><td class="value red">${formatarMoeda(saldoDevedor)}</td></tr>
     </table>`;
 
-    // CSS ESPECIAL PARA ALINHAR TABELA DE ITENS
     let cssTableItems = `
         .items-table th:nth-child(1), .items-table td:nth-child(1) { text-align: left !important; padding-left: 5px; }
         .items-table th:nth-child(2), .items-table td:nth-child(2) { text-align: center !important; }
         .items-table th:nth-child(3), .items-table td:nth-child(3) { text-align: right !important; }
     `;
 
+    // NOVO LAYOUT DO CABEÇALHO (SIDE BY SIDE)
+    let headerLayout = `
+        <div style="display:flex; align-items:center; border-bottom:2px solid #000; padding-bottom:10px; margin-bottom:10px;">
+            <div style="width:100px; margin-right:15px; text-align:center;">${logoHtml}</div>
+            <div style="flex:1; text-align:left;">
+                <div style="font-size:20px; font-weight:900; color:#0d47a1; margin-bottom:5px;">${empDados.nome}</div>
+                <div style="font-size:12px; font-weight:bold; color:#333;">${empDados.end}</div>
+                <div style="font-size:12px; font-weight:bold; color:#333;">${empDados.tel}</div>
+                <div style="font-size:12px; font-weight:bold; color:#333;">CNPJ: ${empDados.cnpj}</div>
+            </div>
+        </div>
+    `;
+
+    // SE FOR CUPOM (PEQUENO), USA O LAYOUT ANTIGO CENTRALIZADO
+    if(tipo === 'cupom'){
+        headerLayout = `${logoHtml}<br><div class="title-lg" style="font-size:12px">${empDados.nome}</div><div style="font-size:10px">${empDados.end}<br>${empDados.tel}</div><div style="border-bottom: 2px solid #000; margin: 10px 0;"></div>`;
+    }
+
     let conteudo = `<html><head><title>Imprimir</title><style>
-    @media print { @page { margin: 0; margin-top: 40px; margin-bottom: 20px; } body { margin: 0; padding-top: 20px; } } 
+    @media print { @page { margin: 0; margin-top: 20px; margin-bottom: 20px; } body { margin: 0; padding-top: 10px; } } 
     body { font-family: 'Arial', sans-serif; color: #000; text-align: center; font-size: ${tipo==='cupom'?'12px':'13px'}; width: ${tipo==='cupom'?'72mm':'180mm'}; margin: 0 auto; } 
     .main-table { width: 100%; border-collapse: collapse; margin-top: 10px; } 
     .main-table th { background-color: #eee; font-weight: bold; border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 4px; font-size: 11px; } 
@@ -504,7 +543,6 @@
     .bold { font-weight: 800; } 
     .title-lg { font-size: 16px; font-weight: 800; text-transform: uppercase; } 
     
-    /* ESTILO DA TABELA DE TOTAIS */
     .totals-table { width: auto; margin-left: auto; margin-top: 15px; border-collapse: collapse; }
     .totals-table td { padding: 2px 10px; text-align: right; border: none; font-weight: 900; font-size: 14px; }
     .label { font-weight: normal; font-size: 11px; text-align: right; }
@@ -512,12 +550,13 @@
     </style></head>
     <body onload="window.print()">
         <div style="width:100%; max-width:180mm; margin:0 auto;">
-        ${logoHtml}<br>
-        <div class="title-lg">${empDados.nome}</div>
-        <div>${empDados.end}<br>${empDados.tel}</div>
-        <div style="border-bottom: 2px solid #000; margin: 10px 0;"></div>
-        <div class="title-lg">${titulo}</div>
-        <div class="text-left" style="margin-top:10px;"><b>CLIENTE:</b> ${c.nome.toUpperCase()}<br>${c.cpf_cnpj ? '<b>CPF/CNPJ:</b> '+c.cpf_cnpj : ''}</div>
+        ${headerLayout}
+        
+        <div class="title-lg" style="margin-top:10px;">${titulo}</div>
+        <div class="text-left" style="margin-top:10px; border-bottom:1px solid #000; padding-bottom:5px;">
+            <b>CLIENTE:</b> ${c.nome.toUpperCase()}<br>
+            ${c.cpf_cnpj ? '<b>CPF/CNPJ:</b> '+c.cpf_cnpj : ''}
+        </div>
         
         <table class="main-table items-table">
             <thead><tr><th>ITEM</th><th>QTD</th><th>VALOR</th></tr></thead>
@@ -549,11 +588,20 @@
       let saldoDevedor = total - totalPago;
       const assinatura = c.itens.find(i=>i.assinatura)?.assinatura; 
 
-      // Gera HTML Invisivel para Print
+      // LAYOUT ZAP (SIDE BY SIDE HEADER)
+      let headerZap = `
+        <div style="display:flex; align-items:center; border-bottom:2px solid #000; padding-bottom:10px; margin-bottom:10px;">
+            <div style="width:100px; margin-right:15px; text-align:center;"><img src="${logoBase64}" style="max-height:80px;"></div>
+            <div style="flex:1; text-align:left;">
+                <div style="font-size:22px; font-weight:900; color:#0d47a1; margin-bottom:5px;">${empDados.nome}</div>
+                <div style="font-size:12px; font-weight:bold; color:#333;">${empDados.end}</div>
+                <div style="font-size:12px; font-weight:bold; color:#333;">${empDados.tel}</div>
+            </div>
+        </div>
+      `;
+
       let html = `<div style="background:#fff; width:750px; padding:40px 20px 20px 20px; font-family:Arial; text-align:center; color:#000;">
-        <div style="font-size:22px; font-weight:800;">${empDados.nome}</div>
-        <div>${empDados.end}</div>
-        <hr style="border:2px solid #000;">
+        ${headerZap}
         <div style="font-size:20px; font-weight:bold; margin:10px 0;">COMPROVANTE DE VENDA</div>
         <div style="text-align:left; font-size:16px; margin-bottom:15px;"><b>CLIENTE:</b> ${c.nome.toUpperCase()}</div>
         <table style="width:100%; border-collapse:collapse;">
