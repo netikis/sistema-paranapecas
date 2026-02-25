@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d47a1">
-<title>PARANÁ PEÇAS - GESTÃO V37</title>
+<title>PARANÁ PEÇAS - GESTÃO V38</title>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -98,6 +98,7 @@
   .client-card { background: #f9f9f9; color: #000; padding: 15px; margin-top: 20px; margin-bottom: 30px; border-radius: 15px; border: 3px solid #333; box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
   .top-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 15px; align-items: center; }
   input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; }
+  /* BUSCA */
   .search-box { width: 100%; padding: 15px; font-size: 18px; border: 2px solid #0d47a1; border-radius: 8px; margin-bottom: 20px; background: #fff !important; color: #000 !important; font-weight: bold; box-sizing: border-box; }
 </style>
 </head>
@@ -132,7 +133,7 @@
 
 <header class="header">
   <img id="logoLeft" src="" alt="">
-  <div class="titulo">PARANÁ PEÇAS - GESTÃO V37</div>
+  <div class="titulo">PARANÁ PEÇAS - GESTÃO V38</div>
   <div style="display:flex; align-items:center;">
     <div id="userDisplay" style="font-size:10px; margin-right:10px; text-align:right;"></div>
     <button class="danger" onclick="logout()">SAIR</button>
@@ -223,6 +224,9 @@
       <div style="flex: 1; min-width: 250px; border-left: 1px solid #444; padding-left: 15px;">
         <h4>📊 Ferramentas</h4>
         <label>Logo:</label> <input type="file" id="logoInput" accept="image/*" style="font-size: 10px;"><br>
+        
+        <button class="danger" onclick="limparErrosDuplicatas()" style="width: 100%; margin-top: 5px; background: #c62828; border: 2px solid #fff;">♻️ LIMPAR DUPLICADOS/ERROS</button>
+        
         <button class="primary" onclick="fazerBackupLocal()" style="width: 48%; margin-top: 5px;">💾 SALVAR BACKUP</button>
         <button class="dark" onclick="importarBackup()" style="width: 48%; margin-top: 5px;">📂 IMPORTAR BACKUP</button>
         <input type="file" id="importInput" accept=".json" style="display:none" onchange="processarImportacao(event)">
@@ -337,6 +341,7 @@
 <div id="hiddenPrintArea"></div>
 
 <script>
+  // 🔴 SUAS CHAVES 🔴
   const firebaseConfig = {
     apiKey: "AIzaSyDx0wGiH9IdMH6_8RSi-2upT-UnZqZ_UmE",
     authDomain: "gestaodeclientes-7f8f0.firebaseapp.com",
@@ -535,43 +540,78 @@
       }); 
   }
   
-  // ⚠️ V37: FAXINA DE DADOS AUTOMÁTICA
+  // ⚠️ SEGURANÇA V38: FILTRO DE DADOS QUEBRADOS NA RAIZ
   function iniciarSincronizacao() {
-      // Aviso de Loading inicial
-      document.getElementById('listaClientes').innerHTML = '<div style="text-align:center; padding:20px;">Carregando dados...</div>';
+      document.getElementById('listaClientes').innerHTML = '<div style="text-align:center; padding:20px;">Carregando dados... <br><small>Se demorar, use o botão de Limpeza nas Configurações.</small></div>';
       
       db.collection("clientes").onSnapshot((snapshot) => { 
           clientes = []; 
           snapshot.forEach((doc) => { 
               let d = doc.data();
-              // FAXINA: Garante que 'nome' e 'itens' existem. Se não tiver nome, vira 'SEM NOME'.
-              let safeClient = {
-                  id: doc.id,
-                  nome: d.nome || "CLIENTE SEM NOME",
-                  telefone: d.telefone || "",
-                  cpf_cnpj: d.cpf_cnpj || "",
-                  ie: d.ie || "",
-                  cep: d.cep || "",
-                  cidade: d.cidade || "",
-                  endereco: d.endereco || "",
-                  itens: Array.isArray(d.itens) ? d.itens : [] // Garante que itens é array
-              };
-              clientes.push(safeClient); 
+              // FILTRO DE SEGURANÇA: Só aceita se tiver nome
+              if (d && d.nome) {
+                  if (!d.itens) d.itens = []; // Garante que itens não é nulo
+                  clientes.push({ id: doc.id, ...d }); 
+              }
           }); 
           
           try {
-              clientes.sort((a,b) => a.nome.localeCompare(b.nome));
+              clientes.sort((a,b) => (a.nome || "").toString().localeCompare((b.nome || "").toString()));
           } catch(e) { console.log("Erro menor na ordenação"); }
           
           atualizarSelect(); 
           atualizarDashboard(); 
           render(); 
       }, (error) => {
-          document.getElementById('listaClientes').innerHTML = `<div style="text-align:center; padding:20px; color:red"><b>Erro ao carregar:</b> ${error.message}</div>`;
+          document.getElementById('listaClientes').innerHTML = `<div style="text-align:center; padding:20px; color:red"><b>Erro ao carregar:</b> ${error.message}<br><button onclick="location.reload()">Forçar Recarregamento</button></div>`;
       });
 
       db.collection("catalogo").onSnapshot((s)=>{ catalogo=[]; let d=document.getElementById('opcoesCatalogo'); if(!d) return; d.innerHTML=''; s.forEach((doc)=>{ let k=doc.data(); catalogo.push({id:doc.id,...k}); d.innerHTML+=`<option value="${k.nome}">R$ ${k.valor}</option>`; }); });
       db.collection("config").doc("empresa").onSnapshot((doc) => { if (doc.exists) { empDados = doc.data(); if(document.getElementById('confEmpNome')) { document.getElementById('confEmpNome').value = empDados.nome; document.getElementById('confEmpEnd').value = empDados.end; document.getElementById('confEmpTel').value = empDados.tel; document.getElementById('confEmpCnpj').value = empDados.cnpj; } if(empDados.logo) { logoBase64 = empDados.logo; aplicarLogo(); } } });
+  }
+
+  // --- NOVA FUNÇÃO: LIMPEZA DE DADOS ---
+  function limparErrosDuplicatas() {
+      Swal.fire({
+          title: 'Atenção!',
+          text: 'Isso vai apagar clientes sem nome e duplicados. Confirma?',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Sim, limpar!'
+      }).then((result) => {
+          if (result.isConfirmed) {
+              Swal.fire({title: 'Limpando...', didOpen: () => { Swal.showLoading() }});
+              
+              db.collection("clientes").get().then((querySnapshot) => {
+                  let batch = db.batch();
+                  let countDeletados = 0;
+                  let nomesVistos = {};
+
+                  querySnapshot.forEach((doc) => {
+                      let d = doc.data();
+                      
+                      // 1. Apagar sem nome
+                      if (!d.nome || d.nome.trim() === "") {
+                          batch.delete(doc.ref);
+                          countDeletados++;
+                          return;
+                      }
+
+                      // 2. Apagar duplicados (mantém o primeiro)
+                      if (nomesVistos[d.nome]) {
+                          batch.delete(doc.ref);
+                          countDeletados++;
+                      } else {
+                          nomesVistos[d.nome] = true;
+                      }
+                  });
+
+                  batch.commit().then(() => {
+                      Swal.fire('Limpeza Concluída!', `${countDeletados} registros inválidos removidos.`, 'success');
+                  });
+              });
+          }
+      });
   }
 
   function importarBackup() { document.getElementById('importInput').click(); }
@@ -596,7 +636,6 @@
       reader.readAsText(file);
   }
 
-  // ⚠️ V37: RENDERIZAÇÃO BLINDADA
   function render(){
     let div = document.getElementById('listaClientes'); 
     div.innerHTML = '';
@@ -609,7 +648,6 @@
     let termo = document.getElementById('searchBox').value.toLowerCase();
     
     clientes.forEach(c => {
-      // PROTEÇÃO CONTRA ERRO INDIVIDUAL
       try {
           if (termo && !c.nome.toLowerCase().includes(termo)) return;
 
