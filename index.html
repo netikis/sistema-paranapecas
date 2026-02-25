@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d47a1">
-<title>PARANÁ PEÇAS - GESTÃO V33</title>
+<title>PARANÁ PEÇAS - GESTÃO V34</title>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -26,8 +26,7 @@
     body > *:not(#printOverlay) { display: none !important; }
     body { background: white !important; color: black !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; }
     #printOverlay { display: block !important; position: absolute; top: 0; left: 0; width: 100%; height: auto; background: white !important; color: black !important; z-index: 999999; }
-    
-    .cupom-style { width: 72mm !important; max-width: 72mm !important; padding: 0 !important; margin: 0 !important; }
+    .cupom-style { width: 72mm !important; max-width: 72mm !important; font-size: 11px !important; padding: 0 !important; margin: 0 !important; }
     .a4-style { width: 100% !important; max-width: 210mm !important; }
     .print-controls, .no-print { display: none !important; }
     @page { margin: 0; size: auto; }
@@ -35,8 +34,7 @@
 
   .overlay-screen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #222; z-index: 10000; overflow-y: auto; }
   .print-controls { position: sticky; top: 0; left: 0; width: 100%; background: #111; padding: 15px; display: flex; gap: 15px; justify-content: center; z-index: 10001; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-  
-  #printPaper { background: #fff; color: #000; margin: 30px auto; box-shadow: 0 0 20px rgba(0,0,0,0.5); min-height: 200px; }
+  #printPaper { background: #fff; color: #000; margin: 30px auto; box-shadow: 0 0 20px rgba(0,0,0,0.5); transition: all 0.3s ease; }
 
   /* LOGIN */
   #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #000000 0%, #0d47a1 150%); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
@@ -100,6 +98,7 @@
   .client-card { background: #f9f9f9; color: #000; padding: 15px; margin-top: 20px; margin-bottom: 30px; border-radius: 15px; border: 3px solid #333; box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
   .top-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 15px; align-items: center; }
   input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; }
+  /* BUSCA */
   .search-box { width: 100%; padding: 15px; font-size: 18px; border: 2px solid #0d47a1; border-radius: 8px; margin-bottom: 20px; background: #fff !important; color: #000 !important; font-weight: bold; box-sizing: border-box; }
 </style>
 </head>
@@ -134,7 +133,7 @@
 
 <header class="header">
   <img id="logoLeft" src="" alt="">
-  <div class="titulo">PARANÁ PEÇAS - GESTÃO V33</div>
+  <div class="titulo">PARANÁ PEÇAS - GESTÃO V34</div>
   <div style="display:flex; align-items:center;">
     <div id="userDisplay" style="font-size:10px; margin-right:10px; text-align:right;"></div>
     <button class="danger" onclick="logout()">SAIR</button>
@@ -336,6 +335,7 @@
 <div id="hiddenPrintArea"></div>
 
 <script>
+  // 🔴 SUAS CHAVES 🔴
   const firebaseConfig = {
     apiKey: "AIzaSyDx0wGiH9IdMH6_8RSi-2upT-UnZqZ_UmE",
     authDomain: "gestaodeclientes-7f8f0.firebaseapp.com",
@@ -352,7 +352,6 @@
   let clientes = []; let catalogo = []; let logoBase64 = localStorage.getItem('logoParana') || "";
   let empDados = { nome: "PARANÁ PEÇAS", end: "", tel: "", cnpj: "" };
   let currentUserRole = 'func'; let roleSelected = '';
-  let unsubscribeClientes = null; let unsubscribeCatalogo = null; let unsubscribeEmpresa = null;
 
   $(document).ready(function(){
       $('#cep, #editCliCep').mask('00000-000'); 
@@ -380,13 +379,17 @@
           cvsRemoto.width = cvsRemoto.offsetWidth; cvsRemoto.height = 200;
           const ctxR = cvsRemoto.getContext('2d'); ctxR.lineWidth = 2; ctxR.strokeStyle = '#000';
           setupCanvasEvents(cvsRemoto);
+          
           auth.signInAnonymously().catch(() => {});
+
           db.collection("clientes").doc(clienteIdUrl).onSnapshot((doc) => {
               if(doc.exists) {
                   let data = doc.data();
                   let html = `<b>Olá, ${data.nome}</b><br>Itens para assinar:<br><br>`;
                   let total = 0;
+                  
                   let indicesPermitidos = itemsUrl ? itemsUrl.split(',').map(Number) : null;
+                  
                   data.itens.forEach((i, idx) => { 
                       if(!i.pago) { 
                           if(indicesPermitidos && !indicesPermitidos.includes(idx)) return;
@@ -475,33 +478,20 @@
       const c = clientes.find(x => x.id === id); 
       const checkboxes = document.getElementsByClassName(`sel-${id}`);
       let idxs = [];
-      for(let i=0; i<checkboxes.length; i++) {
-          if(checkboxes[i].checked) idxs.push(checkboxes[i].value);
-      }
-      
+      for(let i=0; i<checkboxes.length; i++) { if(checkboxes[i].checked) idxs.push(checkboxes[i].value); }
       if(!idxs.length) return Swal.fire('Aviso', "Selecione itens", 'warning'); 
       const selecionados = idxs.map(idx => c.itens[idx]); 
       const totalS = selecionados.reduce((a, b) => a + Number(b.valor), 0); 
       gerarImpressao(c, selecionados, totalS, tipo, "COMPROVANTE DE VENDA", imgAssinatura); 
   }
 
-  // --- NOVA FUNÇÃO DE EXIBIÇÃO DE IMPRESSÃO (V33) ---
   function mostrarTelaImpressao(html, tipo) {
       const papel = document.getElementById('printPaper');
       const overlay = document.getElementById('printOverlay');
-      
-      // Limpa classes anteriores
       papel.className = 'print-paper';
-      
-      // Adiciona classe específica
-      if(tipo === 'cupom') papel.classList.add('cupom-style');
-      else papel.classList.add('a4-style');
-      
+      if(tipo === 'cupom') papel.classList.add('cupom-style'); else papel.classList.add('a4-style');
       papel.innerHTML = html;
-      
-      // Força exibição
       overlay.style.display = 'block';
-      overlay.style.zIndex = '99999';
   }
 
   function gerarImpressao(c, itens, total, tipo, titulo, assinaturaNova = null) {
@@ -548,11 +538,15 @@
       }); 
   }
   
+  // ⚠️ SEGURANÇA V34: TRY-CATCH NO RENDER E ORDENAÇÃO SEGURA
   function iniciarSincronizacao() {
       db.collection("clientes").onSnapshot((snapshot) => { 
           clientes = []; 
           snapshot.forEach((doc) => { clientes.push({ id: doc.id, ...doc.data() }); }); 
-          clientes.sort((a,b) => (a.nome||"").localeCompare(b.nome||""));
+          // Ordenação protegida contra nomes vazios
+          try {
+              clientes.sort((a,b) => (a.nome || "").toString().localeCompare((b.nome || "").toString()));
+          } catch(e) { console.log("Erro ao ordenar", e); }
           atualizarSelect(); 
           atualizarDashboard(); 
           render(); 
@@ -572,7 +566,7 @@
 
     let termo = document.getElementById('searchBox').value.toLowerCase();
     
-    clientes.filter(c => !termo || c.nome.toLowerCase().includes(termo)).forEach(c => {
+    clientes.filter(c => !termo || (c.nome && c.nome.toLowerCase().includes(termo))).forEach(c => {
       let saldo = c.itens.reduce((acc, i) => acc + (Number(i.valor)||0) - (Number(i.pagoValor)||0), 0);
       let html = `<div class="client-card">
         <div style="display:flex; justify-content:space-between;">
@@ -737,11 +731,8 @@
   function limparAssinatura() { let c = document.getElementById('canvasAssinatura'); c.getContext('2d').clearRect(0,0,c.width,c.height); }
   function limparRemoto() { let cvs = document.getElementById('canvasRemoto'); let ctx = cvs.getContext('2d'); ctx.clearRect(0,0,cvs.width,cvs.height); }
   function fecharAssinatura() { document.getElementById('assinaturaModal').style.display = 'none'; signId = null; }
-  function abrirLogs() { db.collection("logs").orderBy("data", "desc").limit(20).get().then(snap => { let h = ""; snap.forEach(d => { let k=d.data(); h+=`<div style="border-bottom:1px solid #333; padding:5px; color:#fff;"><b>${k.acao}</b> - ${k.data.toDate().toLocaleString()}<br>${k.usuario}: ${k.detalhe}</div>`; }); $('#listaLogs').html(h); $('#modalLogs').css('display','flex'); }); }
-  function abrirModalUsuario() { $('#modalUsuario').css('display','flex'); }
-  function criarUsuario() { const nome = $('#novoUserNome').val(); const email = $('#novoUserEmail').val(); const senha = $('#novoUserSenha').val(); const perfil = $('#novoUserPerfil').val(); if(!email || !senha || !nome) return Swal.fire('Erro', 'Preencha tudo!', 'error'); const secondaryApp = firebase.initializeApp(firebaseConfig, "Secondary"); secondaryApp.auth().createUserWithEmailAndPassword(email, senha).then((userCredential) => { return db.collection("usuarios").doc(userCredential.user.uid).set({ nome: nome, email: email, perfil: perfil }); }).then(() => { secondaryApp.auth().signOut(); secondaryApp.delete(); $('#modalUsuario').hide(); $('#novoUserNome').val(''); $('#novoUserEmail').val(''); $('#novoUserSenha').val(''); Swal.fire('Sucesso', 'Usuário criado!', 'success'); }).catch((error) => { Swal.fire('Erro', error.message, 'error'); secondaryApp.delete(); }); }
-  function logAction(acao, detalhe) { db.collection("logs").add({ data: new Date(), usuario: auth.currentUser.email, acao, detalhe }); }
-  function colocarDigital(input) { if(input.files[0]) { let r = new FileReader(); r.onload = e => { let img = new Image(); img.onload = () => document.getElementById('canvasAssinatura').getContext('2d').drawImage(img,0,0,300,150); img.src = e.target.result; }; r.readAsDataURL(input.files[0]); } }
+  function finalizarAssinatura(tipo) { let img = document.getElementById('canvasAssinatura').toDataURL(); if(document.getElementById('salvarAssinaturaCheck').checked) { let c = clientes.find(x => x.id === signId); let idxs = Array.from(document.querySelectorAll(`.sel-${signId}:checked`)).map(e => e.value); idxs.forEach(i => c.itens[i].assinatura = img); db.collection("clientes").doc(signId).update({itens: c.itens}); } if(tipo !== 'salvar_apenas') imprimirSelecionados(signId, tipo); $('#assinaturaModal').hide(); }
+  function gerarLinkRemoto(id) { let l = `${window.location.href.split('?')[0]}?cliente=${id}`; navigator.clipboard.writeText(l).then(() => Swal.fire({title: 'Link Copiado!', html: `Envie para o cliente:<br><br><b>${l}</b>`, icon: 'success'})); }
   function compartilharComprovanteImagem(id) { if (!empDados.end) { Swal.fire({ title: 'Aguarde...', text: 'Carregando dados...', icon: 'info', timer: 3000 }); return; } let c = clientes.find(x => x.id === id); const checks = document.querySelectorAll(`.sel-${id}:checked`); let indices = []; for(let i=0; i<checks.length; i++) { if(checks[i].checked) indices.push(checks[i].value); } if(indices.length === 0) return Swal.fire('Aviso', "Selecione itens", 'warning'); const selecionados = indices.map(idx => c.itens[idx]); let total = selecionados.reduce((a, i) => a + (Number(i.valor)||0), 0); let totalPago = selecionados.reduce((acc, i) => acc + (Number(i.pagoValor) || 0), 0); let saldoDevedor = total - totalPago; const assinatura = c.itens.find(i=>i.assinatura)?.assinatura; let headerZap = `<div style="display:flex; align-items:center; border-bottom:2px solid #000; padding-bottom:10px; margin-bottom:10px;"><div style="width:100px; margin-right:15px; text-align:center;"><img src="${logoBase64}" style="max-height:80px;"></div><div style="flex:1; text-align:left;"><div style="font-size:22px; font-weight:900; color:#0d47a1; margin-bottom:5px;">${empDados.nome}</div><div style="font-size:12px; font-weight:bold; color:#333;">${empDados.end}</div><div style="font-size:12px; font-weight:bold; color:#333;">${empDados.tel}</div></div></div>`; let html = `<div style="background:#fff; width:750px; padding:40px 20px 20px 20px; font-family:Arial; text-align:center; color:#000;">${headerZap}<div style="font-size:20px; font-weight:bold; margin:10px 0;">COMPROVANTE DE VENDA</div><div style="text-align:left; font-size:16px; margin-bottom:15px;"><b>CLIENTE:</b> ${c.nome.toUpperCase()}</div><table style="width:100%; border-collapse:collapse;"><tr style="background:#eee; border-top:2px solid #000; border-bottom:2px solid #000;"><th style="text-align:left; padding:8px;">ITEM</th><th style="text-align:center; padding:8px;">QTD</th><th style="text-align:right; padding:8px;">VALOR</th></tr>${selecionados.map(i => `<tr><td style="text-align:left; padding:8px; border-bottom:1px dashed #ccc; font-weight:bold;">${i.desc.toUpperCase()}</td><td style="text-align:center; padding:8px; border-bottom:1px dashed #ccc; font-weight:bold;">${i.qtd || 1}</td><td style="text-align:right; padding:8px; border-bottom:1px dashed #ccc; font-weight:bold;">${formatarMoeda(i.valor)}</td></tr>`).join('')}</table><div style="margin-top:20px; text-align:right; font-size:18px;"><div style="color:#0000AA; font-weight:900;">TOTAL: ${formatarMoeda(total)}</div><div style="color:#008000; font-weight:900;">PAGO: ${formatarMoeda(totalPago)}</div><div style="color:#FF0000; font-weight:900; font-size:22px;">A RECEBER: ${formatarMoeda(saldoDevedor)}</div></div>${assinatura ? `<img src="${assinatura}" style="max-height:80px; margin-top:20px;">` : ''}<div style="font-size:12px; margin-top:20px; color:#666;">Gerado em ${new Date().toLocaleString()}</div></div>`; let area = document.getElementById('hiddenPrintArea'); area.innerHTML = html; setTimeout(() => { html2canvas(area, { scale: 1.5 }).then(canvasImg => { Swal.close(); Swal.fire({ title: 'Pronto para Enviar!', text: 'Segure na imagem para copiar ou compartilhar.', imageUrl: canvasImg.toDataURL("image/jpeg", 0.9), imageWidth: 400, confirmButtonText: 'Fechar' }); area.innerHTML = ''; }); }, 800); }
 </script>
 </body>
