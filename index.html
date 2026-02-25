@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d47a1">
-<title>PARANÁ PEÇAS - GESTÃO V23</title>
+<title>PARANÁ PEÇAS - GESTÃO V24</title>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -167,7 +167,7 @@
 
 <header class="header">
   <img id="logoLeft" src="" alt="">
-  <div class="titulo">PARANÁ PEÇAS - GESTÃO V23</div>
+  <div class="titulo">PARANÁ PEÇAS - GESTÃO V24</div>
   <div style="display:flex; align-items:center;">
     <div id="userDisplay" style="font-size:10px; margin-right:10px; text-align:right;"></div>
     <button class="danger" onclick="logout()">SAIR</button>
@@ -403,6 +403,34 @@
       ['mousedown', 'touchstart'].forEach(ev => cvs.addEventListener(ev, e => { isDrawing = true; ctx.beginPath(); ctx.moveTo(getPos(e).x, getPos(e).y); e.preventDefault(); }));
       ['mousemove', 'touchmove'].forEach(ev => cvs.addEventListener(ev, e => { if(isDrawing){ ctx.lineTo(getPos(e).x, getPos(e).y); ctx.stroke(); } e.preventDefault(); }));
       ['mouseup', 'touchend'].forEach(ev => cvs.addEventListener(ev, () => isDrawing = false));
+
+      // --- CORREÇÃO DO LINK: LÓGICA DE CARREGAMENTO NO READY ---
+      const urlParams = new URLSearchParams(window.location.search);
+      const clienteIdUrl = urlParams.get('cliente');
+      if(clienteIdUrl) {
+          const cvsRemoto = document.getElementById('canvasRemoto');
+          cvsRemoto.width = cvsRemoto.offsetWidth; cvsRemoto.height = 200;
+          const ctxR = cvsRemoto.getContext('2d'); ctxR.lineWidth = 2; ctxR.strokeStyle = '#000';
+          setupCanvasEvents(cvsRemoto);
+          
+          // FORÇA O LOGIN ANÔNIMO SE PRECISAR, PARA LER O BANCO
+          auth.signInAnonymously().catch(() => {});
+
+          db.collection("clientes").doc(clienteIdUrl).onSnapshot((doc) => {
+              if(doc.exists) {
+                  let data = doc.data();
+                  let html = `<b>Olá, ${data.nome}</b><br>Confira seus itens pendentes:<br><br>`;
+                  let total = 0;
+                  data.itens.forEach(i => { if(!i.pago) { html += `📦 ${i.desc} - ${formatarMoeda(i.valor)}<br>`; total += (Number(i.valor)||0); } });
+                  html += `<hr><b>TOTAL A PAGAR: ${formatarMoeda(total)}</b>`;
+                  document.getElementById('listaItensRemoto').innerHTML = html;
+              } else {
+                  document.getElementById('listaItensRemoto').innerHTML = "Cliente não encontrado.";
+              }
+          }, (error) => {
+             document.getElementById('listaItensRemoto').innerHTML = "Erro ao carregar: " + error.message;
+          });
+      }
   });
 
   const urlParams = new URLSearchParams(window.location.search);
@@ -423,6 +451,21 @@
           document.getElementById('loginOverlay').style.display = 'flex';
       }
   });
+
+  function setupCanvasEvents(canvas) {
+      if(!canvas) return;
+      const ctx = canvas.getContext('2d');
+      let isDrawing = false;
+      function getPos(e) { 
+        const rect = canvas.getBoundingClientRect(); 
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX; 
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY; 
+        return { x: clientX - rect.left, y: clientY - rect.top };
+      }
+      ['mousedown', 'touchstart'].forEach(ev => canvas.addEventListener(ev, e => { isDrawing = true; ctx.beginPath(); ctx.moveTo(getPos(e).x, getPos(e).y); e.preventDefault(); }));
+      ['mousemove', 'touchmove'].forEach(ev => canvas.addEventListener(ev, e => { if(isDrawing){ ctx.lineTo(getPos(e).x, getPos(e).y); ctx.stroke(); } e.preventDefault(); }));
+      ['mouseup', 'touchend'].forEach(ev => canvas.addEventListener(ev, () => isDrawing = false));
+  }
 
   function iniciarSincronizacao() {
       db.collection("clientes").orderBy("nome").onSnapshot((snapshot) => { clientes = []; snapshot.forEach((doc) => { clientes.push({ id: doc.id, ...doc.data() }); }); atualizarSelect(); atualizarDashboard(); render(); });
@@ -501,9 +544,9 @@
     let conteudo = '';
     const papel = document.getElementById('printPaper');
     
-    // --- MODO CUPOM (CLÁSSICO / ESTREITO) ---
+    // --- MODO CUPOM (CLÁSSICO) ---
     if(tipo === 'cupom') {
-        papel.className = 'print-paper cupom-style'; // Ativa CSS de cupom
+        papel.className = 'print-paper cupom-style';
         conteudo = `
         <style>
             .cupom-content { font-family: 'Courier New', monospace; text-align: center; font-size: 11px; color: black; padding: 5px; }
@@ -536,8 +579,8 @@
         </div>`;
         
     } else { 
-        // --- MODO A4 (PREMIUM / LARGO) ---
-        papel.className = 'print-paper a4-style'; // Ativa CSS de A4
+        // --- MODO A4 (MODERNO / HELVETICA) ---
+        papel.className = 'print-paper a4-style';
         conteudo = `
         <style>
             .paper-content { font-family: 'Helvetica', Arial, sans-serif; text-align: center; color: black; padding: 20px; }
@@ -660,6 +703,7 @@
   function abrirModalUsuario() { $('#modalUsuario').css('display','flex'); }
   function criarUsuario() { const nome = $('#novoUserNome').val(); const email = $('#novoUserEmail').val(); const senha = $('#novoUserSenha').val(); const perfil = $('#novoUserPerfil').val(); if(!email || !senha || !nome) return Swal.fire('Erro', 'Preencha tudo!', 'error'); const secondaryApp = firebase.initializeApp(firebaseConfig, "Secondary"); secondaryApp.auth().createUserWithEmailAndPassword(email, senha).then((userCredential) => { return db.collection("usuarios").doc(userCredential.user.uid).set({ nome: nome, email: email, perfil: perfil }); }).then(() => { secondaryApp.auth().signOut(); secondaryApp.delete(); $('#modalUsuario').hide(); $('#novoUserNome').val(''); $('#novoUserEmail').val(''); $('#novoUserSenha').val(''); Swal.fire('Sucesso', 'Usuário criado!', 'success'); }).catch((error) => { Swal.fire('Erro', error.message, 'error'); secondaryApp.delete(); }); }
   function logAction(acao, detalhe) { db.collection("logs").add({ data: new Date(), usuario: auth.currentUser.email, acao, detalhe }); }
+  function colocarDigital(input) { if(input.files[0]) { let r = new FileReader(); r.onload = e => { let img = new Image(); img.onload = () => document.getElementById('canvasAssinatura').getContext('2d').drawImage(img,0,0,300,150); img.src = e.target.result; }; r.readAsDataURL(input.files[0]); } }
 </script>
 </body>
 </html>
