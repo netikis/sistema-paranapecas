@@ -176,7 +176,7 @@
     </div>
     <div class="row-inputs">
       <input type="text" id="endereco" placeholder="Endereço Completo" style="flex: 3;">
-      <button class="primary" onclick="adicionarCliente()">💾 SALVAR</button>
+      <button id="btnSalvarCliente" class="primary" onclick="adicionarCliente()">💾 SALVAR</button>
     </div>
   </div>
 
@@ -187,8 +187,8 @@
     <select id="clienteSelect" style="margin-bottom: 10px;"></select>
     <div class="row-inputs">
       <input type="text" id="descricao" list="opcoesCatalogo" placeholder="Descrição da Peça" style="flex: 3;" oninput="preencherValorCatPrincipal()">
-      <input type="number" id="quantidade" placeholder="Qtd" style="flex: 1;" value="1" oninput="calcularTotalPrincipal()">
-      <input type="number" id="valorUnitario" placeholder="Unit. R$" style="flex: 1;" oninput="calcularTotalPrincipal()">
+      <input type="text" id="quantidade" placeholder="Qtd" style="flex: 1;" oninput="calcularTotalPrincipal()">
+      <input type="text" id="valorUnitario" placeholder="Unit. R$" style="flex: 1;" oninput="calcularTotalPrincipal()">
       <input type="text" id="valorTotal" placeholder="Total R$" style="flex: 1; background: #333; font-weight: bold;" readonly>
       <input type="hidden" id="custoItem">
     </div>
@@ -214,9 +214,9 @@
          <h4>📦 Catálogo Rápido</h4>
         <input type="text" id="catNome" placeholder="Nome da Peça">
         <div class="row-inputs">
-            <input type="number" id="catCusto" placeholder="Custo R$">
-            <input type="number" id="catValor" placeholder="Venda R$">
-            <input type="number" id="catEstoque" placeholder="Qtd Est.">
+            <input type="text" id="catCusto" placeholder="Custo R$">
+            <input type="text" id="catValor" placeholder="Venda R$">
+            <input type="text" id="catEstoque" placeholder="Qtd Est.">
         </div>
         <button class="success" onclick="salvarCatalogo()">+ ADC AO CATÁLOGO</button>
       </div>
@@ -250,8 +250,8 @@
   <div class="modal-content">
     <h3>Editar Item</h3>
     <label>Descrição:</label><input type="text" id="editDesc">
-    <label>Qtd:</label><input type="number" id="editQtd">
-    <label>Valor Total:</label><input type="number" id="editValor">
+    <label>Qtd:</label><input type="text" id="editQtd">
+    <label>Valor Total:</label><input type="text" id="editValor">
     <label>Data Entrada:</label><input type="date" id="editData">
     <label>Data Vencimento:</label><input type="date" id="editVenc">
     <br><br><button class="success" onclick="salvarEdicao()">Salvar</button><button class="danger" onclick="fecharModal()">Sair</button>
@@ -306,8 +306,8 @@
     <label>Peça:</label>
     <input type="text" id="descRapido" list="opcoesCatalogo" oninput="preencherValorCatRapido()" placeholder="Nome da peça...">
     <div class="row-inputs">
-        <input type="number" id="qtdRapido" placeholder="Qtd" value="1" oninput="calcularTotalRapido()">
-        <input type="number" id="valorUnitRapido" placeholder="Unit. R$" oninput="calcularTotalRapido()">
+        <input type="text" id="qtdRapido" placeholder="Qtd" oninput="calcularTotalRapido()">
+        <input type="text" id="valorUnitRapido" placeholder="Unit. R$" oninput="calcularTotalRapido()">
         <input type="hidden" id="custoRapido">
     </div>
     <div class="row-inputs">
@@ -334,7 +334,6 @@
 <div id="hiddenPrintArea"></div>
 
 <script>
-  // 🔴 SUAS CHAVES 🔴
   const firebaseConfig = {
     apiKey: "AIzaSyDx0wGiH9IdMH6_8RSi-2upT-UnZqZ_UmE",
     authDomain: "gestaodeclientes-7f8f0.firebaseapp.com",
@@ -379,17 +378,13 @@
           cvsRemoto.width = cvsRemoto.offsetWidth; cvsRemoto.height = 200;
           const ctxR = cvsRemoto.getContext('2d'); ctxR.lineWidth = 2; ctxR.strokeStyle = '#000';
           setupCanvasEvents(cvsRemoto);
-          
           auth.signInAnonymously().catch(() => {});
-
           db.collection("clientes").doc(clienteIdUrl).onSnapshot((doc) => {
               if(doc.exists) {
                   let data = doc.data();
                   let html = `<b>Olá, ${data.nome}</b><br>Itens para assinar:<br><br>`;
                   let total = 0;
-                  
                   let indicesPermitidos = itemsUrl ? itemsUrl.split(',').map(Number) : null;
-                  
                   data.itens.forEach((i, idx) => { 
                       if(!i.pago) { 
                           if(indicesPermitidos && !indicesPermitidos.includes(idx)) return;
@@ -429,29 +424,19 @@
   function setupCanvasEvents(canvas) {
       if(!canvas) return;
       const ctx = canvas.getContext('2d');
-      ctx.lineWidth = 2; 
-      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 2; ctx.strokeStyle = '#000';
       let isDrawing = false;
-      
       function getPos(e) { 
         const rect = canvas.getBoundingClientRect(); 
         const clientX = e.touches ? e.touches[0].clientX : e.clientX; 
         const clientY = e.touches ? e.touches[0].clientY : e.clientY; 
-        
-        // CORREÇÃO DE ESCALA
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
         return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
       }
-
-      const start = (e) => { isDrawing = true; ctx.beginPath(); const pos = getPos(e); ctx.moveTo(pos.x, pos.y); e.preventDefault(); };
-      const move = (e) => { if(isDrawing){ const pos = getPos(e); ctx.lineTo(pos.x, pos.y); ctx.stroke(); } e.preventDefault(); };
-      const end = () => { isDrawing = false; };
-
-      canvas.addEventListener('mousedown', start); canvas.addEventListener('touchstart', start, {passive: false});
-      canvas.addEventListener('mousemove', move); canvas.addEventListener('touchmove', move, {passive: false});
-      canvas.addEventListener('mouseup', end); canvas.addEventListener('touchend', end);
-      canvas.addEventListener('mouseout', end);
+      ['mousedown', 'touchstart'].forEach(ev => canvas.addEventListener(ev, (e) => { isDrawing = true; ctx.beginPath(); const pos = getPos(e); ctx.moveTo(pos.x, pos.y); e.preventDefault(); }, {passive: false}));
+      ['mousemove', 'touchmove'].forEach(ev => canvas.addEventListener(ev, (e) => { if(isDrawing){ const pos = getPos(e); ctx.lineTo(pos.x, pos.y); ctx.stroke(); } e.preventDefault(); }, {passive: false}));
+      ['mouseup', 'touchend', 'mouseout'].forEach(ev => canvas.addEventListener(ev, () => isDrawing = false));
   }
 
   function abrirAssinatura(id) {
@@ -459,19 +444,20 @@
       let algumSelecionado = false;
       for(let i=0; i<checkboxes.length; i++) { if(checkboxes[i].checked) { algumSelecionado = true; break; } }
       if(!algumSelecionado) return Swal.fire('Atenção', "Selecione itens para assinar", 'warning');
-      
       signId = id;
       const modal = document.getElementById('assinaturaModal');
       modal.style.display = 'flex';
-      
       setTimeout(() => {
           const cvs = document.getElementById('canvasAssinatura');
-          cvs.width = cvs.offsetWidth; 
-          cvs.height = 200;
-          const ctx = cvs.getContext('2d'); 
-          ctx.clearRect(0,0,cvs.width,cvs.height);
+          cvs.width = cvs.offsetWidth; cvs.height = 200;
+          const ctx = cvs.getContext('2d'); ctx.clearRect(0,0,cvs.width,cvs.height);
           setupCanvasEvents(cvs); 
       }, 200);
+  }
+
+  function parseMoeda(valor) {
+      if (!valor) return 0;
+      return parseFloat(valor.toString().replace(',', '.'));
   }
 
   function finalizarAssinatura(tipo) { 
@@ -486,31 +472,24 @@
           }
           db.collection("clientes").doc(signId).update({itens: c.itens}); 
       } 
-      // IMPRESSÃO DIRETA SEM ESPERAR O BANCO
       if(tipo !== 'salvar_apenas') imprimirSelecionados(signId, tipo, img); 
       $('#assinaturaModal').hide(); 
   }
 
-  // --- IMPRESSÃO PASSANDO IMAGEM DIRETO ---
   function imprimirSelecionados(id, tipo, imgAssinatura = null) { 
       const c = clientes.find(x => x.id === id); 
       const checkboxes = document.getElementsByClassName(`sel-${id}`);
       let idxs = [];
-      for(let i=0; i<checkboxes.length; i++) {
-          if(checkboxes[i].checked) idxs.push(checkboxes[i].value);
-      }
-      
+      for(let i=0; i<checkboxes.length; i++) { if(checkboxes[i].checked) idxs.push(checkboxes[i].value); }
       if(!idxs.length) return Swal.fire('Aviso', "Selecione itens", 'warning'); 
       const selecionados = idxs.map(idx => c.itens[idx]); 
       const totalS = selecionados.reduce((a, b) => a + Number(b.valor), 0); 
-      
       gerarImpressao(c, selecionados, totalS, tipo, "COMPROVANTE DE VENDA", imgAssinatura); 
   }
 
   function gerarImpressao(c, itens, total, tipo, titulo, assinaturaNova = null) {
     const logoHtml = logoBase64 ? `<img src="${logoBase64}" style="max-height:60px; display:block; margin:0 auto 5px auto;">` : '';
     let totalPago = itens.reduce((a, i) => a + (Number(i.pagoValor)||0), 0); let saldo = total - totalPago; 
-    // Prioriza assinatura nova (da tela), senão pega do banco
     let imgAss = assinaturaNova || (itens.find(i=>i.assinatura)?.assinatura);
     let conteudo = '';
     const papel = document.getElementById('printPaper');
@@ -526,42 +505,13 @@
   }
 
   function fecharImpressao() { $('#printOverlay').hide(); $('#printPaper').html(''); }
-  function gerarLinkRemoto(id) { 
-      const checkboxes = document.getElementsByClassName(`sel-${id}`);
-      let indices = [];
-      for(let i=0; i<checkboxes.length; i++) { if(checkboxes[i].checked) indices.push(checkboxes[i].value); }
-      if(indices.length === 0) return Swal.fire('Atenção', "Selecione os itens para enviar", 'warning');
-      let baseUrl = window.location.href.split('?')[0]; 
-      let link = `${baseUrl}?cliente=${id}&items=${indices.join(',')}`;
-      navigator.clipboard.writeText(link).then(() => { Swal.fire({title: 'Link Copiado!', html: `Envie para o cliente:<br><br><b>${link}</b>`, icon: 'success'}); }); 
-  }
-  function salvarAssinaturaRemota() { 
-      let cvs = document.getElementById('canvasRemoto'); let img = cvs.toDataURL(); 
-      const urlParams = new URLSearchParams(window.location.search);
-      const itemsUrl = urlParams.get('items');
-      let indicesPermitidos = itemsUrl ? itemsUrl.split(',').map(Number) : null;
-      db.collection("clientes").doc(clienteIdUrl).get().then(doc => { 
-          let itens = doc.data().itens; 
-          itens.forEach((i, idx) => { 
-              if(!i.pago) { 
-                   if(indicesPermitidos && !indicesPermitidos.includes(idx)) return;
-                   i.assinatura = img; 
-              } 
-          }); 
-          db.collection("clientes").doc(clienteIdUrl).update({ itens }).then(() => { 
-              Swal.fire({ icon: 'success', title: 'Assinado!', text: 'Obrigado!', showConfirmButton: false }); 
-              setTimeout(() => document.body.innerHTML = "<h2 style='text-align:center;padding:50px;color:#fff;'>Tudo certo! Pode fechar.</h2>", 2000);
-          }); 
-      }); 
-  }
-  
-  // ⚠️ CORREÇÃO DESTRAVADA: REMOVI ORDERBY PARA NÃO TRAVAR O BANCO
+
+  // --- LÓGICA DE CÁLCULO E LANÇAMENTO CORRIGIDA (VÍRGULA E PONTO) ---
   function iniciarSincronizacao() {
       db.collection("clientes").onSnapshot((snapshot) => { 
           clientes = []; 
           snapshot.forEach((doc) => { clientes.push({ id: doc.id, ...doc.data() }); }); 
-          // ORDENAÇÃO LOCAL
-          clientes.sort((a,b) => a.nome.localeCompare(b.nome));
+          clientes.sort((a,b) => (a.nome||"").localeCompare(b.nome||""));
           atualizarSelect(); 
           atualizarDashboard(); 
           render(); 
@@ -606,21 +556,9 @@
                 <th>PEÇA</th><th>QTD</th><th>VALOR</th><th>DATA</th><th>VENC.</th><th>SITUAÇÃO</th><th>AÇÕES</th>
             </tr>
         </thead><tbody>${c.itens.map((i, ii) => {
-          
           let hoje = new Date().toISOString().split('T')[0];
           let isVencido = (!i.pago && i.venc && i.venc < hoje);
-          let sit = '';
-
-          if (i.pago) {
-              sit = '<span class="status-tag tag-verde">PAGO</span>';
-          } else if (i.pagoValor > 0) {
-              sit = `<span class="status-tag tag-amarelo">PARCIAL<br>${formatarMoeda(i.pagoValor)}</span>`;
-          } else if (isVencido) {
-              sit = '<span class="status-tag tag-vermelho">VENCIDO</span>';
-          } else {
-              sit = 'ABERTO';
-          }
-
+          let sit = i.pago ? '<span class="status-tag tag-verde">PAGO</span>' : (i.pagoValor > 0 ? `<span class="status-tag tag-amarelo">PARCIAL<br>${formatarMoeda(i.pagoValor)}</span>` : (isVencido ? '<span class="status-tag tag-vermelho">VENCIDO</span>' : 'ABERTO'));
           return `<tr ${isVencido ? 'class="vencido"' : ''}>
             <td><input type="checkbox" class="sel-${c.id}" value="${ii}"></td>
             <td style="text-align:left">${i.desc} ${i.assinatura?'✍️':''}</td>
@@ -629,24 +567,128 @@
             <td>${formatarDataBR(i.data)}</td>
             <td>${formatarDataBR(i.venc)}</td>
             <td>${sit}</td>
-            <td>
-               <div class="table-actions">
-                  <button class="success" onclick="pagar('${c.id}',${ii})">$</button>
-                  <button class="primary admin-only" onclick="abrirEditar('${c.id}',${ii})">✏️</button>
-                  <button class="danger admin-only" onclick="excluirLançamento('${c.id}',${ii})">X</button>
-               </div>
-            </td></tr>`;
+            <td><div class="table-actions"><button class="success" onclick="pagar('${c.id}',${ii})">$</button><button class="primary admin-only" onclick="abrirEditar('${c.id}',${ii})">✏️</button><button class="danger admin-only" onclick="excluirLançamento('${c.id}',${ii})">X</button></div></td></tr>`;
         }).join('')}</tbody></table></div>`;
       div.innerHTML += html;
     });
   }
 
   function salvarDadosEmpresa() { let n=document.getElementById('confEmpNome').value, e=document.getElementById('confEmpEnd').value, t=document.getElementById('confEmpTel').value, c=document.getElementById('confEmpCnpj').value; db.collection("config").doc("empresa").set({ nome: n, end: e, tel: t, cnpj: c }, {merge: true}).then(() => Swal.fire('Salvo!','','success')); }
-  function salvarCatalogo() { let n=document.getElementById('catNome').value,v=Number(document.getElementById('catValor').value); if(n&&v){db.collection("catalogo").add({nome:n.toUpperCase(),valor:v});document.getElementById('catNome').value='';document.getElementById('catValor').value='';Swal.fire('Salvo','','success');} }
-  function preencherValorCat(){let t=document.getElementById('descricao').value.toUpperCase(),a=catalogo.find(c=>c.nome===t);if(a)document.getElementById('valor').value=a.valor;}
+  function salvarCatalogo() { let n=document.getElementById('catNome').value, v=parseMoeda(document.getElementById('catValor').value); if(n&&v){db.collection("catalogo").add({nome:n.toUpperCase(),valor:v});document.getElementById('catNome').value='';document.getElementById('catValor').value='';Swal.fire('Salvo','','success');} }
+  
+  function preencherValorCatPrincipal() { let t=document.getElementById('descricao').value.toUpperCase(),a=catalogo.find(c=>c.nome===t);if(a) { document.getElementById('valorUnitario').value=a.valor; calcularTotalPrincipal(); } }
+  function calcularTotalPrincipal() { 
+      let qtd = parseMoeda(document.getElementById('quantidade').value) || 0;
+      let unit = parseMoeda(document.getElementById('valorUnitario').value) || 0;
+      document.getElementById('valorTotal').value = (qtd * unit).toFixed(2);
+  }
+
+  function adicionarCliente() {
+      let nome = document.getElementById('nome').value.trim();
+      if(!nome) return Swal.fire('Erro', 'Nome obrigatório', 'error');
+      
+      db.collection("clientes").add({
+          nome: nome.toUpperCase(),
+          cpf_cnpj: document.getElementById('cpf_cnpj').value,
+          ie: document.getElementById('ie').value,
+          telefone: document.getElementById('telefone').value,
+          cep: document.getElementById('cep').value,
+          cidade: document.getElementById('cidade').value,
+          endereco: document.getElementById('endereco').value,
+          itens: []
+      }).then((docRef) => {
+          Swal.fire('Sucesso', 'Cliente salvo', 'success');
+          // LIMPA CAMPOS
+          document.getElementById('nome').value = '';
+          document.getElementById('cpf_cnpj').value = '';
+          document.getElementById('ie').value = '';
+          document.getElementById('telefone').value = '';
+          document.getElementById('endereco').value = '';
+          // AUTO SELECIONAR NO LANCAMENTO
+          setTimeout(() => { document.getElementById('clienteSelect').value = docRef.id; }, 1000);
+      });
+  }
+
+  function adicionarItem(){
+      let id=document.getElementById('clienteSelect').value;
+      if(!id) return Swal.fire('Erro','Selecione cliente','error');
+      
+      let qtd = parseMoeda(document.getElementById('quantidade').value);
+      let valor = parseMoeda(document.getElementById('valorTotal').value);
+      let desc = document.getElementById('descricao').value.toUpperCase();
+      
+      if(!desc || !valor) return Swal.fire('Erro', 'Preencha descrição e valor', 'error');
+
+      let item={
+          desc: desc,
+          qtd: qtd || 1,
+          valor: valor,
+          data: document.getElementById('dataEntrada').value || new Date().toISOString().split('T')[0],
+          venc: document.getElementById('dataVenc').value,
+          pago: false,
+          pagoValor: 0
+      };
+      
+      db.collection("clientes").doc(id).update({itens:firebase.firestore.FieldValue.arrayUnion(item)})
+      .then(()=>{
+          Swal.fire({icon:'success',title:'Lançado',toast:true,position:'top-end',timer:1500,showConfirmButton:false});
+          document.getElementById('descricao').value = '';
+          document.getElementById('quantidade').value = '';
+          document.getElementById('valorUnitario').value = '';
+          document.getElementById('valorTotal').value = '';
+      });
+  }
+
+  function abrirLancarRapido(id, nome) { 
+      document.getElementById('idCliRapido').value = id; // Garante que o ID está lá
+      document.getElementById('modalLancarRapido').style.display='flex'; 
+  }
+
+  function preencherValorCatRapido() { 
+      let t=document.getElementById('descRapido').value.toUpperCase();
+      let a=catalogo.find(c=>c.nome===t);
+      if(a) { 
+          document.getElementById('valorUnitRapido').value=a.valor; 
+          calcularTotalRapido(); 
+      } 
+  }
+
+  function calcularTotalRapido() { 
+      let qtd = parseMoeda(document.getElementById('qtdRapido').value) || 0;
+      let unit = parseMoeda(document.getElementById('valorUnitRapido').value) || 0;
+      document.getElementById('valorTotalRapido').value = (qtd * unit).toFixed(2);
+  }
+
+  function confirmarLancamentoRapido() { 
+      let id = document.getElementById('idCliRapido').value;
+      let desc = document.getElementById('descRapido').value.toUpperCase();
+      let qtd = parseMoeda(document.getElementById('qtdRapido').value) || 1;
+      let valor = parseMoeda(document.getElementById('valorTotalRapido').value);
+      
+      if(!id) return Swal.fire('Erro', 'Cliente não identificado', 'error');
+      if(!valor) return Swal.fire('Erro', 'Valor inválido', 'error');
+
+      db.collection("clientes").doc(id).update({ 
+          itens: firebase.firestore.FieldValue.arrayUnion({ 
+              desc: desc, 
+              qtd: qtd, 
+              valor: valor, 
+              data: new Date().toISOString().split('T')[0], 
+              pago: false,
+              pagoValor: 0
+          }) 
+      }).then(() => {
+          document.getElementById('modalLancarRapido').style.display='none';
+          Swal.fire('Salvo','','success');
+          // Limpa campos
+          document.getElementById('descRapido').value = '';
+          document.getElementById('qtdRapido').value = '';
+          document.getElementById('valorUnitRapido').value = '';
+          document.getElementById('valorTotalRapido').value = '';
+      }); 
+  }
+
   function atualizarSelect(){let s=document.getElementById('clienteSelect'),c=s.value;s.innerHTML='<option value="">Selecione...</option>';clientes.sort((a,b)=>a.nome.localeCompare(b.nome)).forEach((k)=>{let o=document.createElement('option');o.value=k.id;o.textContent=k.nome;s.appendChild(o)});if(c)s.value=c;}
-  function adicionarCliente(){let n=document.getElementById('nome').value.trim();if(!n)return Swal.fire('Erro','Nome obrigatório','error');db.collection("clientes").add({nome:n,cpf_cnpj:document.getElementById('cpf_cnpj').value,ie:document.getElementById('ie').value,telefone:document.getElementById('telefone').value,cep:document.getElementById('cep').value,cidade:document.getElementById('cidade').value,endereco:document.getElementById('endereco').value,itens:[]});Swal.fire('Sucesso','Cliente salvo','success');}
-  function adicionarItem(){let id=document.getElementById('clienteSelect').value;if(!id)return Swal.fire('Erro','Selecione cliente','error');let item={desc:document.getElementById('descricao').value.toUpperCase(),qtd:Number(document.getElementById('quantidade').value)||1,valor:Number(document.getElementById('valor').value),data:document.getElementById('dataEntrada').value||new Date().toISOString().split('T')[0],venc:document.getElementById('dataVenc').value,pago:false,pagoValor:0,img:null};db.collection("clientes").doc(id).update({itens:firebase.firestore.FieldValue.arrayUnion(item)}).then(()=>{Swal.fire({icon:'success',title:'Lançado',toast:true,position:'top-end',timer:1500,showConfirmButton:false});});}
   function toggleAll(id,s){ let boxes = document.getElementsByClassName(`sel-${id}`); for(let i=0; i<boxes.length; i++) boxes[i].checked = s.checked; }
   function formatarMoeda(v){return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
   function formatarDataBR(i){if(!i)return'';let p=i.split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:i;}
@@ -656,9 +698,9 @@
   function atualizarDashboard(){let t=0,r=0;clientes.forEach(c=>c.itens.forEach(i=>{t+=(Number(i.valor)||0);r+=(Number(i.pagoValor)||0)}));document.getElementById('dashTotal').innerText=formatarMoeda(t);document.getElementById('dashRecebido').innerText=formatarMoeda(r);document.getElementById('dashDevedor').innerText=formatarMoeda(t-r);}
   function migrarDados(){let l=JSON.parse(localStorage.getItem('clientesParana'))||[];l.forEach(c=>db.collection("clientes").add(c));Swal.fire('OK','Sincronizado','success');}
   function cobrarWhatsApp(id, saldo) { let c = clientes.find(x => x.id === id); window.open(`https://wa.me/55${c.telefone.replace(/\D/g,'')}?text=Ola ${c.nome}, saldo de R$ ${saldo}`); }
-  function pagar(id, ii){let c=clientes.find(x=>x.id===id),itens=[...c.itens],v=Number(prompt(`Resta: ${formatarMoeda(itens[ii].valor-itens[ii].pagoValor)}\nQuanto pagou?`));if(v>0){itens[ii].pagoValor+=v;if(itens[ii].pagoValor>=itens[ii].valor)itens[ii].pago=true;db.collection("clientes").doc(id).update({itens});Swal.fire({icon:'success',title:'Pago',toast:true,position:'top-end',timer:1000,showConfirmButton:false});}}
+  function pagar(id, ii){let c=clientes.find(x=>x.id===id),itens=[...c.itens],v=parseMoeda(prompt(`Resta: ${formatarMoeda(itens[ii].valor-itens[ii].pagoValor)}\nQuanto pagou?`));if(v>0){itens[ii].pagoValor+=v;if(itens[ii].pagoValor>=itens[ii].valor)itens[ii].pago=true;db.collection("clientes").doc(id).update({itens});Swal.fire({icon:'success',title:'Pago',toast:true,position:'top-end',timer:1000,showConfirmButton:false});}}
   function abrirEditar(id,ii){let c=clientes.find(x=>x.id===id),i=c.itens[ii];editRef={id,ii};document.getElementById('editDesc').value=i.desc;document.getElementById('editQtd').value=i.qtd||1;document.getElementById('editValor').value=i.valor;document.getElementById('editData').value=i.data||"";document.getElementById('editVenc').value=i.venc||"";document.getElementById('editModal').style.display='flex';}
-  function salvarEdicao(){let {id,ii}=editRef,c=clientes.find(x=>x.id===id),itens=[...c.itens];itens[ii].desc=document.getElementById('editDesc').value;itens[ii].qtd=Number(document.getElementById('editQtd').value);itens[ii].valor=Number(document.getElementById('editValor').value);itens[ii].data=document.getElementById('editData').value;itens[ii].venc=document.getElementById('editVenc').value;db.collection("clientes").doc(id).update({itens}).then(()=>fecharModal());}
+  function salvarEdicao(){let {id,ii}=editRef,c=clientes.find(x=>x.id===id),itens=[...c.itens];itens[ii].desc=document.getElementById('editDesc').value;itens[ii].qtd=parseMoeda(document.getElementById('editQtd').value);itens[ii].valor=parseMoeda(document.getElementById('editValor').value);itens[ii].data=document.getElementById('editData').value;itens[ii].venc=document.getElementById('editVenc').value;db.collection("clientes").doc(id).update({itens}).then(()=>fecharModal());}
   function fecharModal(){document.getElementById('editModal').style.display='none';}
   function excluirLançamento(id,ii){Swal.fire({title:'Excluir item?',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33',confirmButtonText:'Sim'}).then((r)=>{if(r.isConfirmed){let c=clientes.find(x=>x.id===id),itens=[...c.itens];itens.splice(ii,1);db.collection("clientes").doc(id).update({itens});}});}
   function excluirCliente(id){Swal.fire({title:'Excluir Cliente?',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33',confirmButtonText:'Excluir Tudo'}).then((r)=>{if(r.isConfirmed)db.collection("clientes").doc(id).delete();});}
@@ -673,10 +715,37 @@
   function limparAssinatura() { let c = document.getElementById('canvasAssinatura'); c.getContext('2d').clearRect(0,0,c.width,c.height); }
   function limparRemoto() { let cvs = document.getElementById('canvasRemoto'); let ctx = cvs.getContext('2d'); ctx.clearRect(0,0,cvs.width,cvs.height); }
   function fecharAssinatura() { document.getElementById('assinaturaModal').style.display = 'none'; signId = null; }
-  function finalizarAssinatura(tipo) { let img = document.getElementById('canvasAssinatura').toDataURL(); if(document.getElementById('salvarAssinaturaCheck').checked) { let c = clientes.find(x => x.id === signId); let idxs = Array.from(document.querySelectorAll(`.sel-${signId}:checked`)).map(e => e.value); idxs.forEach(i => c.itens[i].assinatura = img); db.collection("clientes").doc(signId).update({itens: c.itens}); } if(tipo !== 'salvar_apenas') imprimirSelecionados(signId, tipo); $('#assinaturaModal').hide(); }
-  function gerarLinkRemoto(id) { let l = `${window.location.href.split('?')[0]}?cliente=${id}`; navigator.clipboard.writeText(l).then(() => Swal.fire({title: 'Link Copiado!', html: `Envie para o cliente:<br><br><b>${l}</b>`, icon: 'success'})); }
+  function gerarLinkRemoto(id) { 
+      const checkboxes = document.getElementsByClassName(`sel-${id}`);
+      let indices = [];
+      for(let i=0; i<checkboxes.length; i++) { if(checkboxes[i].checked) indices.push(checkboxes[i].value); }
+      if(indices.length === 0) return Swal.fire('Atenção', "Selecione os itens para enviar", 'warning');
+      let baseUrl = window.location.href.split('?')[0]; 
+      let link = `${baseUrl}?cliente=${id}&items=${indices.join(',')}`;
+      navigator.clipboard.writeText(link).then(() => { Swal.fire({title: 'Link Copiado!', html: `Envie para o cliente:<br><br><b>${link}</b>`, icon: 'success'}); }); 
+  }
+  function salvarAssinaturaRemota() { 
+      let cvs = document.getElementById('canvasRemoto'); let img = cvs.toDataURL(); 
+      const urlParams = new URLSearchParams(window.location.search);
+      const itemsUrl = urlParams.get('items');
+      let indicesPermitidos = itemsUrl ? itemsUrl.split(',').map(Number) : null;
+      db.collection("clientes").doc(clienteIdUrl).get().then(doc => { 
+          let itens = doc.data().itens; 
+          itens.forEach((i, idx) => { 
+              if(!i.pago) { 
+                   if(indicesPermitidos && !indicesPermitidos.includes(idx)) return;
+                   i.assinatura = img; 
+              } 
+          }); 
+          db.collection("clientes").doc(clienteIdUrl).update({ itens }).then(() => { 
+              Swal.fire({ icon: 'success', title: 'Assinado!', text: 'Obrigado!', showConfirmButton: false }); 
+              setTimeout(() => document.body.innerHTML = "<h2 style='text-align:center;padding:50px;color:#fff;'>Tudo certo! Pode fechar.</h2>", 2000);
+          }); 
+      }); 
+  }
+  function logAction(acao, detalhe) { db.collection("logs").add({ data: new Date(), usuario: auth.currentUser.email, acao, detalhe }); }
+  function colocarDigital(input) { if(input.files[0]) { let r = new FileReader(); r.onload = e => { let img = new Image(); img.onload = () => document.getElementById('canvasAssinatura').getContext('2d').drawImage(img,0,0,300,150); img.src = e.target.result; }; r.readAsDataURL(input.files[0]); } }
   function compartilharComprovanteImagem(id) { if (!empDados.end) { Swal.fire({ title: 'Aguarde...', text: 'Carregando dados...', icon: 'info', timer: 3000 }); return; } const c = clientes.find(x => x.id === id); const checks = document.querySelectorAll(`.sel-${id}:checked`); const indices = Array.from(checks).map(cb => parseInt(cb.value)); const itens = (indices.length > 0) ? indices.map(idx => c.itens[idx]) : c.itens; let total = itens.reduce((a, i) => a + (Number(i.valor)||0), 0); let totalPago = itens.reduce((acc, i) => acc + (Number(i.pagoValor) || 0), 0); let saldoDevedor = total - totalPago; const assinatura = c.itens.find(i=>i.assinatura)?.assinatura; let headerZap = `<div style="display:flex; align-items:center; border-bottom:2px solid #000; padding-bottom:10px; margin-bottom:10px;"><div style="width:100px; margin-right:15px; text-align:center;"><img src="${logoBase64}" style="max-height:80px;"></div><div style="flex:1; text-align:left;"><div style="font-size:22px; font-weight:900; color:#0d47a1; margin-bottom:5px;">${empDados.nome}</div><div style="font-size:12px; font-weight:bold; color:#333;">${empDados.end}</div><div style="font-size:12px; font-weight:bold; color:#333;">${empDados.tel}</div></div></div>`; let html = `<div style="background:#fff; width:750px; padding:40px 20px 20px 20px; font-family:Arial; text-align:center; color:#000;">${headerZap}<div style="font-size:20px; font-weight:bold; margin:10px 0;">COMPROVANTE DE VENDA</div><div style="text-align:left; font-size:16px; margin-bottom:15px;"><b>CLIENTE:</b> ${c.nome.toUpperCase()}</div><table style="width:100%; border-collapse:collapse;"><tr style="background:#eee; border-top:2px solid #000; border-bottom:2px solid #000;"><th style="text-align:left; padding:8px;">ITEM</th><th style="text-align:center; padding:8px;">QTD</th><th style="text-align:right; padding:8px;">VALOR</th></tr>${itens.map(i => `<tr><td style="text-align:left; padding:8px; border-bottom:1px dashed #ccc; font-weight:bold;">${i.desc.toUpperCase()}</td><td style="text-align:center; padding:8px; border-bottom:1px dashed #ccc; font-weight:bold;">${i.qtd || 1}</td><td style="text-align:right; padding:8px; border-bottom:1px dashed #ccc; font-weight:bold;">${formatarMoeda(i.valor)}</td></tr>`).join('')}</table><div style="margin-top:20px; text-align:right; font-size:18px;"><div style="color:#0000AA; font-weight:900;">TOTAL: ${formatarMoeda(total)}</div><div style="color:#008000; font-weight:900;">PAGO: ${formatarMoeda(totalPago)}</div><div style="color:#FF0000; font-weight:900; font-size:22px;">A RECEBER: ${formatarMoeda(saldoDevedor)}</div></div>${assinatura ? `<img src="${assinatura}" style="max-height:80px; margin-top:20px;">` : ''}<div style="font-size:12px; margin-top:20px; color:#666;">Gerado em ${new Date().toLocaleString()}</div></div>`; let area = document.getElementById('hiddenPrintArea'); area.innerHTML = html; setTimeout(() => { html2canvas(area, { scale: 1.5 }).then(canvasImg => { Swal.close(); Swal.fire({ title: 'Pronto para Enviar!', text: 'Segure na imagem para copiar ou compartilhar.', imageUrl: canvasImg.toDataURL("image/jpeg", 0.9), imageWidth: 400, confirmButtonText: 'Fechar' }); area.innerHTML = ''; }); }, 800); }
-  function gerarImagemWhatsApp() { if (!empDados.end) { Swal.fire({ title: 'Aguarde...', text: 'Carregando dados...', icon: 'info', timer: 3000 }); return; } let c = clientes.find(x => x.id === signId); const checks = document.querySelectorAll(`.sel-${signId}:checked`); const indices = Array.from(checks).map(cb => parseInt(cb.value)); const selecionados = indices.map(idx => c.itens[idx]); const totalS = selecionados.reduce((a, i) => a + (Number(i.valor) || 0), 0); const totalPago = selecionados.reduce((a, i) => a + (Number(i.pagoValor) || 0), 0); const assinatura = document.getElementById('canvasAssinatura').toDataURL(); let html = `<div style="background:#fff; font-family:'Courier New'; padding:15px; border:1px solid #ccc; width:350px;"><div style="text-align:center; font-weight:bold; margin-bottom:5px; font-size:16px;">${empDados.nome}</div><div style="text-align:center; font-size:11px; margin-bottom:10px; color:#333;">${empDados.end}<br>${empDados.tel}</div><hr style="border:0; border-top:1px dashed #000;"><div style="font-size:12px; margin-bottom:10px;"><b>CLIENTE:</b> ${c.nome.toUpperCase()}</div><table style="width:100%; font-size:11px; border-collapse:collapse; margin-bottom:10px;"><tr style="border-bottom:1px solid #000;"><th style="text-align:left;">Peça</th><th style="text-align:right;">Valor</th></tr>${selecionados.map(i => `<tr><td style="text-align:left; padding:3px 0;">${i.desc}</td><td style="text-align:right; padding:3px 0;">${formatarMoeda(i.valor)}</td></tr>`).join('')}</table><hr style="border:0; border-top:1px dashed #000;"><div style="text-align:right; font-size:14px; font-weight:bold;">TOTAL: ${formatarMoeda(totalS)}</div><div style="text-align:right; font-size:12px;">PAGO: ${formatarMoeda(totalPago)}</div><div style="text-align:right; font-size:14px; font-weight:bold; color:red;">RESTANTE: ${formatarMoeda(totalS-totalPago)}</div><div style="margin-top:20px; text-align:center;"><img src="${assinatura}" style="max-height:50px;"><br><span style="font-size:10px; color:#555;">Assinado Digitalmente</span></div><div style="margin-top:10px; text-align:center; font-size:9px; color:#aaa;">Emitido em: ${new Date().toLocaleString('pt-BR')}</div></div>`; let area = document.getElementById('hiddenPrintArea'); area.innerHTML = html; setTimeout(() => { html2canvas(area, { scale: 2 }).then(canvasImg => { Swal.fire({ title: 'Imagem Gerada!', text: 'Segure na imagem para copiar.', imageUrl: canvasImg.toDataURL("image/jpeg", 0.9), imageWidth: 300, confirmButtonText: 'Fechar' }); area.innerHTML = ''; fecharAssinatura(); }); }, 500); }
 </script>
 </body>
 </html>
