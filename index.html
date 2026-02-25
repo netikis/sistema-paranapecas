@@ -16,6 +16,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
 
 <style>
+  /* ESTILO GERAL (FUNDO PRETO) */
   body { font-family: 'Segoe UI', Arial, sans-serif; background: #000; margin: 0; color: #fff; overflow-x: hidden; touch-action: manipulation; }
   
   /* LOGIN */
@@ -23,17 +24,55 @@
   .login-box { background: rgba(20, 20, 20, 0.95); padding: 40px; border-radius: 15px; border: 1px solid #333; text-align: center; width: 320px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
   .login-box input { background: #222; border: 1px solid #444; color: #fff; margin-bottom: 15px; font-size: 16px; padding: 15px; width: 100%; border-radius: 8px; box-sizing: border-box; text-align: center; }
   
-  /* OVERLAY DE IMPRESSÃO */
-  #printOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; color: #000; z-index: 100000; overflow-y: auto; text-align: center; }
-  .print-controls { position: fixed; top: 0; left: 0; width: 100%; background: #222; padding: 10px; display: flex; gap: 10px; justify-content: center; z-index: 100001; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
-  .print-content { margin-top: 70px; padding: 20px; min-height: 100vh; background: #fff; }
+  /* --- ÁREA DE IMPRESSÃO (CORRIGIDA) --- */
+  #printOverlay { 
+      display: none; 
+      position: fixed; 
+      top: 0; left: 0; 
+      width: 100%; height: 100%; 
+      background: #fff; /* Fundo branco SÓ para o overlay */
+      color: #000; 
+      z-index: 100000; 
+      overflow-y: auto; 
+      text-align: center; 
+  }
   
+  .print-controls { 
+      position: fixed; top: 0; left: 0; width: 100%; 
+      background: #222; padding: 10px; 
+      display: flex; gap: 10px; justify-content: center; 
+      z-index: 100001; 
+      box-shadow: 0 2px 10px rgba(0,0,0,0.5); 
+  }
+  
+  .print-content { 
+      margin-top: 80px; 
+      padding: 20px; 
+      min-height: 100vh; 
+      background: #fff; 
+  }
+
+  /* REGRAS DE IMPRESSÃO (O SEGREDO PARA NÃO SAIR 7 PÁGINAS) */
   @media print {
-    body * { visibility: hidden; }
-    #printOverlay, #printOverlay * { visibility: visible; }
-    #printOverlay { position: absolute; left: 0; top: 0; background: #fff; }
-    .print-controls { display: none !important; }
+    body { background-color: white !important; overflow: hidden !important; height: auto !important; }
+    /* Esconde tudo o que não for a área de impressão */
+    body > *:not(#printOverlay) { display: none !important; }
+    
+    #printOverlay { 
+        display: block !important; 
+        position: absolute !important; 
+        top: 0 !important; left: 0 !important; 
+        width: 100% !important; height: auto !important; 
+        overflow: visible !important; 
+        z-index: 999999 !important;
+        background: white !important;
+    }
+    
+    .print-content { margin-top: 0 !important; padding: 0 !important; border: none !important; }
+    .print-controls { display: none !important; } /* Esconde botões na folha */
     .no-print { display: none !important; }
+    
+    @page { margin: 0.5cm; size: auto; }
   }
 
   .btn-perfil { width: 100%; padding: 15px; margin: 10px 0; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: transform 0.2s; }
@@ -46,12 +85,10 @@
   .header img { height: 40px; max-width: 100px; object-fit: contain; }
   .container { width: 98%; padding: 10px; margin: 0 auto; box-sizing: border-box; }
   
-  /* MODOS E VISIBILIDADE */
   body.role-func .admin-only { display: none !important; }
   body.mode-client .admin-only, body.mode-client .header button, body.mode-client .card:not(#areaClienteRemoto) { display: none !important; }
   body.mode-client #areaClienteRemoto { display: block !important; }
   body.mode-client #loginOverlay { display: none !important; } 
-  
   #areaClienteRemoto { display: none; background: #111; padding: 20px; border-radius: 10px; text-align: center; }
 
   .dashboard { display: flex; gap: 10px; margin-bottom: 20px; justify-content: space-between; overflow-x: auto; } 
@@ -111,8 +148,8 @@
 
 <div id="printOverlay">
     <div class="print-controls">
-        <button class="danger" onclick="fecharImpressao()" style="font-size:14px; padding:10px 20px;">❌ FECHAR / VOLTAR</button>
-        <button class="primary" onclick="window.print()" style="font-size:14px; padding:10px 20px;">🖨️ IMPRIMIR</button>
+        <button class="danger" onclick="fecharImpressao()" style="font-size:14px; padding:12px 25px; border:2px solid #fff;">⬅ VOLTAR / FECHAR</button>
+        <button class="primary" onclick="window.print()" style="font-size:14px; padding:12px 25px; border:2px solid #fff;">🖨️ IMPRIMIR</button>
     </div>
     <div id="printContent" class="print-content"></div>
 </div>
@@ -607,7 +644,7 @@
   function imprimirSelecionados(id, tipo, assinaturaImg = null) { const c = clientes.find(x => x.id === id); const checks = document.querySelectorAll(`.sel-${id}:checked`); const indices = Array.from(checks).map(cb => parseInt(cb.value)); if (indices.length === 0) return Swal.fire('Aviso', "Selecione itens", 'warning'); const selecionados = indices.map(idx => c.itens[idx]); const totalS = selecionados.reduce((a, i) => a + (Number(i.valor) || 0), 0); gerarImpressao(c, selecionados, totalS, tipo, "COMPROVANTE DE VENDA", assinaturaImg); }
   function imprimirExtratoGeral(id){ let c = clientes.find(x => x.id === id); if(!c.itens.length)return; let t = c.itens.reduce((a, i) => a + (Number(i.valor) || 0), 0); gerarImpressao(c, c.itens, t, 'extrato', "EXTRATO GERAL"); }
   
-  // FUNÇÃO NOVA DE IMPRESSÃO EM OVERLAY (CORREÇÃO MOBILE)
+  // FUNÇÃO NOVA DE IMPRESSÃO EM OVERLAY (CORREÇÃO MOBILE E FUNDO PRETO)
   function gerarImpressao(c, itens, total, tipo, titulo, assinaturaNova = null) {
     const logoHtml = logoBase64 ? `<img src="${logoBase64}" style="max-height:60px; display:block; margin:0 auto 5px auto;">` : '';
     let totalPago = itens.reduce((acc, i) => acc + (Number(i.pagoValor) || 0), 0); let saldoDevedor = total - totalPago; let imgFinal = assinaturaNova || (itens.find(i=>i.assinatura)?.assinatura);
@@ -643,7 +680,8 @@
 
     let conteudo = `
     <style>
-    body { background: #fff !important; }
+    /* FORÇAR APARÊNCIA DE PAPEL APENAS DENTRO DESTA DIV */
+    #printContent { background: white !important; color: black !important; }
     .main-table { width: 100%; border-collapse: collapse; margin-top: 10px; } 
     .main-table th { background-color: #eee; font-weight: bold; border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 4px; font-size: 11px; } 
     .main-table td { border-bottom: 1px dashed #ccc; padding: 6px 4px; font-weight: bold; font-size: 11px; } 
@@ -750,6 +788,7 @@
       }, 800);
   }
 
+  // --- FUNCOES BASE ---
   function salvarDadosEmpresa() { let n=document.getElementById('confEmpNome').value, e=document.getElementById('confEmpEnd').value, t=document.getElementById('confEmpTel').value, c=document.getElementById('confEmpCnpj').value; db.collection("config").doc("empresa").set({ nome: n, end: e, tel: t, cnpj: c }, {merge: true}).then(() => Swal.fire({ icon: 'success', title: 'Salvo!', timer: 1500, showConfirmButton:false })); }
   function salvarCatalogo() { let n=document.getElementById('catNome').value,v=Number(document.getElementById('catValor').value); if(n&&v){db.collection("catalogo").add({nome:n.toUpperCase(),valor:v});document.getElementById('catNome').value='';document.getElementById('catValor').value='';} }
   function apagarCat(id){db.collection("catalogo").doc(id).delete();}
