@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d47a1">
-<title>PARANÁ PEÇAS - GESTÃO V27</title>
+<title>PARANÁ PEÇAS - GESTÃO V28</title>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -86,7 +86,17 @@
   .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 1000; }
   .modal-content { background: #222; padding: 25px; border-radius: 10px; width: 95%; max-width: 500px; color: #fff; border: 1px solid #555; max-height: 90vh; overflow-y: auto; }
   
-  #canvasAssinatura, #canvasRemoto { background: #fff; border: 2px dashed #555; width: 100%; height: 200px; border-radius: 5px; margin-bottom: 10px; display: block; touch-action: none; }
+  /* CANVAS ASSINATURA (CORRIGIDO) */
+  #canvasAssinatura, #canvasRemoto { 
+      background: #fff; 
+      border: 2px dashed #555; 
+      width: 100%; 
+      height: 200px; 
+      border-radius: 5px; 
+      margin-bottom: 10px; 
+      display: block; 
+      touch-action: none; /* IMPEDE ROLAGEM NO CELULAR */
+  }
   #hiddenPrintArea { position: absolute; top: -9999px; left: -9999px; width: 794px; background: #fff; color: #000; padding: 20px; }
 
   body.role-func .admin-only { display: none !important; }
@@ -132,7 +142,7 @@
 
 <header class="header">
   <img id="logoLeft" src="" alt="">
-  <div class="titulo">PARANÁ PEÇAS - GESTÃO V27</div>
+  <div class="titulo">PARANÁ PEÇAS - GESTÃO V28</div>
   <div style="display:flex; align-items:center;">
     <div id="userDisplay" style="font-size:10px; margin-right:10px; text-align:right;"></div>
     <button class="danger" onclick="logout()">SAIR</button>
@@ -141,6 +151,7 @@
 </header>
 
 <div class="container">
+  
   <div id="areaClienteRemoto">
       <h3 style="color:#38ef7d">✍️ ÁREA DE ASSINATURA</h3>
       <div id="listaItensRemoto" style="text-align:left; background:#222; padding:10px; border-radius:5px; margin-bottom:20px; font-size:14px;">Carregando...</div>
@@ -333,7 +344,6 @@
 <div id="hiddenPrintArea"></div>
 
 <script>
-  // 🔴 SUAS CHAVES 🔴
   const firebaseConfig = {
     apiKey: "AIzaSyDx0wGiH9IdMH6_8RSi-2upT-UnZqZ_UmE",
     authDomain: "gestaodeclientes-7f8f0.firebaseapp.com",
@@ -366,11 +376,13 @@
 
   auth.onAuthStateChanged((user) => {
       if (document.body.classList.contains('mode-client')) {
-          // MODO REMOTO - INICIAR CANVAS E DADOS
           const cvsRemoto = document.getElementById('canvasRemoto');
-          cvsRemoto.width = cvsRemoto.offsetWidth; cvsRemoto.height = 200;
-          const ctxR = cvsRemoto.getContext('2d'); ctxR.lineWidth = 2; ctxR.strokeStyle = '#000'; ctxR.clearRect(0,0,cvsRemoto.width,cvsRemoto.height);
-          setupCanvasEvents(cvsRemoto);
+          // Força setup imediato no modo remoto
+          setTimeout(() => {
+              cvsRemoto.width = cvsRemoto.offsetWidth; 
+              cvsRemoto.height = 200;
+              setupCanvasEvents(cvsRemoto);
+          }, 500);
           
           auth.signInAnonymously().catch(() => {});
           
@@ -402,7 +414,7 @@
               if(role === 'admin') document.body.classList.remove('role-func'); else document.body.classList.add('role-func');
               document.getElementById('userDisplay').innerHTML = `👤 ${user.email}<br>${role.toUpperCase()}`;
               document.getElementById('loginOverlay').style.display = 'none';
-              document.getElementById('searchBox').value = ''; // ⚠️ LIMPA BUSCA AUTOMATICAMENTE
+              document.getElementById('searchBox').value = ''; 
               iniciarSincronizacao();
           });
       } else {
@@ -410,34 +422,67 @@
       }
   });
 
-  // --- FUNÇÃO DE DESENHO RESTAURADA E CORRIGIDA ---
+  // --- DESENHO NO CANVAS RESTAURADO ---
   function setupCanvasEvents(canvas) {
       if(!canvas) return;
       const ctx = canvas.getContext('2d');
+      ctx.lineWidth = 2; 
+      ctx.strokeStyle = '#000';
       let isDrawing = false;
       
       function getPos(e) { 
         const rect = canvas.getBoundingClientRect(); 
         const clientX = e.touches ? e.touches[0].clientX : e.clientX; 
         const clientY = e.touches ? e.touches[0].clientY : e.clientY; 
-        
-        // CORREÇÃO DE ESCALA PARA QUANDO O CANVAS É REDIMENSIONADO PELO CSS
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
-        
-        return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+        return { 
+            x: (clientX - rect.left) * (canvas.width / rect.width), 
+            y: (clientY - rect.top) * (canvas.height / rect.height)
+        };
       }
 
-      const start = (e) => { isDrawing = true; ctx.beginPath(); const pos = getPos(e); ctx.moveTo(pos.x, pos.y); e.preventDefault(); };
-      const move = (e) => { if(isDrawing){ const pos = getPos(e); ctx.lineTo(pos.x, pos.y); ctx.stroke(); } e.preventDefault(); };
-      const end = () => { isDrawing = false; };
+      // Eventos de Mouse e Touch
+      ['mousedown', 'touchstart'].forEach(ev => canvas.addEventListener(ev, (e) => { 
+          isDrawing = true; 
+          ctx.beginPath(); 
+          const pos = getPos(e); 
+          ctx.moveTo(pos.x, pos.y); 
+          e.preventDefault(); 
+      }, {passive: false}));
 
-      canvas.addEventListener('mousedown', start); canvas.addEventListener('touchstart', start, {passive: false});
-      canvas.addEventListener('mousemove', move); canvas.addEventListener('touchmove', move, {passive: false});
-      canvas.addEventListener('mouseup', end); canvas.addEventListener('touchend', end);
-      canvas.addEventListener('mouseout', end);
+      ['mousemove', 'touchmove'].forEach(ev => canvas.addEventListener(ev, (e) => { 
+          if(isDrawing){ 
+              const pos = getPos(e); 
+              ctx.lineTo(pos.x, pos.y); 
+              ctx.stroke(); 
+          } 
+          e.preventDefault(); 
+      }, {passive: false}));
+
+      ['mouseup', 'touchend', 'mouseout'].forEach(ev => canvas.addEventListener(ev, () => isDrawing = false));
   }
 
+  function abrirAssinatura(id) {
+      const checkboxes = document.getElementsByClassName(`sel-${id}`);
+      let algumSelecionado = false;
+      for(let i=0; i<checkboxes.length; i++) { if(checkboxes[i].checked) { algumSelecionado = true; break; } }
+      if(!algumSelecionado) return Swal.fire('Atenção', "Selecione itens para assinar", 'warning');
+      
+      signId = id;
+      const modal = document.getElementById('assinaturaModal');
+      modal.style.display = 'flex';
+      
+      // Força recriação do canvas após o modal estar visível
+      setTimeout(() => {
+          const cvs = document.getElementById('canvasAssinatura');
+          cvs.width = cvs.offsetWidth; 
+          cvs.height = 200;
+          const ctx = cvs.getContext('2d'); 
+          ctx.clearRect(0,0,cvs.width,cvs.height);
+          setupCanvasEvents(cvs); 
+      }, 200);
+  }
+
+  // --- RESTO DAS FUNÇÕES DE LÓGICA E IMPRESSÃO ---
   function iniciarSincronizacao() {
       db.collection("clientes").orderBy("nome").onSnapshot((snapshot) => { clientes = []; snapshot.forEach((doc) => { clientes.push({ id: doc.id, ...doc.data() }); }); atualizarSelect(); atualizarDashboard(); render(); });
       db.collection("catalogo").onSnapshot((s)=>{ catalogo=[]; let d=document.getElementById('opcoesCatalogo'); if(!d) return; d.innerHTML=''; s.forEach((doc)=>{ let k=doc.data(); catalogo.push({id:doc.id,...k}); d.innerHTML+=`<option value="${k.nome}">R$ ${k.valor}</option>`; }); });
@@ -473,13 +518,21 @@
                 <th>PEÇA</th><th>QTD</th><th>VALOR</th><th>DATA</th><th>VENC.</th><th>SITUAÇÃO</th><th>AÇÕES</th>
             </tr>
         </thead><tbody>${c.itens.map((i, ii) => {
+          
           let hoje = new Date().toISOString().split('T')[0];
           let isVencido = (!i.pago && i.venc && i.venc < hoje);
           let sit = '';
-          if (i.pago) sit = '<span class="status-tag tag-verde">PAGO</span>';
-          else if (i.pagoValor > 0) sit = `<span class="status-tag tag-amarelo">PARCIAL<br>${formatarMoeda(i.pagoValor)}</span>`;
-          else if (isVencido) sit = '<span class="status-tag tag-vermelho">VENCIDO</span>';
-          else sit = 'ABERTO';
+
+          if (i.pago) {
+              sit = '<span class="status-tag tag-verde">PAGO</span>';
+          } else if (i.pagoValor > 0) {
+              sit = `<span class="status-tag tag-amarelo">PARCIAL<br>${formatarMoeda(i.pagoValor)}</span>`;
+          } else if (isVencido) {
+              sit = '<span class="status-tag tag-vermelho">VENCIDO</span>';
+          } else {
+              sit = 'ABERTO';
+          }
+
           return `<tr ${isVencido ? 'class="vencido"' : ''}>
             <td><input type="checkbox" class="sel-${c.id}" value="${ii}"></td>
             <td style="text-align:left">${i.desc} ${i.assinatura?'✍️':''}</td>
@@ -488,27 +541,16 @@
             <td>${formatarDataBR(i.data)}</td>
             <td>${formatarDataBR(i.venc)}</td>
             <td>${sit}</td>
-            <td><div class="table-actions"><button class="success" onclick="pagar('${c.id}',${ii})">$</button><button class="primary admin-only" onclick="abrirEditar('${c.id}',${ii})">✏️</button><button class="danger admin-only" onclick="excluirLançamento('${c.id}',${ii})">X</button></div></td></tr>`;
+            <td>
+               <div class="table-actions">
+                  <button class="success" onclick="pagar('${c.id}',${ii})">$</button>
+                  <button class="primary admin-only" onclick="abrirEditar('${c.id}',${ii})">✏️</button>
+                  <button class="danger admin-only" onclick="excluirLançamento('${c.id}',${ii})">X</button>
+               </div>
+            </td></tr>`;
         }).join('')}</tbody></table></div>`;
       div.innerHTML += html;
     });
-  }
-
-  function abrirAssinatura(id) {
-      const checkboxes = document.getElementsByClassName(`sel-${id}`);
-      let algumSelecionado = false;
-      for(let i=0; i<checkboxes.length; i++) { if(checkboxes[i].checked) { algumSelecionado = true; break; } }
-      if(!algumSelecionado) return Swal.fire('Atenção', "Selecione itens para assinar", 'warning');
-      signId = id;
-      const cvs = document.getElementById('canvasAssinatura');
-      // Reset tamanho e contexto
-      cvs.width = cvs.parentElement.offsetWidth; 
-      cvs.height = 200;
-      const ctx = cvs.getContext('2d'); 
-      ctx.lineWidth = 2; ctx.strokeStyle = '#000'; ctx.clearRect(0,0,cvs.width,cvs.height);
-      
-      setupCanvasEvents(cvs); 
-      $('#assinaturaModal').css('display','flex');
   }
 
   function gerarLinkRemoto(id) { 
@@ -558,10 +600,9 @@
   }
 
   function fecharImpressao() { $('#printOverlay').hide(); $('#printPaper').html(''); }
-
-  // --- RESTO DAS FUNÇÕES (MANTER IGUAL) ---
+  
   function salvarDadosEmpresa() { let n=document.getElementById('confEmpNome').value, e=document.getElementById('confEmpEnd').value, t=document.getElementById('confEmpTel').value, c=document.getElementById('confEmpCnpj').value; db.collection("config").doc("empresa").set({ nome: n, end: e, tel: t, cnpj: c }, {merge: true}).then(() => Swal.fire('Salvo!','','success')); }
-  function salvarCatalogo() { let n=document.getElementById('catNome').value,v=Number(document.getElementById('catValor').value); if(n&&v){db.collection("catalogo").add({nome:n.toUpperCase(),valor:v});document.getElementById('catNome').value='';document.getElementById('catValor').value='';} }
+  function salvarCatalogo() { let n=document.getElementById('catNome').value,v=Number(document.getElementById('catValor').value); if(n&&v){db.collection("catalogo").add({nome:n.toUpperCase(),valor:v});document.getElementById('catNome').value='';document.getElementById('catValor').value='';Swal.fire('Salvo','','success');} }
   function apagarCat(id){db.collection("catalogo").doc(id).delete();}
   function preencherValorCat(){let t=document.getElementById('descricao').value.toUpperCase(),a=catalogo.find(c=>c.nome===t);if(a)document.getElementById('valor').value=a.valor;}
   function atualizarSelect(){let s=document.getElementById('clienteSelect'),c=s.value;s.innerHTML='<option value="">Selecione...</option>';clientes.sort((a,b)=>a.nome.localeCompare(b.nome)).forEach((k)=>{let o=document.createElement('option');o.value=k.id;o.textContent=k.nome;s.appendChild(o)});if(c)s.value=c;}
