@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d47a1">
-<title>PARANÁ PEÇAS - GESTÃO V28</title>
+<title>PARANÁ PEÇAS - GESTÃO V29</title>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -26,14 +26,19 @@
     body > *:not(#printOverlay) { display: none !important; }
     body { background: white !important; color: black !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; }
     #printOverlay { display: block !important; position: absolute; top: 0; left: 0; width: 100%; height: auto; background: white !important; color: black !important; z-index: 999999; }
+    
+    /* CLASSES PARA FORÇAR TAMANHO NO PAPEL */
     .cupom-style { width: 72mm !important; max-width: 72mm !important; font-size: 11px !important; padding: 0 !important; margin: 0 !important; }
     .a4-style { width: 100% !important; max-width: 210mm !important; }
+    
     .print-controls, .no-print { display: none !important; }
     @page { margin: 0; size: auto; }
   }
 
   .overlay-screen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #222; z-index: 10000; overflow-y: auto; }
   .print-controls { position: sticky; top: 0; left: 0; width: 100%; background: #111; padding: 15px; display: flex; gap: 15px; justify-content: center; z-index: 10001; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+  
+  /* PAPEL NA TELA */
   #printPaper { background: #fff; color: #000; margin: 30px auto; box-shadow: 0 0 20px rgba(0,0,0,0.5); transition: all 0.3s ease; }
 
   /* LOGIN */
@@ -86,17 +91,8 @@
   .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 1000; }
   .modal-content { background: #222; padding: 25px; border-radius: 10px; width: 95%; max-width: 500px; color: #fff; border: 1px solid #555; max-height: 90vh; overflow-y: auto; }
   
-  /* CANVAS ASSINATURA (CORRIGIDO) */
-  #canvasAssinatura, #canvasRemoto { 
-      background: #fff; 
-      border: 2px dashed #555; 
-      width: 100%; 
-      height: 200px; 
-      border-radius: 5px; 
-      margin-bottom: 10px; 
-      display: block; 
-      touch-action: none; /* IMPEDE ROLAGEM NO CELULAR */
-  }
+  /* CANVAS ASSINATURA (CORRIGIDO PARA TOUCH) */
+  #canvasAssinatura, #canvasRemoto { background: #fff; border: 2px dashed #555; width: 100%; height: 200px; border-radius: 5px; margin-bottom: 10px; display: block; touch-action: none; }
   #hiddenPrintArea { position: absolute; top: -9999px; left: -9999px; width: 794px; background: #fff; color: #000; padding: 20px; }
 
   body.role-func .admin-only { display: none !important; }
@@ -142,7 +138,7 @@
 
 <header class="header">
   <img id="logoLeft" src="" alt="">
-  <div class="titulo">PARANÁ PEÇAS - GESTÃO V28</div>
+  <div class="titulo">PARANÁ PEÇAS - GESTÃO V29</div>
   <div style="display:flex; align-items:center;">
     <div id="userDisplay" style="font-size:10px; margin-right:10px; text-align:right;"></div>
     <button class="danger" onclick="logout()">SAIR</button>
@@ -344,6 +340,7 @@
 <div id="hiddenPrintArea"></div>
 
 <script>
+  // 🔴 SUAS CHAVES 🔴
   const firebaseConfig = {
     apiKey: "AIzaSyDx0wGiH9IdMH6_8RSi-2upT-UnZqZ_UmE",
     authDomain: "gestaodeclientes-7f8f0.firebaseapp.com",
@@ -377,15 +374,12 @@
   auth.onAuthStateChanged((user) => {
       if (document.body.classList.contains('mode-client')) {
           const cvsRemoto = document.getElementById('canvasRemoto');
-          // Força setup imediato no modo remoto
           setTimeout(() => {
               cvsRemoto.width = cvsRemoto.offsetWidth; 
               cvsRemoto.height = 200;
               setupCanvasEvents(cvsRemoto);
           }, 500);
-          
           auth.signInAnonymously().catch(() => {});
-          
           db.collection("clientes").doc(clienteIdUrl).onSnapshot((doc) => {
               if(doc.exists) {
                   let data = doc.data();
@@ -422,7 +416,7 @@
       }
   });
 
-  // --- DESENHO NO CANVAS RESTAURADO ---
+  // --- FUNÇÃO DE DESENHO (TOUCH E MOUSE) ---
   function setupCanvasEvents(canvas) {
       if(!canvas) return;
       const ctx = canvas.getContext('2d');
@@ -434,31 +428,21 @@
         const rect = canvas.getBoundingClientRect(); 
         const clientX = e.touches ? e.touches[0].clientX : e.clientX; 
         const clientY = e.touches ? e.touches[0].clientY : e.clientY; 
-        return { 
-            x: (clientX - rect.left) * (canvas.width / rect.width), 
-            y: (clientY - rect.top) * (canvas.height / rect.height)
-        };
+        
+        // CORREÇÃO DE ESCALA
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
       }
 
-      // Eventos de Mouse e Touch
-      ['mousedown', 'touchstart'].forEach(ev => canvas.addEventListener(ev, (e) => { 
-          isDrawing = true; 
-          ctx.beginPath(); 
-          const pos = getPos(e); 
-          ctx.moveTo(pos.x, pos.y); 
-          e.preventDefault(); 
-      }, {passive: false}));
+      const start = (e) => { isDrawing = true; ctx.beginPath(); const pos = getPos(e); ctx.moveTo(pos.x, pos.y); e.preventDefault(); };
+      const move = (e) => { if(isDrawing){ const pos = getPos(e); ctx.lineTo(pos.x, pos.y); ctx.stroke(); } e.preventDefault(); };
+      const end = () => { isDrawing = false; };
 
-      ['mousemove', 'touchmove'].forEach(ev => canvas.addEventListener(ev, (e) => { 
-          if(isDrawing){ 
-              const pos = getPos(e); 
-              ctx.lineTo(pos.x, pos.y); 
-              ctx.stroke(); 
-          } 
-          e.preventDefault(); 
-      }, {passive: false}));
-
-      ['mouseup', 'touchend', 'mouseout'].forEach(ev => canvas.addEventListener(ev, () => isDrawing = false));
+      canvas.addEventListener('mousedown', start); canvas.addEventListener('touchstart', start, {passive: false});
+      canvas.addEventListener('mousemove', move); canvas.addEventListener('touchmove', move, {passive: false});
+      canvas.addEventListener('mouseup', end); canvas.addEventListener('touchend', end);
+      canvas.addEventListener('mouseout', end);
   }
 
   function abrirAssinatura(id) {
@@ -471,7 +455,6 @@
       const modal = document.getElementById('assinaturaModal');
       modal.style.display = 'flex';
       
-      // Força recriação do canvas após o modal estar visível
       setTimeout(() => {
           const cvs = document.getElementById('canvasAssinatura');
           cvs.width = cvs.offsetWidth; 
@@ -482,77 +465,59 @@
       }, 200);
   }
 
-  // --- RESTO DAS FUNÇÕES DE LÓGICA E IMPRESSÃO ---
-  function iniciarSincronizacao() {
-      db.collection("clientes").orderBy("nome").onSnapshot((snapshot) => { clientes = []; snapshot.forEach((doc) => { clientes.push({ id: doc.id, ...doc.data() }); }); atualizarSelect(); atualizarDashboard(); render(); });
-      db.collection("catalogo").onSnapshot((s)=>{ catalogo=[]; let d=document.getElementById('opcoesCatalogo'); if(!d) return; d.innerHTML=''; s.forEach((doc)=>{ let k=doc.data(); catalogo.push({id:doc.id,...k}); d.innerHTML+=`<option value="${k.nome}">R$ ${k.valor}</option>`; }); });
-      db.collection("config").doc("empresa").onSnapshot((doc) => { if (doc.exists) { empDados = doc.data(); if(document.getElementById('confEmpNome')) { document.getElementById('confEmpNome').value = empDados.nome; document.getElementById('confEmpEnd').value = empDados.end; document.getElementById('confEmpTel').value = empDados.tel; document.getElementById('confEmpCnpj').value = empDados.cnpj; } if(empDados.logo) { logoBase64 = empDados.logo; aplicarLogo(); } } });
-  }
-
-  function render(){
-    let div = document.getElementById('listaClientes'); div.innerHTML = '';
-    let termo = document.getElementById('searchBox').value.toLowerCase();
-    
-    clientes.filter(c => !termo || c.nome.toLowerCase().includes(termo)).forEach(c => {
-      let saldo = c.itens.reduce((acc, i) => acc + (Number(i.valor)||0) - (Number(i.pagoValor)||0), 0);
-      let html = `<div class="client-card">
-        <div style="display:flex; justify-content:space-between;">
-            <div><b style="font-size:22px; color:#0d47a1">${c.nome}</b><br><span style="color:#555">${c.telefone||''}</span></div>
-            <div style="text-align:right; font-weight:bold; font-size:22px; color:${saldo>0?'red':'green'}">R$ ${formatarMoeda(saldo)}</div>
-        </div>
-        <div class="top-actions" style="margin-top:10px;">
-            <button class="warning" onclick="editarDadosCliente('${c.id}')" style="background:#f9a825; color:#000;">✏️ EDITAR</button>
-            <button class="primary" onclick="imprimirSelecionados('${c.id}', 'extrato')">📄 A4</button>
-            <button class="warning" onclick="imprimirSelecionados('${c.id}', 'cupom')">🖨️ CUPOM</button>
-            <button class="report-btn" onclick="gerarRelatorioDebitos('${c.id}')">📄 DÉBITOS</button>
-            <button class="share" onclick="compartilharComprovanteImagem('${c.id}')">📤 ZAP DOC</button>
-            <button class="primary" onclick="gerarLinkRemoto('${c.id}')" style="background:#0277bd">🔗 LINK</button>
-            <button class="dark" onclick="abrirAssinatura('${c.id}')">✍️ ASSINAR</button>
-            <button class="wapp" onclick="cobrarWhatsApp('${c.id}', ${saldo})">💬 COBRAR</button>
-            <button class="fiscal" onclick="abrirLancarRapido('${c.id}', '${c.nome}')">➕ PEÇA</button>
-            <button class="danger admin-only" onclick="excluirCliente('${c.id}')">🗑️</button>
-        </div>
-        <table><thead>
-            <tr>
-                <th style="width:30px"><input type="checkbox" onchange="toggleAll('${c.id}', this)" title="Selecionar Todos"></th>
-                <th>PEÇA</th><th>QTD</th><th>VALOR</th><th>DATA</th><th>VENC.</th><th>SITUAÇÃO</th><th>AÇÕES</th>
-            </tr>
-        </thead><tbody>${c.itens.map((i, ii) => {
-          
-          let hoje = new Date().toISOString().split('T')[0];
-          let isVencido = (!i.pago && i.venc && i.venc < hoje);
-          let sit = '';
-
-          if (i.pago) {
-              sit = '<span class="status-tag tag-verde">PAGO</span>';
-          } else if (i.pagoValor > 0) {
-              sit = `<span class="status-tag tag-amarelo">PARCIAL<br>${formatarMoeda(i.pagoValor)}</span>`;
-          } else if (isVencido) {
-              sit = '<span class="status-tag tag-vermelho">VENCIDO</span>';
-          } else {
-              sit = 'ABERTO';
+  function finalizarAssinatura(tipo) { 
+      let img = document.getElementById('canvasAssinatura').toDataURL(); 
+      if(document.getElementById('salvarAssinaturaCheck').checked) { 
+          let c = clientes.find(x => x.id === signId); 
+          const checkboxes = document.getElementsByClassName(`sel-${signId}`);
+          for(let i=0; i<checkboxes.length; i++) {
+              if(checkboxes[i].checked) {
+                  c.itens[checkboxes[i].value].assinatura = img;
+              }
           }
-
-          return `<tr ${isVencido ? 'class="vencido"' : ''}>
-            <td><input type="checkbox" class="sel-${c.id}" value="${ii}"></td>
-            <td style="text-align:left">${i.desc} ${i.assinatura?'✍️':''}</td>
-            <td>${i.qtd||1}</td>
-            <td>${formatarMoeda(i.valor)}</td>
-            <td>${formatarDataBR(i.data)}</td>
-            <td>${formatarDataBR(i.venc)}</td>
-            <td>${sit}</td>
-            <td>
-               <div class="table-actions">
-                  <button class="success" onclick="pagar('${c.id}',${ii})">$</button>
-                  <button class="primary admin-only" onclick="abrirEditar('${c.id}',${ii})">✏️</button>
-                  <button class="danger admin-only" onclick="excluirLançamento('${c.id}',${ii})">X</button>
-               </div>
-            </td></tr>`;
-        }).join('')}</tbody></table></div>`;
-      div.innerHTML += html;
-    });
+          db.collection("clientes").doc(signId).update({itens: c.itens}); 
+      } 
+      // IMPRESSÃO DIRETA SEM ESPERAR O BANCO
+      if(tipo !== 'salvar_apenas') imprimirSelecionados(signId, tipo, img); 
+      $('#assinaturaModal').hide(); 
   }
 
+  // --- IMPRESSÃO PASSANDO IMAGEM DIRETO ---
+  function imprimirSelecionados(id, tipo, imgAssinatura = null) { 
+      const c = clientes.find(x => x.id === id); 
+      const checkboxes = document.getElementsByClassName(`sel-${id}`);
+      let idxs = [];
+      for(let i=0; i<checkboxes.length; i++) {
+          if(checkboxes[i].checked) idxs.push(checkboxes[i].value);
+      }
+      
+      if(!idxs.length) return Swal.fire('Aviso', "Selecione itens", 'warning'); 
+      const selecionados = idxs.map(idx => c.itens[idx]); 
+      const totalS = selecionados.reduce((a, b) => a + Number(b.valor), 0); 
+      
+      gerarImpressao(c, selecionados, totalS, tipo, "COMPROVANTE DE VENDA", imgAssinatura); 
+  }
+
+  function gerarImpressao(c, itens, total, tipo, titulo, assinaturaNova = null) {
+    const logoHtml = logoBase64 ? `<img src="${logoBase64}" style="max-height:60px; display:block; margin:0 auto 5px auto;">` : '';
+    let totalPago = itens.reduce((a, i) => a + (Number(i.pagoValor)||0), 0); let saldo = total - totalPago; 
+    // Prioriza assinatura nova (da tela), senão pega do banco
+    let imgAss = assinaturaNova || (itens.find(i=>i.assinatura)?.assinatura);
+    let conteudo = '';
+    const papel = document.getElementById('printPaper');
+    
+    if(tipo === 'cupom') {
+        papel.className = 'print-paper cupom-style';
+        conteudo = `<style>.cupom-content { font-family: 'Courier New', monospace; text-align: center; font-size: 11px; color: black; padding: 5px; } .dashed { border-top: 1px dashed #000; margin: 5px 0; } .row { display: flex; justify-content: space-between; }</style><div class="cupom-content">${logoHtml}<div style="font-weight:bold; font-size:12px">${empDados.nome}</div><div>${empDados.tel}</div><div class="dashed"></div><div style="font-weight:bold; margin:5px 0">${titulo}</div><div style="text-align:left">CLI: ${c.nome.toUpperCase()}<br>DOC: ${c.cpf_cnpj || ''}</div><div class="dashed"></div><table style="width:100%; font-size:11px; text-align:left"><tr><th style="border-bottom:1px solid #000">ITEM</th><th style="border-bottom:1px solid #000; text-align:right">VALOR</th></tr>${itens.map(i => `<tr><td>${i.qtd}x ${i.desc.substring(0,20)}</td><td style="text-align:right">${formatarMoeda(i.valor)}</td></tr>`).join('')}</table><div class="dashed"></div><div class="row" style="font-weight:bold"><span>TOTAL:</span><span>${formatarMoeda(total)}</span></div><div class="row"><span>PAGO:</span><span>${formatarMoeda(totalPago)}</span></div><div class="row" style="font-size:13px"><span>A PAGAR:</span><span>${formatarMoeda(saldo)}</span></div><div class="dashed"></div>${imgAss ? `<img src="${imgAss}" style="max-height:40px;">` : '<br><br>___________'}<br>Assinatura<br><br>${new Date().toLocaleString()}</div>`;
+    } else { 
+        papel.className = 'print-paper a4-style';
+        conteudo = `<style>.paper-content { font-family: 'Helvetica', Arial, sans-serif; text-align: center; color: black; padding: 20px; } .header-box { display: flex; align-items: center; border-bottom: 2px dashed #000; padding-bottom: 15px; margin-bottom: 20px; } .logo-box { width: 120px; text-align: center; margin-right: 20px; } .info-box { flex: 1; text-align: left; line-height: 1.4; color: #000; } .company-name { font-size: 18px; font-weight: 900; margin-bottom: 5px; text-transform: uppercase; } .table-items { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 12px; } .table-items th { color: #000 !important; font-weight: 900 !important; border-bottom: 2px solid #000; text-align: left; padding: 5px; } .table-items td { padding: 5px; border-bottom: 1px dashed #ccc; text-align: left; color: #000 !important; } .totals { margin-top: 20px; text-align: right; font-weight: 900; font-size: 14px; color: #000; }</style><div class="paper-content"><div class="header-box"><div class="logo-box">${logoHtml}</div><div class="info-box"><div class="company-name">${empDados.nome}</div><div>${empDados.end}</div><div>${empDados.tel}</div><div>CNPJ: ${empDados.cnpj || ''}</div></div></div><h3 style="margin:5px 0; text-transform:uppercase;">${titulo}</h3><div style="text-align:left; border-bottom:2px solid #000; padding-bottom:5px; margin-bottom:15px;"><b>CLIENTE:</b> ${c.nome.toUpperCase()}<br>${c.cpf_cnpj ? '<b>DOC:</b> '+c.cpf_cnpj : ''}</div><table class="table-items"><thead><tr><th>ITEM</th><th style="text-align:center">QTD</th><th style="text-align:right">VALOR</th></tr></thead><tbody>${itens.map(i => `<tr><td>${i.desc.toUpperCase()}</td><td style="text-align:center">${i.qtd||1}</td><td style="text-align:right">${formatarMoeda(i.valor)}</td></tr>`).join('')}</tbody></table><div class="totals"><div>TOTAL: ${formatarMoeda(total)}</div><div style="color:green">PAGO: ${formatarMoeda(totalPago)}</div><div style="color:red; font-size:16px">A PAGAR: ${formatarMoeda(saldo)}</div></div>${imgAss ? `<div style="margin-top:30px;"><img src="${imgAss}" style="height:50px;"><br>Assinado Digitalmente</div>` : '<div style="margin-top:50px; border-top:1px solid #000; width:80%; margin-left:10%;">Assinatura</div>'}<div style="font-size:10px; margin-top:20px;">Emitido em: ${new Date().toLocaleString()}</div></div>`;
+    }
+    $('#printPaper').html(conteudo); $('#printOverlay').show();
+  }
+
+  // --- RESTO DO CÓDIGO (MANTER IGUAL) ---
+  function fecharImpressao() { $('#printOverlay').hide(); $('#printPaper').html(''); }
   function gerarLinkRemoto(id) { 
       const checkboxes = document.getElementsByClassName(`sel-${id}`);
       let indices = [];
@@ -562,7 +527,6 @@
       let link = `${baseUrl}?cliente=${id}&items=${indices.join(',')}`;
       navigator.clipboard.writeText(link).then(() => { Swal.fire({title: 'Link Copiado!', html: `Envie para o cliente:<br><br><b>${link}</b>`, icon: 'success'}); }); 
   }
-
   function salvarAssinaturaRemota() { 
       let cvs = document.getElementById('canvasRemoto'); let img = cvs.toDataURL(); 
       const urlParams = new URLSearchParams(window.location.search);
@@ -582,28 +546,8 @@
           }); 
       }); 
   }
-
-  function gerarImpressao(c, itens, total, tipo, titulo, assinaturaNova = null) {
-    const logoHtml = logoBase64 ? `<img src="${logoBase64}" style="max-height:60px; display:block; margin:0 auto 5px auto;">` : '';
-    let totalPago = itens.reduce((a, i) => a + (Number(i.pagoValor)||0), 0); let saldo = total - totalPago; let imgAss = assinaturaNova || (itens.find(i=>i.assinatura)?.assinatura);
-    let conteudo = '';
-    const papel = document.getElementById('printPaper');
-    
-    if(tipo === 'cupom') {
-        papel.className = 'print-paper cupom-style';
-        conteudo = `<style>.cupom-content { font-family: 'Courier New', monospace; text-align: center; font-size: 11px; color: black; padding: 5px; } .dashed { border-top: 1px dashed #000; margin: 5px 0; } .row { display: flex; justify-content: space-between; }</style><div class="cupom-content">${logoHtml}<div style="font-weight:bold; font-size:12px">${empDados.nome}</div><div>${empDados.tel}</div><div class="dashed"></div><div style="font-weight:bold; margin:5px 0">${titulo}</div><div style="text-align:left">CLI: ${c.nome.toUpperCase()}<br>DOC: ${c.cpf_cnpj || ''}</div><div class="dashed"></div><table style="width:100%; font-size:11px; text-align:left"><tr><th style="border-bottom:1px solid #000">ITEM</th><th style="border-bottom:1px solid #000; text-align:right">VALOR</th></tr>${itens.map(i => `<tr><td>${i.qtd}x ${i.desc.substring(0,20)}</td><td style="text-align:right">${formatarMoeda(i.valor)}</td></tr>`).join('')}</table><div class="dashed"></div><div class="row" style="font-weight:bold"><span>TOTAL:</span><span>${formatarMoeda(total)}</span></div><div class="row"><span>PAGO:</span><span>${formatarMoeda(totalPago)}</span></div><div class="row" style="font-size:13px"><span>A PAGAR:</span><span>${formatarMoeda(saldo)}</span></div><div class="dashed"></div>${imgAss ? `<img src="${imgAss}" style="max-height:40px;">` : '<br><br>___________'}<br>Assinatura<br><br>${new Date().toLocaleString()}</div>`;
-    } else { 
-        papel.className = 'print-paper a4-style';
-        conteudo = `<style>.paper-content { font-family: 'Helvetica', Arial, sans-serif; text-align: center; color: black; padding: 20px; } .header-box { display: flex; align-items: center; border-bottom: 2px dashed #000; padding-bottom: 15px; margin-bottom: 20px; } .logo-box { width: 120px; text-align: center; margin-right: 20px; } .info-box { flex: 1; text-align: left; line-height: 1.4; color: #000; } .company-name { font-size: 18px; font-weight: 900; margin-bottom: 5px; text-transform: uppercase; } .table-items { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 12px; } .table-items th { color: #000 !important; font-weight: 900 !important; border-bottom: 2px solid #000; text-align: left; padding: 5px; } .table-items td { padding: 5px; border-bottom: 1px dashed #ccc; text-align: left; color: #000 !important; } .totals { margin-top: 20px; text-align: right; font-weight: 900; font-size: 14px; color: #000; }</style><div class="paper-content"><div class="header-box"><div class="logo-box">${logoHtml}</div><div class="info-box"><div class="company-name">${empDados.nome}</div><div>${empDados.end}</div><div>${empDados.tel}</div><div>CNPJ: ${empDados.cnpj || ''}</div></div></div><h3 style="margin:5px 0; text-transform:uppercase;">${titulo}</h3><div style="text-align:left; border-bottom:2px solid #000; padding-bottom:5px; margin-bottom:15px;"><b>CLIENTE:</b> ${c.nome.toUpperCase()}<br>${c.cpf_cnpj ? '<b>DOC:</b> '+c.cpf_cnpj : ''}</div><table class="table-items"><thead><tr><th>ITEM</th><th style="text-align:center">QTD</th><th style="text-align:right">VALOR</th></tr></thead><tbody>${itens.map(i => `<tr><td>${i.desc.toUpperCase()}</td><td style="text-align:center">${i.qtd||1}</td><td style="text-align:right">${formatarMoeda(i.valor)}</td></tr>`).join('')}</tbody></table><div class="totals"><div>TOTAL: ${formatarMoeda(total)}</div><div style="color:green">PAGO: ${formatarMoeda(totalPago)}</div><div style="color:red; font-size:16px">A PAGAR: ${formatarMoeda(saldo)}</div></div>${imgAss ? `<div style="margin-top:30px;"><img src="${imgAss}" style="height:50px;"><br>Assinado Digitalmente</div>` : '<div style="margin-top:50px; border-top:1px solid #000; width:80%; margin-left:10%;">Assinatura</div>'}<div style="font-size:10px; margin-top:20px;">Emitido em: ${new Date().toLocaleString()}</div></div>`;
-    }
-    $('#printPaper').html(conteudo); $('#printOverlay').show();
-  }
-
-  function fecharImpressao() { $('#printOverlay').hide(); $('#printPaper').html(''); }
-  
   function salvarDadosEmpresa() { let n=document.getElementById('confEmpNome').value, e=document.getElementById('confEmpEnd').value, t=document.getElementById('confEmpTel').value, c=document.getElementById('confEmpCnpj').value; db.collection("config").doc("empresa").set({ nome: n, end: e, tel: t, cnpj: c }, {merge: true}).then(() => Swal.fire('Salvo!','','success')); }
   function salvarCatalogo() { let n=document.getElementById('catNome').value,v=Number(document.getElementById('catValor').value); if(n&&v){db.collection("catalogo").add({nome:n.toUpperCase(),valor:v});document.getElementById('catNome').value='';document.getElementById('catValor').value='';Swal.fire('Salvo','','success');} }
-  function apagarCat(id){db.collection("catalogo").doc(id).delete();}
   function preencherValorCat(){let t=document.getElementById('descricao').value.toUpperCase(),a=catalogo.find(c=>c.nome===t);if(a)document.getElementById('valor').value=a.valor;}
   function atualizarSelect(){let s=document.getElementById('clienteSelect'),c=s.value;s.innerHTML='<option value="">Selecione...</option>';clientes.sort((a,b)=>a.nome.localeCompare(b.nome)).forEach((k)=>{let o=document.createElement('option');o.value=k.id;o.textContent=k.nome;s.appendChild(o)});if(c)s.value=c;}
   function adicionarCliente(){let n=document.getElementById('nome').value.trim();if(!n)return Swal.fire('Erro','Nome obrigatório','error');db.collection("clientes").add({nome:n,cpf_cnpj:document.getElementById('cpf_cnpj').value,ie:document.getElementById('ie').value,telefone:document.getElementById('telefone').value,cep:document.getElementById('cep').value,cidade:document.getElementById('cidade').value,endereco:document.getElementById('endereco').value,itens:[]});Swal.fire('Sucesso','Cliente salvo','success');}
@@ -634,13 +578,6 @@
   function limparAssinatura() { let c = document.getElementById('canvasAssinatura'); c.getContext('2d').clearRect(0,0,c.width,c.height); }
   function limparRemoto() { let cvs = document.getElementById('canvasRemoto'); let ctx = cvs.getContext('2d'); ctx.clearRect(0,0,cvs.width,cvs.height); }
   function fecharAssinatura() { document.getElementById('assinaturaModal').style.display = 'none'; signId = null; }
-  function finalizarAssinatura(tipo) { let img = document.getElementById('canvasAssinatura').toDataURL(); if(document.getElementById('salvarAssinaturaCheck').checked) { let c = clientes.find(x => x.id === signId); let idxs = Array.from(document.querySelectorAll(`.sel-${signId}:checked`)).map(e => e.value); idxs.forEach(i => c.itens[i].assinatura = img); db.collection("clientes").doc(signId).update({itens: c.itens}); } if(tipo !== 'salvar_apenas') imprimirSelecionados(signId, tipo); $('#assinaturaModal').hide(); }
-  function gerarLinkRemoto(id) { let l = `${window.location.href.split('?')[0]}?cliente=${id}`; navigator.clipboard.writeText(l).then(() => Swal.fire({title: 'Link Copiado!', html: `Envie para o cliente:<br><br><b>${l}</b>`, icon: 'success'})); }
-  function compartilharComprovanteImagem(id) { if (!empDados.end) { Swal.fire({ title: 'Aguarde...', text: 'Carregando dados...', icon: 'info', timer: 3000 }); return; } const c = clientes.find(x => x.id === id); const checks = document.querySelectorAll(`.sel-${id}:checked`); const indices = Array.from(checks).map(cb => parseInt(cb.value)); const itens = (indices.length > 0) ? indices.map(idx => c.itens[idx]) : c.itens; let total = itens.reduce((a, i) => a + (Number(i.valor)||0), 0); let totalPago = itens.reduce((acc, i) => acc + (Number(i.pagoValor) || 0), 0); let saldoDevedor = total - totalPago; const assinatura = c.itens.find(i=>i.assinatura)?.assinatura; let headerZap = `<div style="display:flex; align-items:center; border-bottom:2px solid #000; padding-bottom:10px; margin-bottom:10px;"><div style="width:100px; margin-right:15px; text-align:center;"><img src="${logoBase64}" style="max-height:80px;"></div><div style="flex:1; text-align:left;"><div style="font-size:22px; font-weight:900; color:#0d47a1; margin-bottom:5px;">${empDados.nome}</div><div style="font-size:12px; font-weight:bold; color:#333;">${empDados.end}</div><div style="font-size:12px; font-weight:bold; color:#333;">${empDados.tel}</div></div></div>`; let html = `<div style="background:#fff; width:750px; padding:40px 20px 20px 20px; font-family:Arial; text-align:center; color:#000;">${headerZap}<div style="font-size:20px; font-weight:bold; margin:10px 0;">COMPROVANTE DE VENDA</div><div style="text-align:left; font-size:16px; margin-bottom:15px;"><b>CLIENTE:</b> ${c.nome.toUpperCase()}</div><table style="width:100%; border-collapse:collapse;"><tr style="background:#eee; border-top:2px solid #000; border-bottom:2px solid #000;"><th style="text-align:left; padding:8px;">ITEM</th><th style="text-align:center; padding:8px;">QTD</th><th style="text-align:right; padding:8px;">VALOR</th></tr>${itens.map(i => `<tr><td style="text-align:left; padding:8px; border-bottom:1px dashed #ccc; font-weight:bold;">${i.desc.toUpperCase()}</td><td style="text-align:center; padding:8px; border-bottom:1px dashed #ccc; font-weight:bold;">${i.qtd || 1}</td><td style="text-align:right; padding:8px; border-bottom:1px dashed #ccc; font-weight:bold;">${formatarMoeda(i.valor)}</td></tr>`).join('')}</table><div style="margin-top:20px; text-align:right; font-size:18px;"><div style="color:#0000AA; font-weight:900;">TOTAL: ${formatarMoeda(total)}</div><div style="color:#008000; font-weight:900;">PAGO: ${formatarMoeda(totalPago)}</div><div style="color:#FF0000; font-weight:900; font-size:22px;">A RECEBER: ${formatarMoeda(saldoDevedor)}</div></div>${assinatura ? `<img src="${assinatura}" style="max-height:80px; margin-top:20px;">` : ''}<div style="font-size:12px; margin-top:20px; color:#666;">Gerado em ${new Date().toLocaleString()}</div></div>`; let area = document.getElementById('hiddenPrintArea'); area.innerHTML = html; setTimeout(() => { html2canvas(area, { scale: 1.5 }).then(canvasImg => { Swal.close(); Swal.fire({ title: 'Pronto para Enviar!', text: 'Segure na imagem para copiar ou compartilhar.', imageUrl: canvasImg.toDataURL("image/jpeg", 0.9), imageWidth: 400, confirmButtonText: 'Fechar' }); area.innerHTML = ''; }); }, 800); }
-  function abrirLancarRapido(id, nome) { $('#idCliRapido').val(id); $('#modalLancarRapido').css('display','flex'); }
-  function preencherValorCatRapido() { let item = catalogo.find(c => c.nome === $('#descRapido').val().toUpperCase()); if(item) { $('#valorUnitRapido').val(item.valor); $('#custoRapido').val(item.custo); calcularTotalRapido(); } }
-  function calcularTotalRapido() { $('#valorTotalRapido').val( ($('#qtdRapido').val() * $('#valorUnitRapido').val()).toFixed(2) ); }
-  function confirmarLancamentoRapido() { let id = $('#idCliRapido').val(); let nome = $('#descRapido').val().toUpperCase(); let qtd = Number($('#qtdRapido').val()); let total = Number($('#valorTotalRapido').val()); let custo = Number($('#custoRapido').val()) * qtd; let itemCat = catalogo.find(c => c.nome === nome); if(itemCat) db.collection("catalogo").doc(itemCat.id).update({ estoque: itemCat.estoque - qtd }); db.collection("clientes").doc(id).update({ itens: firebase.firestore.FieldValue.arrayUnion({ desc: nome, qtd, valor: total, custo, data: new Date().toISOString().split('T')[0], pago: false }) }); $('#modalLancarRapido').hide(); Swal.fire('Salvo','','success'); }
   function gerarRelatorioDebitos(id) { const c = clientes.find(x => x.id === id); const itens = c.itens.filter(i => !i.pago); if(itens.length === 0) return Swal.fire('Nada deve','Este cliente está em dia.','success'); const total = itens.reduce((a, b) => a + Number(b.valor), 0); gerarImpressao(c, itens, total, 'extrato', "RELATÓRIO DE DÉBITOS PENDENTES"); }
   function gerarRelatorioGeral() { const logoHtml = logoBase64 ? `<img src="${logoBase64}" style="max-height:50px; margin-right:15px;">` : ''; let headerLayout = `<div style="display:flex; align-items:center; border-bottom:2px solid #000; padding-bottom:10px; margin-bottom:20px;">${logoHtml}<div style="text-align:left;"><div style="font-size:18px; font-weight:900;">${empDados.nome}</div><div style="font-size:12px;">${empDados.end} | ${empDados.tel}</div></div></div>`; let totalGeralVendido = 0; let totalGeralRecebido = 0; let totalGeralDevedor = 0; let linhasTabela = clientes.map(c => { let t = c.itens.reduce((acc, i) => acc + (Number(i.valor)||0), 0); let p = c.itens.reduce((acc, i) => acc + (Number(i.pagoValor)||0), 0); let d = t - p; if (t === 0) return ''; totalGeralVendido += t; totalGeralRecebido += p; totalGeralDevedor += d; let corDevedor = d > 0 ? 'red' : '#333'; return `<tr><td style="text-align:left; padding:5px; border-bottom:1px solid #ddd;">${c.nome.toUpperCase()}</td><td style="text-align:right; padding:5px; border-bottom:1px solid #ddd;">${formatarMoeda(t)}</td><td style="text-align:right; padding:5px; border-bottom:1px solid #ddd; color:green; font-weight:bold;">${formatarMoeda(p)}</td><td style="text-align:right; padding:5px; border-bottom:1px solid #ddd; color:blue; font-weight:bold;">${formatarMoeda(d)}</td></tr>`; }).join(''); let html = `<style>.paper-content { font-family: 'Helvetica', Arial, sans-serif; font-size: 12px; color: black !important; } table { width: 100%; border-collapse: collapse; margin-top: 10px; } th { background: #eee; text-align: right; padding: 8px; border-bottom: 2px solid #000; color: #000 !important; font-weight: 900; } th:first-child { text-align: left; } td { color: #000 !important; } .totais { margin-top: 20px; font-size: 14px; font-weight: bold; text-align: right; color: #000; }</style><div class="paper-content">${headerLayout}<h2 style="text-align:center; margin-bottom:20px; color:#000;">BALANÇO GERAL DE CLIENTES</h2><table><thead><tr><th>CLIENTE</th><th>TOTAL COMPRADO</th><th>TOTAL PAGO</th><th>SALDO A RECEBER</th></tr></thead><tbody>${linhasTabela}</tbody></table><div class="totais"><p>TOTAL VENDIDO: ${formatarMoeda(totalGeralVendido)}</p><p style="color:green">TOTAL RECEBIDO: ${formatarMoeda(totalGeralRecebido)}</p><p style="color:red; font-size:18px;">TOTAL A RECEBER NA RUA: ${formatarMoeda(totalGeralDevedor)}</p></div><br><br><p style="text-align:center; font-size:10px; color:#aaa">Gerado em: ${new Date().toLocaleString()}</p></div>`; $('#printPaper').html(html); $('#printOverlay').show(); }
   function abrirLogs() { db.collection("logs").orderBy("data", "desc").limit(20).get().then(snap => { let h = ""; snap.forEach(d => { let k=d.data(); h+=`<div style="border-bottom:1px solid #333; padding:5px; color:#fff;"><b>${k.acao}</b> - ${k.data.toDate().toLocaleString()}<br>${k.usuario}: ${k.detalhe}</div>`; }); $('#listaLogs').html(h); $('#modalLogs').css('display','flex'); }); }
@@ -648,6 +585,8 @@
   function criarUsuario() { const nome = $('#novoUserNome').val(); const email = $('#novoUserEmail').val(); const senha = $('#novoUserSenha').val(); const perfil = $('#novoUserPerfil').val(); if(!email || !senha || !nome) return Swal.fire('Erro', 'Preencha tudo!', 'error'); const secondaryApp = firebase.initializeApp(firebaseConfig, "Secondary"); secondaryApp.auth().createUserWithEmailAndPassword(email, senha).then((userCredential) => { return db.collection("usuarios").doc(userCredential.user.uid).set({ nome: nome, email: email, perfil: perfil }); }).then(() => { secondaryApp.auth().signOut(); secondaryApp.delete(); $('#modalUsuario').hide(); $('#novoUserNome').val(''); $('#novoUserEmail').val(''); $('#novoUserSenha').val(''); Swal.fire('Sucesso', 'Usuário criado!', 'success'); }).catch((error) => { Swal.fire('Erro', error.message, 'error'); secondaryApp.delete(); }); }
   function logAction(acao, detalhe) { db.collection("logs").add({ data: new Date(), usuario: auth.currentUser.email, acao, detalhe }); }
   function colocarDigital(input) { if(input.files[0]) { let r = new FileReader(); r.onload = e => { let img = new Image(); img.onload = () => document.getElementById('canvasAssinatura').getContext('2d').drawImage(img,0,0,300,150); img.src = e.target.result; }; r.readAsDataURL(input.files[0]); } }
+  function compartilharComprovanteImagem(id) { if (!empDados.end) { Swal.fire({ title: 'Aguarde...', text: 'Carregando dados...', icon: 'info', timer: 3000 }); return; } const c = clientes.find(x => x.id === id); const checks = document.querySelectorAll(`.sel-${id}:checked`); const indices = Array.from(checks).map(cb => parseInt(cb.value)); const itens = (indices.length > 0) ? indices.map(idx => c.itens[idx]) : c.itens; let total = itens.reduce((a, i) => a + (Number(i.valor)||0), 0); let totalPago = itens.reduce((acc, i) => acc + (Number(i.pagoValor) || 0), 0); let saldoDevedor = total - totalPago; const assinatura = c.itens.find(i=>i.assinatura)?.assinatura; let headerZap = `<div style="display:flex; align-items:center; border-bottom:2px solid #000; padding-bottom:10px; margin-bottom:10px;"><div style="width:100px; margin-right:15px; text-align:center;"><img src="${logoBase64}" style="max-height:80px;"></div><div style="flex:1; text-align:left;"><div style="font-size:22px; font-weight:900; color:#0d47a1; margin-bottom:5px;">${empDados.nome}</div><div style="font-size:12px; font-weight:bold; color:#333;">${empDados.end}</div><div style="font-size:12px; font-weight:bold; color:#333;">${empDados.tel}</div></div></div>`; let html = `<div style="background:#fff; width:750px; padding:40px 20px 20px 20px; font-family:Arial; text-align:center; color:#000;">${headerZap}<div style="font-size:20px; font-weight:bold; margin:10px 0;">COMPROVANTE DE VENDA</div><div style="text-align:left; font-size:16px; margin-bottom:15px;"><b>CLIENTE:</b> ${c.nome.toUpperCase()}</div><table style="width:100%; border-collapse:collapse;"><tr style="background:#eee; border-top:2px solid #000; border-bottom:2px solid #000;"><th style="text-align:left; padding:8px;">ITEM</th><th style="text-align:center; padding:8px;">QTD</th><th style="text-align:right; padding:8px;">VALOR</th></tr>${itens.map(i => `<tr><td style="text-align:left; padding:8px; border-bottom:1px dashed #ccc; font-weight:bold;">${i.desc.toUpperCase()}</td><td style="text-align:center; padding:8px; border-bottom:1px dashed #ccc; font-weight:bold;">${i.qtd || 1}</td><td style="text-align:right; padding:8px; border-bottom:1px dashed #ccc; font-weight:bold;">${formatarMoeda(i.valor)}</td></tr>`).join('')}</table><div style="margin-top:20px; text-align:right; font-size:18px;"><div style="color:#0000AA; font-weight:900;">TOTAL: ${formatarMoeda(total)}</div><div style="color:#008000; font-weight:900;">PAGO: ${formatarMoeda(totalPago)}</div><div style="color:#FF0000; font-weight:900; font-size:22px;">A RECEBER: ${formatarMoeda(saldoDevedor)}</div></div>${assinatura ? `<img src="${assinatura}" style="max-height:80px; margin-top:20px;">` : ''}<div style="font-size:12px; margin-top:20px; color:#666;">Gerado em ${new Date().toLocaleString()}</div></div>`; let area = document.getElementById('hiddenPrintArea'); area.innerHTML = html; setTimeout(() => { html2canvas(area, { scale: 1.5 }).then(canvasImg => { Swal.close(); Swal.fire({ title: 'Pronto para Enviar!', text: 'Segure na imagem para copiar ou compartilhar.', imageUrl: canvasImg.toDataURL("image/jpeg", 0.9), imageWidth: 400, confirmButtonText: 'Fechar' }); area.innerHTML = ''; }); }, 800); }
+  function gerarImagemWhatsApp() { if (!empDados.end) { Swal.fire({ title: 'Aguarde...', text: 'Carregando dados...', icon: 'info', timer: 3000 }); return; } let c = clientes.find(x => x.id === signId); const checks = document.querySelectorAll(`.sel-${signId}:checked`); const indices = Array.from(checks).map(cb => parseInt(cb.value)); const selecionados = indices.map(idx => c.itens[idx]); const totalS = selecionados.reduce((a, i) => a + (Number(i.valor) || 0), 0); const totalPago = selecionados.reduce((a, i) => a + (Number(i.pagoValor) || 0), 0); const assinatura = document.getElementById('canvasAssinatura').toDataURL(); let html = `<div style="background:#fff; font-family:'Courier New'; padding:15px; border:1px solid #ccc; width:350px;"><div style="text-align:center; font-weight:bold; margin-bottom:5px; font-size:16px;">${empDados.nome}</div><div style="text-align:center; font-size:11px; margin-bottom:10px; color:#333;">${empDados.end}<br>${empDados.tel}</div><hr style="border:0; border-top:1px dashed #000;"><div style="font-size:12px; margin-bottom:10px;"><b>CLIENTE:</b> ${c.nome.toUpperCase()}</div><table style="width:100%; font-size:11px; border-collapse:collapse; margin-bottom:10px;"><tr style="border-bottom:1px solid #000;"><th style="text-align:left;">Peça</th><th style="text-align:right;">Valor</th></tr>${selecionados.map(i => `<tr><td style="text-align:left; padding:3px 0;">${i.desc}</td><td style="text-align:right; padding:3px 0;">${formatarMoeda(i.valor)}</td></tr>`).join('')}</table><hr style="border:0; border-top:1px dashed #000;"><div style="text-align:right; font-size:14px; font-weight:bold;">TOTAL: ${formatarMoeda(totalS)}</div><div style="text-align:right; font-size:12px;">PAGO: ${formatarMoeda(totalPago)}</div><div style="text-align:right; font-size:14px; font-weight:bold; color:red;">RESTANTE: ${formatarMoeda(totalS-totalPago)}</div><div style="margin-top:20px; text-align:center;"><img src="${assinatura}" style="max-height:50px;"><br><span style="font-size:10px; color:#555;">Assinado Digitalmente</span></div><div style="margin-top:10px; text-align:center; font-size:9px; color:#aaa;">Emitido em: ${new Date().toLocaleString('pt-BR')}</div></div>`; let area = document.getElementById('hiddenPrintArea'); area.innerHTML = html; setTimeout(() => { html2canvas(area, { scale: 2 }).then(canvasImg => { Swal.fire({ title: 'Imagem Gerada!', text: 'Segure na imagem para copiar.', imageUrl: canvasImg.toDataURL("image/jpeg", 0.9), imageWidth: 300, confirmButtonText: 'Fechar' }); area.innerHTML = ''; fecharAssinatura(); }); }, 500); }
 </script>
 </body>
 </html>
