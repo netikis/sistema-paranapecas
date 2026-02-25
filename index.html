@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d47a1">
-<title>PARANÁ PEÇAS - GESTÃO V35</title>
+<title>PARANÁ PEÇAS - GESTÃO V36</title>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -132,7 +132,7 @@
 
 <header class="header">
   <img id="logoLeft" src="" alt="">
-  <div class="titulo">PARANÁ PEÇAS - GESTÃO V35</div>
+  <div class="titulo">PARANÁ PEÇAS - GESTÃO V36</div>
   <div style="display:flex; align-items:center;">
     <div id="userDisplay" style="font-size:10px; margin-right:10px; text-align:right;"></div>
     <button class="danger" onclick="logout()">SAIR</button>
@@ -337,7 +337,6 @@
 <div id="hiddenPrintArea"></div>
 
 <script>
-  // 🔴 SUAS CHAVES 🔴
   const firebaseConfig = {
     apiKey: "AIzaSyDx0wGiH9IdMH6_8RSi-2upT-UnZqZ_UmE",
     authDomain: "gestaodeclientes-7f8f0.firebaseapp.com",
@@ -381,13 +380,17 @@
           cvsRemoto.width = cvsRemoto.offsetWidth; cvsRemoto.height = 200;
           const ctxR = cvsRemoto.getContext('2d'); ctxR.lineWidth = 2; ctxR.strokeStyle = '#000';
           setupCanvasEvents(cvsRemoto);
+          
           auth.signInAnonymously().catch(() => {});
+
           db.collection("clientes").doc(clienteIdUrl).onSnapshot((doc) => {
               if(doc.exists) {
                   let data = doc.data();
                   let html = `<b>Olá, ${data.nome}</b><br>Itens para assinar:<br><br>`;
                   let total = 0;
+                  
                   let indicesPermitidos = itemsUrl ? itemsUrl.split(',').map(Number) : null;
+                  
                   data.itens.forEach((i, idx) => { 
                       if(!i.pago) { 
                           if(indicesPermitidos && !indicesPermitidos.includes(idx)) return;
@@ -536,32 +539,41 @@
       }); 
   }
   
-  // ⚠️ SEGURANÇA V35: CARREGAMENTO DESTRAVADO (SEM ORDERBY) E IMPORTAÇÃO
+  // ⚠️ SEGURANÇA V36: ORDENAÇÃO DESTRAVADA E DEBUG DE ERRO
   function iniciarSincronizacao() {
+      // Aviso de Loading inicial
+      document.getElementById('listaClientes').innerHTML = '<div style="text-align:center; padding:20px;">Carregando dados...</div>';
+      
       db.collection("clientes").onSnapshot((snapshot) => { 
           clientes = []; 
           snapshot.forEach((doc) => { 
               let d = doc.data();
-              // Garantia contra dados quebrados
-              if (!d.itens) d.itens = [];
-              clientes.push({ id: doc.id, ...d }); 
+              // Filtro de segurança: Ignora cliente corrompido
+              if (d && d.nome) {
+                  if (!d.itens) d.itens = [];
+                  clientes.push({ id: doc.id, ...d }); 
+              }
           }); 
-          // Ordenação segura
-          clientes.sort((a,b) => (a.nome || "").toString().localeCompare((b.nome || "").toString()));
+          
+          try {
+              clientes.sort((a,b) => (a.nome || "").toString().localeCompare((b.nome || "").toString()));
+          } catch(e) { console.log("Erro menor na ordenação"); }
+          
           atualizarSelect(); 
           atualizarDashboard(); 
           render(); 
+      }, (error) => {
+          // MOSTRA ERRO NA TELA SE FALHAR
+          document.getElementById('listaClientes').innerHTML = `<div style="text-align:center; padding:20px; color:red"><b>Erro ao carregar:</b> ${error.message}<br>Verifique sua conexão ou permissões.</div>`;
       });
-      // ... resto das coleções (catalogo, config)
+
+      // ... resto das coleções
       db.collection("catalogo").onSnapshot((s)=>{ catalogo=[]; let d=document.getElementById('opcoesCatalogo'); if(!d) return; d.innerHTML=''; s.forEach((doc)=>{ let k=doc.data(); catalogo.push({id:doc.id,...k}); d.innerHTML+=`<option value="${k.nome}">R$ ${k.valor}</option>`; }); });
       db.collection("config").doc("empresa").onSnapshot((doc) => { if (doc.exists) { empDados = doc.data(); if(document.getElementById('confEmpNome')) { document.getElementById('confEmpNome').value = empDados.nome; document.getElementById('confEmpEnd').value = empDados.end; document.getElementById('confEmpTel').value = empDados.tel; document.getElementById('confEmpCnpj').value = empDados.cnpj; } if(empDados.logo) { logoBase64 = empDados.logo; aplicarLogo(); } } });
   }
 
-  // FUNÇÃO NOVA: IMPORTAR BACKUP
-  function importarBackup() {
-      document.getElementById('importInput').click();
-  }
-
+  // FUNÇÃO DE IMPORTAR BACKUP (MANTIDA)
+  function importarBackup() { document.getElementById('importInput').click(); }
   function processarImportacao(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -570,34 +582,15 @@
           try {
               const data = JSON.parse(e.target.result);
               if (!Array.isArray(data)) throw new Error("Formato inválido");
-              
-              Swal.fire({
-                  title: 'Importando...',
-                  text: 'Aguarde enquanto os clientes são salvos.',
-                  allowOutsideClick: false,
-                  didOpen: () => { Swal.showLoading() }
-              });
-
+              Swal.fire({ title: 'Importando...', text: 'Aguarde...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
               let count = 0;
               for (const cli of data) {
-                  // Limpa ID antigo para criar novo
-                  let novoCliente = {
-                      nome: cli.nome || "Sem Nome",
-                      telefone: cli.telefone || "",
-                      cpf_cnpj: cli.cpf_cnpj || "",
-                      ie: cli.ie || "",
-                      cep: cli.cep || "",
-                      cidade: cli.cidade || "",
-                      endereco: cli.endereco || "",
-                      itens: cli.itens || []
-                  };
+                  let novoCliente = { nome: cli.nome || "Sem Nome", telefone: cli.telefone || "", cpf_cnpj: cli.cpf_cnpj || "", ie: cli.ie || "", cep: cli.cep || "", cidade: cli.cidade || "", endereco: cli.endereco || "", itens: cli.itens || [] };
                   await db.collection("clientes").add(novoCliente);
                   count++;
               }
               Swal.fire('Sucesso', `${count} clientes importados!`, 'success');
-          } catch (err) {
-              Swal.fire('Erro', 'Arquivo corrompido ou inválido', 'error');
-          }
+          } catch (err) { Swal.fire('Erro', 'Arquivo corrompido', 'error'); }
       };
       reader.readAsText(file);
   }
@@ -780,7 +773,7 @@
   function fecharAssinatura() { document.getElementById('assinaturaModal').style.display = 'none'; signId = null; }
   function finalizarAssinatura(tipo) { let img = document.getElementById('canvasAssinatura').toDataURL(); if(document.getElementById('salvarAssinaturaCheck').checked) { let c = clientes.find(x => x.id === signId); let idxs = Array.from(document.querySelectorAll(`.sel-${signId}:checked`)).map(e => e.value); idxs.forEach(i => c.itens[i].assinatura = img); db.collection("clientes").doc(signId).update({itens: c.itens}); } if(tipo !== 'salvar_apenas') imprimirSelecionados(signId, tipo); $('#assinaturaModal').hide(); }
   function gerarLinkRemoto(id) { let l = `${window.location.href.split('?')[0]}?cliente=${id}`; navigator.clipboard.writeText(l).then(() => Swal.fire({title: 'Link Copiado!', html: `Envie para o cliente:<br><br><b>${l}</b>`, icon: 'success'})); }
-  function compartilharComprovanteImagem(id) { if (!empDados.end) { Swal.fire({ title: 'Aguarde...', text: 'Carregando dados...', icon: 'info', timer: 3000 }); return; } let c = clientes.find(x => x.id === id); const checks = document.querySelectorAll(`.sel-${id}:checked`); let indices = []; for(let i=0; i<checks.length; i++) { if(checks[i].checked) indices.push(checks[i].value); } if(indices.length === 0) return Swal.fire('Aviso', "Selecione itens", 'warning'); const selecionados = indices.map(idx => c.itens[idx]); let total = selecionados.reduce((a, i) => a + (Number(i.valor)||0), 0); let totalPago = selecionados.reduce((acc, i) => acc + (Number(i.pagoValor) || 0), 0); let saldoDevedor = total - totalPago; const assinatura = c.itens.find(i=>i.assinatura)?.assinatura; let headerZap = `<div style="display:flex; align-items:center; border-bottom:2px solid #000; padding-bottom:10px; margin-bottom:10px;"><div style="width:100px; margin-right:15px; text-align:center;"><img src="${logoBase64}" style="max-height:80px;"></div><div style="flex:1; text-align:left;"><div style="font-size:22px; font-weight:900; color:#0d47a1; margin-bottom:5px;">${empDados.nome}</div><div style="font-size:12px; font-weight:bold; color:#333;">${empDados.end}</div><div style="font-size:12px; font-weight:bold; color:#333;">${empDados.tel}</div></div></div>`; let html = `<div style="background:#fff; width:750px; padding:40px 20px 20px 20px; font-family:Arial; text-align:center; color:#000;">${headerZap}<div style="font-size:20px; font-weight:bold; margin:10px 0;">COMPROVANTE DE VENDA</div><div style="text-align:left; font-size:16px; margin-bottom:15px;"><b>CLIENTE:</b> ${c.nome.toUpperCase()}</div><table style="width:100%; border-collapse:collapse;"><tr style="background:#eee; border-top:2px solid #000; border-bottom:2px solid #000;"><th style="text-align:left; padding:8px;">ITEM</th><th style="text-align:center; padding:8px;">QTD</th><th style="text-align:right; padding:8px;">VALOR</th></tr>${selecionados.map(i => `<tr><td style="text-align:left; padding:3px 0;">${i.desc}</td><td style="text-align:right; padding:3px 0;">${formatarMoeda(i.valor)}</td></tr>`).join('')}</table><hr style="border:0; border-top:1px dashed #000;"><div style="text-align:right; font-size:14px; font-weight:bold;">TOTAL: ${formatarMoeda(total)}</div><div style="text-align:right; font-size:12px;">PAGO: ${formatarMoeda(totalPago)}</div><div style="text-align:right; font-size:14px; font-weight:bold; color:red;">RESTANTE: ${formatarMoeda(saldoDevedor)}</div><div style="margin-top:20px; text-align:center;"><img src="${assinatura}" style="max-height:50px;"><br><span style="font-size:10px; color:#555;">Assinado Digitalmente</span></div><div style="margin-top:10px; text-align:center; font-size:9px; color:#aaa;">Emitido em: ${new Date().toLocaleString('pt-BR')}</div></div>`; let area = document.getElementById('hiddenPrintArea'); area.innerHTML = html; setTimeout(() => { html2canvas(area, { scale: 2 }).then(canvasImg => { Swal.fire({ title: 'Imagem Gerada!', text: 'Segure na imagem para copiar.', imageUrl: canvasImg.toDataURL("image/jpeg", 0.9), imageWidth: 300, confirmButtonText: 'Fechar' }); area.innerHTML = ''; fecharAssinatura(); }); }, 500); }
+  function compartilharComprovanteImagem(id) { if (!empDados.end) { Swal.fire({ title: 'Aguarde...', text: 'Carregando dados...', icon: 'info', timer: 3000 }); return; } let c = clientes.find(x => x.id === id); const checks = document.querySelectorAll(`.sel-${id}:checked`); let indices = []; for(let i=0; i<checks.length; i++) { if(checks[i].checked) indices.push(checks[i].value); } if(indices.length === 0) return Swal.fire('Aviso', "Selecione itens", 'warning'); const selecionados = indices.map(idx => c.itens[idx]); let total = selecionados.reduce((a, i) => a + (Number(i.valor)||0), 0); let totalPago = selecionados.reduce((acc, i) => acc + (Number(i.pagoValor) || 0), 0); let saldoDevedor = total - totalPago; const assinatura = c.itens.find(i=>i.assinatura)?.assinatura; let headerZap = `<div style="display:flex; align-items:center; border-bottom:2px solid #000; padding-bottom:10px; margin-bottom:10px;"><div style="width:100px; margin-right:15px; text-align:center;"><img src="${logoBase64}" style="max-height:80px;"></div><div style="flex:1; text-align:left;"><div style="font-size:22px; font-weight:900; color:#0d47a1; margin-bottom:5px;">${empDados.nome}</div><div style="font-size:12px; font-weight:bold; color:#333;">${empDados.end}</div><div style="font-size:12px; font-weight:bold; color:#333;">${empDados.tel}</div></div></div>`; let html = `<div style="background:#fff; width:750px; padding:40px 20px 20px 20px; font-family:Arial; text-align:center; color:#000;">${headerZap}<div style="font-size:20px; font-weight:bold; margin:10px 0;">COMPROVANTE DE VENDA</div><div style="text-align:left; font-size:16px; margin-bottom:15px;"><b>CLIENTE:</b> ${c.nome.toUpperCase()}</div><table style="width:100%; border-collapse:collapse;"><tr style="background:#eee; border-top:2px solid #000; border-bottom:2px solid #000;"><th style="text-align:left; padding:8px;">ITEM</th><th style="text-align:center; padding:8px;">QTD</th><th style="text-align:right; padding:8px;">VALOR</th></tr>${selecionados.map(i => `<tr><td style="text-align:left; padding:3px 0;">${i.desc}</td><td style="text-align:right; padding:3px 0;">${formatarMoeda(i.valor)}</td></tr>`).join('')}</table><hr style="border:0; border-top:1px dashed #000;"><div style="text-align:right; font-size:14px; font-weight:bold;">TOTAL: ${formatarMoeda(totalS)}</div><div style="text-align:right; font-size:12px;">PAGO: ${formatarMoeda(totalPago)}</div><div style="text-align:right; font-size:14px; font-weight:bold; color:red;">RESTANTE: ${formatarMoeda(totalS-totalPago)}</div><div style="margin-top:20px; text-align:center;"><img src="${assinatura}" style="max-height:50px;"><br><span style="font-size:10px; color:#555;">Assinado Digitalmente</span></div><div style="margin-top:10px; text-align:center; font-size:9px; color:#aaa;">Emitido em: ${new Date().toLocaleString('pt-BR')}</div></div>`; let area = document.getElementById('hiddenPrintArea'); area.innerHTML = html; setTimeout(() => { html2canvas(area, { scale: 2 }).then(canvasImg => { Swal.fire({ title: 'Imagem Gerada!', text: 'Segure na imagem para copiar.', imageUrl: canvasImg.toDataURL("image/jpeg", 0.9), imageWidth: 300, confirmButtonText: 'Fechar' }); area.innerHTML = ''; fecharAssinatura(); }); }, 500); }
 </script>
 </body>
 </html>
