@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d47a1">
-<title>PARANÁ PEÇAS - GESTÃO V24</title>
+<title>PARANÁ PEÇAS - GESTÃO V25</title>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -20,59 +20,27 @@
   /* ESTILO BASE */
   body { font-family: 'Segoe UI', Arial, sans-serif; background: #000; margin: 0; color: #fff; overflow-x: hidden; touch-action: manipulation; }
   
-  /* --- SISTEMA DE IMPRESSÃO HÍBRIDO (A4 e CUPOM) --- */
+  /* --- SISTEMA DE IMPRESSÃO --- */
   #printOverlay { display: none; } 
-
   @media print {
     body > *:not(#printOverlay) { display: none !important; }
     body { background: white !important; color: black !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; }
-    
-    #printOverlay { 
-        display: block !important; 
-        position: absolute; top: 0; left: 0; 
-        width: 100%; height: auto;
-        background: white !important; 
-        color: black !important;
-        z-index: 999999;
-    }
-
-    /* FORÇA O TAMANHO DO CUPOM NA IMPRESSORA */
-    .cupom-style {
-        width: 72mm !important;
-        max-width: 72mm !important;
-        font-size: 11px !important;
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-    
-    /* FORÇA O TAMANHO DO A4 NA IMPRESSORA */
-    .a4-style {
-        width: 100% !important;
-        max-width: 210mm !important;
-    }
-
+    #printOverlay { display: block !important; position: absolute; top: 0; left: 0; width: 100%; height: auto; background: white !important; color: black !important; z-index: 999999; }
+    .cupom-style { width: 72mm !important; max-width: 72mm !important; font-size: 11px !important; padding: 0 !important; margin: 0 !important; }
+    .a4-style { width: 100% !important; max-width: 210mm !important; }
     .print-controls, .no-print { display: none !important; }
     @page { margin: 0; size: auto; }
   }
 
-  /* OVERLAY VISUAL NA TELA */
   .overlay-screen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #222; z-index: 10000; overflow-y: auto; }
   .print-controls { position: sticky; top: 0; left: 0; width: 100%; background: #111; padding: 15px; display: flex; gap: 15px; justify-content: center; z-index: 10001; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-  
-  /* PAPEL NA TELA (Muda de tamanho via JS) */
-  #printPaper { 
-      background: #fff; color: #000; 
-      margin: 30px auto; 
-      box-shadow: 0 0 20px rgba(0,0,0,0.5); 
-      transition: all 0.3s ease;
-  }
+  #printPaper { background: #fff; color: #000; margin: 30px auto; box-shadow: 0 0 20px rgba(0,0,0,0.5); transition: all 0.3s ease; }
 
   /* LOGIN */
   #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #000000 0%, #0d47a1 150%); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
   .login-box { background: rgba(20, 20, 20, 0.95); padding: 40px; border-radius: 15px; border: 1px solid #333; text-align: center; width: 320px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
   .login-box input { background: #222; border: 1px solid #444; color: #fff; margin-bottom: 15px; font-size: 16px; padding: 15px; width: 100%; border-radius: 8px; box-sizing: border-box; text-align: center; }
-  
-  .btn-perfil { width: 100%; padding: 15px; margin: 10px 0; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: transform 0.2s; }
+  .btn-perfil { width: 100%; padding: 15px; margin: 10px 0; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
   .btn-admin { background: linear-gradient(135deg, #1565c0, #0d47a1); color: #fff; }
   .btn-balcao { background: linear-gradient(135deg, #424242, #616161); color: #fff; }
 
@@ -106,15 +74,12 @@
   table { width: 100%; border-collapse: collapse; margin-top: 15px; background: #fff; color: #000; border-radius: 8px; overflow: hidden; }
   th { background: #444; color: #fff; padding: 10px; font-size: 12px; font-weight: 900; text-transform: uppercase; }
   td { border-bottom: 1px solid #eee; padding: 8px; text-align: center; font-size: 14px; font-weight: 800; color: #000; }
-  
-  /* CORES DA TABELA */
   .vencido { background-color: #ffebee !important; }
   .vencido td { color: #c62828 !important; }
   .status-tag { padding: 3px 6px; border-radius: 4px; color: #fff; font-size: 10px; font-weight: bold; display: inline-block; }
   .tag-verde { background: #2e7d32; }
   .tag-amarelo { background: #f9a825; color: #000; border: 1px solid #c17900; }
   .tag-vermelho { background: #c62828; }
-
   .table-actions { display: flex; justify-content: center; gap: 5px; }
   .table-actions button { padding: 5px 10px; font-size: 10px; }
   
@@ -167,7 +132,7 @@
 
 <header class="header">
   <img id="logoLeft" src="" alt="">
-  <div class="titulo">PARANÁ PEÇAS - GESTÃO V24</div>
+  <div class="titulo">PARANÁ PEÇAS - GESTÃO V25</div>
   <div style="display:flex; align-items:center;">
     <div id="userDisplay" style="font-size:10px; margin-right:10px; text-align:right;"></div>
     <button class="danger" onclick="logout()">SAIR</button>
@@ -237,7 +202,7 @@
     <h3>⚙️ Configurações</h3>
     <div style="display: flex; flex-wrap: wrap; gap: 20px;">
       <div style="flex: 1; min-width: 250px;">
-        <h4>🏢 Dados da Empresa</h4>
+        <h4>🏢 Empresa</h4>
         <input type="text" id="confEmpNome" placeholder="Nome da Empresa">
         <input type="text" id="confEmpEnd" placeholder="Endereço">
         <input type="text" id="confEmpTel" placeholder="Telefone">
@@ -368,7 +333,7 @@
 <div id="hiddenPrintArea"></div>
 
 <script>
-  // 🔴 SUAS CHAVES 🔴
+  // 🔴 SUAS CHAVES DO FIREBASE 🔴
   const firebaseConfig = {
     apiKey: "AIzaSyDx0wGiH9IdMH6_8RSi-2upT-UnZqZ_UmE",
     authDomain: "gestaodeclientes-7f8f0.firebaseapp.com",
@@ -404,31 +369,40 @@
       ['mousemove', 'touchmove'].forEach(ev => cvs.addEventListener(ev, e => { if(isDrawing){ ctx.lineTo(getPos(e).x, getPos(e).y); ctx.stroke(); } e.preventDefault(); }));
       ['mouseup', 'touchend'].forEach(ev => cvs.addEventListener(ev, () => isDrawing = false));
 
-      // --- CORREÇÃO DO LINK: LÓGICA DE CARREGAMENTO NO READY ---
       const urlParams = new URLSearchParams(window.location.search);
       const clienteIdUrl = urlParams.get('cliente');
+      const itemsUrl = urlParams.get('items');
+      
       if(clienteIdUrl) {
           const cvsRemoto = document.getElementById('canvasRemoto');
           cvsRemoto.width = cvsRemoto.offsetWidth; cvsRemoto.height = 200;
           const ctxR = cvsRemoto.getContext('2d'); ctxR.lineWidth = 2; ctxR.strokeStyle = '#000';
           setupCanvasEvents(cvsRemoto);
           
-          // FORÇA O LOGIN ANÔNIMO SE PRECISAR, PARA LER O BANCO
           auth.signInAnonymously().catch(() => {});
 
           db.collection("clientes").doc(clienteIdUrl).onSnapshot((doc) => {
               if(doc.exists) {
                   let data = doc.data();
-                  let html = `<b>Olá, ${data.nome}</b><br>Confira seus itens pendentes:<br><br>`;
+                  let html = `<b>Olá, ${data.nome}</b><br>Itens para assinar:<br><br>`;
                   let total = 0;
-                  data.itens.forEach(i => { if(!i.pago) { html += `📦 ${i.desc} - ${formatarMoeda(i.valor)}<br>`; total += (Number(i.valor)||0); } });
-                  html += `<hr><b>TOTAL A PAGAR: ${formatarMoeda(total)}</b>`;
+                  
+                  let indicesPermitidos = itemsUrl ? itemsUrl.split(',').map(Number) : null;
+                  
+                  data.itens.forEach((i, idx) => { 
+                      // Se tiver indices na URL, mostra só eles. Se não tiver, mostra todos os não pagos.
+                      if(!i.pago) { 
+                          if(indicesPermitidos && !indicesPermitidos.includes(idx)) return;
+
+                          html += `📦 ${i.desc} - ${formatarMoeda(i.valor)}<br>`; 
+                          total += (Number(i.valor)||0); 
+                      } 
+                  });
+                  html += `<hr><b>TOTAL: ${formatarMoeda(total)}</b>`;
                   document.getElementById('listaItensRemoto').innerHTML = html;
               } else {
                   document.getElementById('listaItensRemoto').innerHTML = "Cliente não encontrado.";
               }
-          }, (error) => {
-             document.getElementById('listaItensRemoto').innerHTML = "Erro ao carregar: " + error.message;
           });
       }
   });
@@ -537,14 +511,64 @@
     });
   }
 
-  // --- SEPARAÇÃO TOTAL DE IMPRESSÃO (A4 x CUPOM) ---
+  // --- FUNÇÕES CORRIGIDAS ---
+  function abrirAssinatura(id) {
+      const checkboxes = document.getElementsByClassName(`sel-${id}`);
+      let algumSelecionado = false;
+      for(let i=0; i<checkboxes.length; i++) {
+          if(checkboxes[i].checked) { algumSelecionado = true; break; }
+      }
+      if(!algumSelecionado) return Swal.fire('Atenção', "Selecione itens para assinar", 'warning');
+      signId = id;
+      const cvs = document.getElementById('canvasAssinatura');
+      cvs.width = cvs.parentElement.offsetWidth; cvs.height = 200;
+      const ctx = cvs.getContext('2d'); ctx.lineWidth = 2; ctx.strokeStyle = '#000'; ctx.clearRect(0,0,cvs.width,cvs.height);
+      setupCanvasEvents(cvs); 
+      $('#assinaturaModal').css('display','flex');
+  }
+
+  function gerarLinkRemoto(id) { 
+      const checkboxes = document.getElementsByClassName(`sel-${id}`);
+      let indices = [];
+      for(let i=0; i<checkboxes.length; i++) {
+          if(checkboxes[i].checked) indices.push(checkboxes[i].value);
+      }
+      
+      if(indices.length === 0) return Swal.fire('Atenção', "Selecione os itens para enviar", 'warning');
+
+      let baseUrl = window.location.href.split('?')[0]; 
+      let link = `${baseUrl}?cliente=${id}&items=${indices.join(',')}`;
+      
+      navigator.clipboard.writeText(link).then(() => { Swal.fire({title: 'Link Copiado!', html: `Envie para o cliente:<br><br><b>${link}</b>`, icon: 'success'}); }); 
+  }
+
+  function salvarAssinaturaRemota() { 
+      let cvs = document.getElementById('canvasRemoto'); let img = cvs.toDataURL(); 
+      const urlParams = new URLSearchParams(window.location.search);
+      const itemsUrl = urlParams.get('items');
+      let indicesPermitidos = itemsUrl ? itemsUrl.split(',').map(Number) : null;
+
+      db.collection("clientes").doc(clienteIdUrl).get().then(doc => { 
+          let itens = doc.data().itens; 
+          itens.forEach((i, idx) => { 
+              if(!i.pago) { 
+                   if(indicesPermitidos && !indicesPermitidos.includes(idx)) return;
+                   i.assinatura = img; 
+              } 
+          }); 
+          db.collection("clientes").doc(clienteIdUrl).update({ itens }).then(() => { 
+              Swal.fire({ icon: 'success', title: 'Assinado!', text: 'Obrigado!', showConfirmButton: false }); 
+              setTimeout(() => document.body.innerHTML = "<h2 style='text-align:center;padding:50px;color:#fff;'>Tudo certo! Pode fechar.</h2>", 2000);
+          }); 
+      }); 
+  }
+
   function gerarImpressao(c, itens, total, tipo, titulo, assinaturaNova = null) {
     const logoHtml = logoBase64 ? `<img src="${logoBase64}" style="max-height:60px; display:block; margin:0 auto 5px auto;">` : '';
     let totalPago = itens.reduce((a, i) => a + (Number(i.pagoValor)||0), 0); let saldo = total - totalPago; let imgAss = assinaturaNova || (itens.find(i=>i.assinatura)?.assinatura);
     let conteudo = '';
     const papel = document.getElementById('printPaper');
     
-    // --- MODO CUPOM (CLÁSSICO) ---
     if(tipo === 'cupom') {
         papel.className = 'print-paper cupom-style';
         conteudo = `
@@ -577,9 +601,7 @@
             <br>Assinatura
             <br><br>${new Date().toLocaleString()}
         </div>`;
-        
     } else { 
-        // --- MODO A4 (MODERNO / HELVETICA) ---
         papel.className = 'print-paper a4-style';
         conteudo = `
         <style>
