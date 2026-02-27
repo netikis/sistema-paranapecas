@@ -87,7 +87,7 @@
   input, select { padding: 10px; border-radius: 5px; border: 1px solid #555; background: #222; color: #fff; width: 100%; box-sizing: border-box; }
   
   button { padding: 10px 15px; margin: 2px; border-radius: 5px; cursor: pointer; font-weight: 800; border: none; color: #fff; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
-  .primary { background: #1565c0; } .success { background: #2e7d32; } .danger { background: #c62828; } .warning { background: #f57c00; } .dark { background: #333; } .wapp { background: #25D366; color: #fff; } .fiscal { background: #fb8c00; color: #fff; } .share { background: #00bcd4; color: #fff; }
+  .primary { background: #1565c0; } .success { background: #2e7d32; } .danger { background: #c62828; } .warning { background: #f57c00; } .dark { background: #333; } .wapp { background: #25D366; color: #fff; } .fiscal { background: #fb8c00; color: #fff; } .share { background: #00bcd4; color: #fff; } .purple { background: #5e35b1; color: #fff; }
   
   table { width: 100%; border-collapse: collapse; margin-top: 15px; background: #fff; color: #000; border-radius: 8px; overflow: hidden; }
   th { background: #444; color: #fff; padding: 10px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
@@ -540,6 +540,7 @@
         <button class="warning" onclick="imprimirSelecionados('${c.id}', 'cupom')">🖨️ IMPRIMIR CUPOM</button>
         <button class="share" onclick="compartilharComprovanteImagem('${c.id}')">📤 ENVIAR DOC</button>
         <button class="dark" onclick="imprimirExtratoDebitos('${c.id}')" style="background:#d32f2f;">📄 EXTRATO DÉBITOS</button>
+        <button class="purple" onclick="gerarRelatorioAssinaturas('${c.id}')">🕵️ AUDITORIA ASSINATURAS</button>
         <button class="fiscal" onclick="abrirLancarRapido('${c.id}', '${c.nome}')" style="background:#2e7d32;">➕ ADC. PEÇA</button>
         <button class="dark" onclick="abrirAssinatura('${c.id}')">✍️ ASSINAR PRESENCIAL</button>
         <button class="primary" style="background:#0277bd" onclick="gerarLinkRemoto('${c.id}')">🔗 LINK PARA ASSINAR</button>
@@ -548,16 +549,33 @@
       </div>
       <table><thead><tr><th><input type="checkbox" onchange="toggleAll('${c.id}', this)"></th><th>Peça</th><th>Qtd</th><th>Valor</th><th>Data</th><th>Venc.</th><th>Situação</th><th>Ações</th></tr></thead><tbody>${c.itens.map((i, ii) => {
       
-      // LÓGICA CORRIGIDA PARA EXIBIR VALOR PARCIAL
       let pg = Number(i.pagoValor) || 0;
       let isVencido = (!i.pago && i.venc && i.venc < new Date().toISOString().split('T')[0]);
       let sit = i.pago ? '<span style="color:green;font-weight:900">PAGO</span>' : (pg > 0 ? `<span style="color:#fbc02d;font-weight:900">PARCIAL<br><small style="color:#000">Pago: ${formatarMoeda(pg)}</small></span>` : `<span style="font-weight:900">${isVencido?'VENCIDO':'Aberto'}</span>`);
       
-      return `<tr ${isVencido?'class="vencido"':''}><td><input type="checkbox" class="sel-${c.id}" value="${ii}" style="width:18px; height:18px;"></td><td style="text-align:left; font-weight:900; font-size:14px;">${i.desc}${i.assinatura?' ✍️':''}</td><td style="font-weight:900; font-size:14px;">${i.qtd||1}</td><td style="font-weight:900; font-size:14px;">${formatarMoeda(i.valor)}</td><td style="font-weight:900; font-size:14px;">${formatarDataBR(i.data)}</td><td style="font-weight:900; font-size:14px;">${formatarDataBR(i.venc)}</td><td style="font-weight:900; font-size:14px;">${sit}</td><td><div class="table-actions"><button class="success" onclick="pagar('${c.id}',${ii})">$</button><button class="primary admin-only" onclick="abrirEditar('${c.id}',${ii})">✏️</button><button class="danger admin-only" onclick="excluirLançamento('${c.id}',${ii})">X</button></div></td></tr>`}).join('')}</tbody></table></div>`;
+      // Botão de ver assinatura inserido aqui
+      let btnVerAssinatura = i.assinatura ? `<button class="dark" style="padding:2px 5px; font-size:10px; margin-left:5px;" onclick="verAssinatura('${c.id}', ${ii})">👁️ VER</button>` : '';
+
+      return `<tr ${isVencido?'class="vencido"':''}><td><input type="checkbox" class="sel-${c.id}" value="${ii}" style="width:18px; height:18px;"></td><td style="text-align:left; font-weight:900; font-size:14px;">${i.desc}${btnVerAssinatura}</td><td style="font-weight:900; font-size:14px;">${i.qtd||1}</td><td style="font-weight:900; font-size:14px;">${formatarMoeda(i.valor)}</td><td style="font-weight:900; font-size:14px;">${formatarDataBR(i.data)}</td><td style="font-weight:900; font-size:14px;">${formatarDataBR(i.venc)}</td><td style="font-weight:900; font-size:14px;">${sit}</td><td><div class="table-actions"><button class="success" onclick="pagar('${c.id}',${ii})">$</button><button class="primary admin-only" onclick="abrirEditar('${c.id}',${ii})">✏️</button><button class="danger admin-only" onclick="excluirLançamento('${c.id}',${ii})">X</button></div></td></tr>`}).join('')}</tbody></table></div>`;
       div.innerHTML += html;
     });
   }
   function mudarPagina(delta) { paginaAtual += delta; render(); }
+
+  // --- NOVA FUNÇÃO DE VISUALIZAR ASSINATURA ---
+  function verAssinatura(id, ii) {
+      let item = clientes.find(c => c.id === id).itens[ii];
+      if(!item || !item.assinatura) return;
+      
+      Swal.fire({
+          title: 'Assinatura Registrada',
+          html: `<b>Item:</b> ${item.desc}<br><b>Valor:</b> ${formatarMoeda(item.valor)}<br><b>Data:</b> ${formatarDataBR(item.data)}`,
+          imageUrl: item.assinatura,
+          imageWidth: 400,
+          imageAlt: 'Assinatura do Cliente',
+          confirmButtonText: 'Fechar'
+      });
+  }
 
   // --- NOVA FUNÇÃO DE LANÇAMENTO RÁPIDO ---
   function abrirLancarRapido(id, nome) {
@@ -622,27 +640,86 @@
   function imprimirSelecionados(id, tipo, assinaturaImg = null) { const c = clientes.find(x => x.id === id); const checks = document.querySelectorAll(`.sel-${id}:checked`); const indices = Array.from(checks).map(cb => parseInt(cb.value)); if (indices.length === 0) return Swal.fire('Aviso', "Selecione itens", 'warning'); const selecionados = indices.map(idx => c.itens[idx]); const totalS = selecionados.reduce((a, i) => a + (Number(i.valor) || 0), 0); gerarImpressao(c, selecionados, totalS, tipo, "COMPROVANTE DE VENDA", assinaturaImg); }
   function imprimirExtratoGeral(id){ let c = clientes.find(x => x.id === id); if(!c.itens.length)return; let t = c.itens.reduce((a, i) => a + (Number(i.valor) || 0), 0); gerarImpressao(c, c.itens, t, 'extrato', "EXTRATO GERAL"); }
   
-  // --- FUNÇÃO PARA IMPRIMIR APENAS DÉBITOS ---
   function imprimirExtratoDebitos(id) {
       let c = clientes.find(x => x.id === id);
       if(!c) return;
-      // Filtra apenas o que NÃO ESTÁ PAGO
       let pendentes = c.itens.filter(i => !i.pago);
-      
       if(pendentes.length === 0) return Swal.fire('Aviso', 'Este cliente não possui débitos pendentes.', 'info');
-
       let totalPend = pendentes.reduce((a, i) => a + (Number(i.valor) || 0), 0);
-      
-      // Reusa a função de impressão, mas com título e itens filtrados
       gerarImpressao(c, pendentes, totalPend, 'extrato', 'EXTRATO DE DÉBITOS PENDENTES');
   }
 
-  // FUNÇÃO NOVA DE IMPRESSÃO - CORRIGIDA E AUTOMÁTICA
+  // --- NOVA FUNÇÃO DE RELATÓRIO DE AUDITORIA DE ASSINATURAS ---
+  function gerarRelatorioAssinaturas(id) {
+      let c = clientes.find(x => x.id === id);
+      if (!c) return;
+      
+      // Filtra apenas itens que têm assinatura
+      let assinados = c.itens.filter(i => i.assinatura);
+      
+      if (assinados.length === 0) return Swal.fire('Aviso', 'Nenhuma assinatura registrada para este cliente.', 'info');
+      
+      // Ordena por data (mais recente primeiro)
+      assinados.sort((a, b) => new Date(b.data) - new Date(a.data));
+
+      const logoHtml = logoBase64 ? `<img src="${logoBase64}" style="max-height:60px; display:block; margin:0 auto 5px auto;">` : '';
+      
+      let html = `
+      <style>
+        .audit-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .audit-table td { border: 1px solid #ccc; padding: 10px; vertical-align: middle; }
+        .audit-info { width: 60%; }
+        .audit-img { width: 40%; text-align: center; background: #f5f5f5; }
+        .audit-img img { max-width: 100%; max-height: 80px; }
+      </style>
+      <div style="background:#fff; color:#000; padding:20px; font-family:Arial, sans-serif;">
+          <div style="text-align:center; border-bottom: 2px solid #000; padding-bottom:10px;">
+              ${logoHtml}
+              <h2 style="margin:5px 0;">RELATÓRIO DE AUDITORIA DE RETIRADAS</h2>
+              <div style="font-size:12px;">${empDados.nome}</div>
+          </div>
+          
+          <div style="margin-top:20px; font-size:14px;">
+              <b>CLIENTE:</b> ${c.nome.toUpperCase()}<br>
+              <b>CPF/CNPJ:</b> ${c.cpf_cnpj || 'Não informado'}<br>
+              <b>TOTAL DE ASSINATURAS:</b> ${assinados.length}
+          </div>
+
+          <table class="audit-table">
+              <tr style="background:#ddd; font-weight:bold;">
+                  <td style="text-align:center;">DETALHES DA RETIRADA</td>
+                  <td style="text-align:center;">ASSINATURA REGISTRADA</td>
+              </tr>
+              ${assinados.map(i => `
+              <tr>
+                  <td class="audit-info">
+                      <b>DATA:</b> ${formatarDataBR(i.data)}<br>
+                      <b>ITEM:</b> ${i.desc.toUpperCase()}<br>
+                      <b>VALOR:</b> ${formatarMoeda(i.valor)}<br>
+                      <b>STATUS:</b> ${i.pago ? '<span style="color:green">PAGO</span>' : '<span style="color:red">EM ABERTO</span>'}
+                  </td>
+                  <td class="audit-img">
+                      <img src="${i.assinatura}">
+                  </td>
+              </tr>
+              `).join('')}
+          </table>
+          
+          <div style="margin-top:30px; font-size:10px; text-align:center; color:#666;">
+              Relatório gerado em ${new Date().toLocaleString()} - Sistema Gestão Pro
+          </div>
+      </div>
+      `;
+      
+      document.getElementById('printContent').innerHTML = html;
+      document.getElementById('printOverlay').style.display = 'block';
+      setTimeout(function(){ window.print(); }, 800);
+  }
+
   function gerarImpressao(c, itens, total, tipo, titulo, assinaturaNova = null) {
     const logoHtml = logoBase64 ? `<img src="${logoBase64}" style="max-height:60px; display:block; margin:0 auto 5px auto;">` : '';
     let totalPago = itens.reduce((acc, i) => acc + (Number(i.pagoValor) || 0), 0); let saldoDevedor = total - totalPago; let imgFinal = assinaturaNova || (itens.find(i=>i.assinatura)?.assinatura);
     
-    // AQUI GARANTIMOS QUE AS CORES APAREÇAM COM !important
     let tabelaTotais = `
     <style>
         .blue { color: #0000AA !important; -webkit-print-color-adjust: exact; } 
@@ -682,7 +759,6 @@
     .print-area-container { background: #fff !important; color: #000 !important; width: 100%; height: 100%; }
     .main-table { width: 100%; border-collapse: collapse; margin-top: 10px; } 
     
-    /* AQUI ESTÁ A CORREÇÃO DO CABEÇALHO */
     .main-table th { 
         background-color: #ccc !important; 
         color: #000 !important; 
@@ -730,20 +806,18 @@
     document.getElementById('printContent').innerHTML = conteudo;
     document.getElementById('printOverlay').style.display = 'block';
     
-    // ATIVA A IMPRESSÃO AUTOMÁTICA APÓS UM SEGUNDO
     setTimeout(function(){
         window.print();
     }, 800);
   }
 
-  // EVENTO PARA SAIR AUTOMATICAMENTE AO FECHAR A IMPRESSÃO
   window.onafterprint = function() {
       fecharImpressao();
   };
 
   function fecharImpressao() {
       document.getElementById('printOverlay').style.display = 'none';
-      document.getElementById('printContent').innerHTML = ''; // Limpa o conteúdo para não vazar estilos
+      document.getElementById('printContent').innerHTML = ''; 
   }
 
   function compartilharComprovanteImagem(id) {
@@ -819,7 +893,6 @@
   function salvarCatalogo() { let n=document.getElementById('catNome').value,v=Number(document.getElementById('catValor').value); if(n&&v){db.collection("catalogo").add({nome:n.toUpperCase(),valor:v});document.getElementById('catNome').value='';document.getElementById('catValor').value='';} }
   function apagarCat(id){db.collection("catalogo").doc(id).delete();}
   
-  // ATUALIZADO: Preenche valor unitário e calcula total no CARD PRINCIPAL
   function preencherValorCatPrincipal(){
       let t=document.getElementById('descricao').value.toUpperCase(),a=catalogo.find(c=>c.nome===t);
       if(a) {
@@ -828,7 +901,6 @@
       }
   }
   
-  // ATUALIZADO: Calcula total no CARD PRINCIPAL
   function calcularTotalPrincipal() {
       let q = Number(document.getElementById('quantidade').value) || 0;
       let u = Number(document.getElementById('valorUnitario').value) || 0;
@@ -838,7 +910,6 @@
   function atualizarSelect(){let s=document.getElementById('clienteSelect'),c=s.value;s.innerHTML='<option value="">Selecione...</option>';clientes.sort((a,b)=>a.nome.localeCompare(b.nome)).forEach((k)=>{let o=document.createElement('option');o.value=k.id;o.textContent=k.nome;s.appendChild(o)});if(c)s.value=c;}
   function adicionarCliente(){let n=document.getElementById('nome').value.trim();if(!n)return Swal.fire('Erro','Nome obrigatório','error');db.collection("clientes").add({nome:n,cpf_cnpj:document.getElementById('cpf_cnpj').value,ie:document.getElementById('ie').value,telefone:document.getElementById('telefone').value,cep:document.getElementById('cep').value,cidade:document.getElementById('cidade').value,endereco:document.getElementById('endereco').value,itens:[]});Swal.fire('Sucesso','Cliente salvo','success');}
   
-  // ATUALIZADO: Salva usando o VALOR TOTAL CALCULADO
   function adicionarItem(){
       let id=document.getElementById('clienteSelect').value;
       if(!id)return Swal.fire('Erro','Selecione cliente','error');
@@ -849,7 +920,7 @@
       let item={
           desc:document.getElementById('descricao').value.toUpperCase(),
           qtd:Number(document.getElementById('quantidade').value)||1,
-          valor: valTotal, // Usa o total calculado
+          valor: valTotal, 
           data:document.getElementById('dataEntrada').value||new Date().toISOString().split('T')[0],
           venc:document.getElementById('dataVenc').value,
           pago:false,pagoValor:0,img:null
@@ -866,7 +937,6 @@
   function aplicarLogo(){if(logoBase64){document.getElementById('logoLeft').src=logoBase64;document.getElementById('logoRight').src=logoBase64;document.getElementById('logoLogin').src=logoBase64;document.getElementById('logoLogin').style.display='inline-block';}}
   function fazerBackupLocal() { if(!clientes.length)return Swal.fire('Erro','Vazio','error'); let b=new Blob([JSON.stringify(clientes)],{type:"application/json"}),l=document.createElement("a");l.href=URL.createObjectURL(b);l.download=`backup_${new Date().toISOString().split('T')[0]}.json`;document.body.appendChild(l);l.click();document.body.removeChild(l);Swal.fire('Sucesso','Backup salvo','success'); }
   
-  // RELATÓRIO GERAL
   function gerarRelatorioGeral() {
     const logoHtml = logoBase64 ? `<img src="${logoBase64}" style="max-height:50px; margin-right:15px;">` : '';
     let headerLayout = `
@@ -941,9 +1011,7 @@
   function gerarLinkRemoto(id) { let l = `${window.location.href.split('?')[0]}?cliente=${id}`; navigator.clipboard.writeText(l).then(() => Swal.fire({title: 'Link Copiado!', html: `Envie para o cliente:<br><br><b>${l}</b>`, icon: 'success'})); }
   function gerarImagemWhatsApp() { if (!empDados.end) { Swal.fire({ title: 'Aguarde...', text: 'Carregando dados...', icon: 'info', timer: 3000 }); return; } let c = clientes.find(x => x.id === signId); const checks = document.querySelectorAll(`.sel-${signId}:checked`); const indices = Array.from(checks).map(cb => parseInt(cb.value)); const selecionados = indices.map(idx => c.itens[idx]); const totalS = selecionados.reduce((a, i) => a + (Number(i.valor) || 0), 0); const totalPago = selecionados.reduce((a, i) => a + (Number(i.pagoValor) || 0), 0); const assinatura = document.getElementById('canvasAssinatura').toDataURL(); let html = `<div style="background:#fff; font-family:'Courier New'; padding:15px; border:1px solid #ccc; width:350px;"><div style="text-align:center; font-weight:bold; margin-bottom:5px; font-size:16px;">${empDados.nome}</div><div style="text-align:center; font-size:11px; margin-bottom:10px; color:#333;">${empDados.end}<br>${empDados.tel}</div><hr style="border:0; border-top:1px dashed #000;"><div style="font-size:12px; margin-bottom:10px;"><b>CLIENTE:</b> ${c.nome.toUpperCase()}</div><table style="width:100%; font-size:11px; border-collapse:collapse; margin-bottom:10px;"><tr style="border-bottom:1px solid #000;"><th style="text-align:left;">Peça</th><th style="text-align:right;">Valor</th></tr>${selecionados.map(i => `<tr><td style="text-align:left; padding:3px 0;">${i.desc}</td><td style="text-align:right; padding:3px 0;">${formatarMoeda(i.valor)}</td></tr>`).join('')}</table><hr style="border:0; border-top:1px dashed #000;"><div style="text-align:right; font-size:14px; font-weight:bold;">TOTAL: ${formatarMoeda(totalS)}</div><div style="text-align:right; font-size:12px;">PAGO: ${formatarMoeda(totalPago)}</div><div style="text-align:right; font-size:14px; font-weight:bold; color:red;">SALDO DEVEDOR: ${formatarMoeda(totalS-totalPago)}</div><div style="margin-top:20px; text-align:center;"><img src="${assinatura}" style="max-height:50px;"><br><span style="font-size:10px; color:#555;">Assinado Digitalmente</span></div><div style="margin-top:10px; text-align:center; font-size:9px; color:#aaa;">Emitido em: ${new Date().toLocaleString('pt-BR')}</div></div>`; let area = document.getElementById('hiddenPrintArea'); area.innerHTML = html; setTimeout(() => { html2canvas(area, { scale: 2 }).then(canvasImg => { Swal.fire({ title: 'Imagem Gerada!', text: 'Segure na imagem para copiar.', imageUrl: canvasImg.toDataURL("image/jpeg", 0.9), imageWidth: 300, confirmButtonText: 'Fechar' }); area.innerHTML = ''; fecharAssinatura(); }); }, 500); }
 
-  // --- FUNÇÃO AVANÇADA DE LIMPEZA E CORREÇÃO ---
   async function limparSistema() {
-      // 1. Confirmação de Segurança
       const confirmacao = await Swal.fire({
           title: 'ATENÇÃO MÁXIMA!',
           html: '<div style="text-align:left;">Esta ferramenta fará uma varredura para corrigir o banco de dados:<br><br>' +
@@ -968,7 +1036,6 @@
       });
 
       try {
-          // Pega todos os clientes direto do banco para garantir dados atualizados
           const snapshot = await db.collection("clientes").get();
           let clientesParaVerificar = [];
           
@@ -981,58 +1048,45 @@
           let totalExcluidosErro = 0;
           let totalDuplicadosResolvidos = 0;
           
-          // Mapa para rastrear nomes únicos
           let mapaNomes = {};
 
           for (let i = 0; i < clientesParaVerificar.length; i++) {
               let c = clientesParaVerificar[i];
-              // Normaliza o nome (Maiúsculo e sem espaços extras)
               let nomeFormatado = c.nome ? c.nome.trim().toUpperCase() : "";
 
-              // CASO 1: Cliente sem nome (Lixo de sistema)
               if (!nomeFormatado || nomeFormatado === "NULL" || nomeFormatado === "UNDEFINED") {
                   let ref = db.collection("clientes").doc(c.id);
                   batch.delete(ref);
                   contadorBatch++;
                   totalExcluidosErro++;
-                  continue; // Vai para o próximo
+                  continue; 
               }
 
-              // CASO 2: Verificação de Duplicidade
               if (mapaNomes[nomeFormatado]) {
-                  // Já existe alguém com esse nome no mapa. Vamos comparar qual manter.
-                  let cadastroExistente = mapaNomes[nomeFormatado]; // O que já guardamos
-                  let cadastroAtual = c; // O que estamos olhando agora
+                  let cadastroExistente = mapaNomes[nomeFormatado]; 
+                  let cadastroAtual = c; 
 
-                  // Conta quantos itens cada um tem
                   let itensExistente = cadastroExistente.itens ? cadastroExistente.itens.length : 0;
                   let itensAtual = cadastroAtual.itens ? cadastroAtual.itens.length : 0;
 
                   let idParaApagar;
 
                   if (itensAtual > itensExistente) {
-                      // O atual tem mais vendas. Ele ganha.
-                      // Apagamos o que estava no mapa (o anterior)
                       idParaApagar = cadastroExistente.id;
-                      // Atualizamos o mapa para o atual ser o "rei" desse nome
                       mapaNomes[nomeFormatado] = cadastroAtual;
                   } else {
-                      // O existente tem mais ou a mesma quantidade. O atual perde.
                       idParaApagar = cadastroAtual.id;
                   }
 
-                  // Adiciona ao lote de exclusão
                   let ref = db.collection("clientes").doc(idParaApagar);
                   batch.delete(ref);
                   contadorBatch++;
                   totalDuplicadosResolvidos++;
 
               } else {
-                  // Nome novo, guarda no mapa como o "oficial" por enquanto
                   mapaNomes[nomeFormatado] = c;
               }
 
-              // O Firestore limita 500 operações por vez. Se chegar perto, executa e limpa.
               if (contadorBatch >= 450) {
                   await batch.commit();
                   batch = db.batch();
@@ -1040,7 +1094,6 @@
               }
           }
 
-          // Executa as operações restantes
           if (contadorBatch > 0) {
               await batch.commit();
           }
