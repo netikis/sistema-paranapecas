@@ -538,7 +538,7 @@
         <button class="warning" onclick="editarDadosCliente('${c.id}')" style="background:#f9a825; color:#000;">✏️ EDITAR DADOS</button>
         <button class="primary" onclick="imprimirSelecionados('${c.id}', 'extrato')">📄 IMPRIMIR A4</button>
         <button class="warning" onclick="imprimirSelecionados('${c.id}', 'cupom')">🖨️ IMPRIMIR CUPOM</button>
-        <button class="share" onclick="compartilharComprovanteImagem('${c.id}')">📤 ENVIAR DOC</button>
+        <button class="share" onclick="compartilharComprovanteImagem('${c.id}')">📤 ENVIAR DOC (ZAP)</button>
         <button class="dark" onclick="imprimirExtratoDebitos('${c.id}')" style="background:#d32f2f;">📄 EXTRATO DÉBITOS</button>
         <button class="purple" onclick="gerarRelatorioAssinaturas('${c.id}')">🕵️ AUDITORIA ASSINATURAS</button>
         <button class="fiscal" onclick="abrirLancarRapido('${c.id}', '${c.nome}')" style="background:#2e7d32;">➕ ADC. PEÇA</button>
@@ -553,7 +553,6 @@
       let isVencido = (!i.pago && i.venc && i.venc < new Date().toISOString().split('T')[0]);
       let sit = i.pago ? '<span style="color:green;font-weight:900">PAGO</span>' : (pg > 0 ? `<span style="color:#fbc02d;font-weight:900">PARCIAL<br><small style="color:#000">Pago: ${formatarMoeda(pg)}</small></span>` : `<span style="font-weight:900">${isVencido?'VENCIDO':'Aberto'}</span>`);
       
-      // Botão de ver assinatura inserido aqui
       let btnVerAssinatura = i.assinatura ? `<button class="dark" style="padding:2px 5px; font-size:10px; margin-left:5px;" onclick="verAssinatura('${c.id}', ${ii})">👁️ VER</button>` : '';
 
       return `<tr ${isVencido?'class="vencido"':''}><td><input type="checkbox" class="sel-${c.id}" value="${ii}" style="width:18px; height:18px;"></td><td style="text-align:left; font-weight:900; font-size:14px;">${i.desc}${btnVerAssinatura}</td><td style="font-weight:900; font-size:14px;">${i.qtd||1}</td><td style="font-weight:900; font-size:14px;">${formatarMoeda(i.valor)}</td><td style="font-weight:900; font-size:14px;">${formatarDataBR(i.data)}</td><td style="font-weight:900; font-size:14px;">${formatarDataBR(i.venc)}</td><td style="font-weight:900; font-size:14px;">${sit}</td><td><div class="table-actions"><button class="success" onclick="pagar('${c.id}',${ii})">$</button><button class="primary admin-only" onclick="abrirEditar('${c.id}',${ii})">✏️</button><button class="danger admin-only" onclick="excluirLançamento('${c.id}',${ii})">X</button></div></td></tr>`}).join('')}</tbody></table></div>`;
@@ -649,21 +648,13 @@
       gerarImpressao(c, pendentes, totalPend, 'extrato', 'EXTRATO DE DÉBITOS PENDENTES');
   }
 
-  // --- NOVA FUNÇÃO DE RELATÓRIO DE AUDITORIA DE ASSINATURAS ---
   function gerarRelatorioAssinaturas(id) {
       let c = clientes.find(x => x.id === id);
       if (!c) return;
-      
-      // Filtra apenas itens que têm assinatura
       let assinados = c.itens.filter(i => i.assinatura);
-      
       if (assinados.length === 0) return Swal.fire('Aviso', 'Nenhuma assinatura registrada para este cliente.', 'info');
-      
-      // Ordena por data (mais recente primeiro)
       assinados.sort((a, b) => new Date(b.data) - new Date(a.data));
-
       const logoHtml = logoBase64 ? `<img src="${logoBase64}" style="max-height:60px; display:block; margin:0 auto 5px auto;">` : '';
-      
       let html = `
       <style>
         .audit-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
@@ -678,13 +669,11 @@
               <h2 style="margin:5px 0;">RELATÓRIO DE AUDITORIA DE RETIRADAS</h2>
               <div style="font-size:12px;">${empDados.nome}</div>
           </div>
-          
           <div style="margin-top:20px; font-size:14px;">
               <b>CLIENTE:</b> ${c.nome.toUpperCase()}<br>
               <b>CPF/CNPJ:</b> ${c.cpf_cnpj || 'Não informado'}<br>
               <b>TOTAL DE ASSINATURAS:</b> ${assinados.length}
           </div>
-
           <table class="audit-table">
               <tr style="background:#ddd; font-weight:bold;">
                   <td style="text-align:center;">DETALHES DA RETIRADA</td>
@@ -704,13 +693,11 @@
               </tr>
               `).join('')}
           </table>
-          
           <div style="margin-top:30px; font-size:10px; text-align:center; color:#666;">
               Relatório gerado em ${new Date().toLocaleString()} - Sistema Gestão Pro
           </div>
       </div>
       `;
-      
       document.getElementById('printContent').innerHTML = html;
       document.getElementById('printOverlay').style.display = 'block';
       setTimeout(function(){ window.print(); }, 800);
@@ -758,19 +745,7 @@
     <style>
     .print-area-container { background: #fff !important; color: #000 !important; width: 100%; height: 100%; }
     .main-table { width: 100%; border-collapse: collapse; margin-top: 10px; } 
-    
-    .main-table th { 
-        background-color: #ccc !important; 
-        color: #000 !important; 
-        font-weight: 900; 
-        border-top: 1px solid #000; 
-        border-bottom: 1px solid #000; 
-        padding: 4px; 
-        font-size: 11px;
-        -webkit-print-color-adjust: exact; 
-        print-color-adjust: exact; 
-    } 
-    
+    .main-table th { background-color: #ccc !important; color: #000 !important; font-weight: 900; border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 4px; font-size: 11px; -webkit-print-color-adjust: exact; print-color-adjust: exact; } 
     .main-table td { border-bottom: 1px dashed #000; padding: 6px 4px; font-weight: bold; font-size: 11px; color: #000 !important; } 
     ${cssTableItems}
     .text-left { text-align: left; } 
@@ -820,6 +795,7 @@
       document.getElementById('printContent').innerHTML = ''; 
   }
 
+  // --- FUNÇÃO ATUALIZADA: COMPARTILHAMENTO NATIVO ---
   function compartilharComprovanteImagem(id) {
       if (!empDados.end) { Swal.fire({ title: 'Aguarde...', text: 'Carregando dados...', icon: 'info', timer: 3000 }); return; } 
       
@@ -872,20 +848,32 @@
       let area = document.getElementById('hiddenPrintArea'); 
       area.innerHTML = html; 
       
-      Swal.fire({ title: 'Gerando Imagem...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
+      Swal.fire({ title: 'Gerando...', text: 'Preparando compartilhamento...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
 
       setTimeout(() => { 
-          html2canvas(area, { scale: 1.5 }).then(canvasImg => { 
-              Swal.close();
-              Swal.fire({ 
-                  title: 'Pronto para Enviar!', 
-                  text: 'Segure na imagem para copiar ou compartilhar.', 
-                  imageUrl: canvasImg.toDataURL("image/jpeg", 0.9), 
-                  imageWidth: 400, 
-                  confirmButtonText: 'Fechar' 
-              }); 
-              area.innerHTML = ''; 
-          }); 
+          html2canvas(area, { scale: 1.5, useCORS: true }).then(canvas => {
+              canvas.toBlob(blob => {
+                  const file = new File([blob], `comprovante_${c.nome.replace(/\s+/g, '_')}.jpg`, { type: "image/jpeg" });
+                  
+                  // TENTA USAR O COMPARTILHAMENTO NATIVO DO CELULAR
+                  if (navigator.share && navigator.canShare({ files: [file] })) {
+                       Swal.close();
+                       navigator.share({
+                          files: [file],
+                          title: 'Comprovante Paraná Peças',
+                          text: `Olá ${c.nome}, segue seu comprovante.`
+                      }).then(() => console.log('Compartilhado com sucesso')).catch((error) => console.log('Erro ao compartilhar', error));
+                  } else {
+                      // FALLBACK PARA PC (DOWNLOAD AUTOMÁTICO)
+                      const link = document.createElement('a');
+                      link.download = `comprovante_${c.nome}.jpg`;
+                      link.href = canvas.toDataURL();
+                      link.click();
+                      Swal.fire('Baixado!', 'A imagem foi salva no seu dispositivo. Agora basta anexar no WhatsApp Web.', 'success');
+                  }
+                  area.innerHTML = '';
+              }, 'image/jpeg', 0.9);
+          });
       }, 800);
   }
 
