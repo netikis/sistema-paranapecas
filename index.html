@@ -235,7 +235,11 @@
       <div style="flex: 1; min-width: 250px; border-left: 1px solid #444; padding-left: 15px;">
         <h4>📊 Ferramentas</h4>
         <label>Logo (Salva na Nuvem):</label> <input type="file" id="logoInput" accept="image/*" style="margin-bottom:15px; font-size: 12px;"><br>
-        <button class="primary" onclick="fazerBackupLocal()" style="width: 100%; margin-bottom: 10px;">💾 BACKUP</button>
+        <button class="primary" onclick="fazerBackupLocal()" style="width: 100%; margin-bottom: 10px;">💾 BACKUP (BAIXAR)</button>
+        
+        <button class="warning" onclick="abrirRestauracao()" style="width: 100%; margin-bottom: 10px; background: #6d4c41;">📂 RESTAURAR BACKUP</button>
+        <input type="file" id="inputBackup" accept=".json" style="display:none" onchange="processarRestauracao(this)">
+        
         <button class="dark" onclick="gerarRelatorioGeral()" style="width: 100%; margin-bottom: 10px;">📈 RELATÓRIO GERAL</button>
         <button class="warning" onclick="abrirModalUsuario()" style="width: 100%;">👥 NOVO USUÁRIO</button>
         <button class="warning" onclick="migrarDados()" style="width: 100%; margin-top: 5px;">🔄 SINCRONIZAR</button>
@@ -795,7 +799,6 @@
       document.getElementById('printContent').innerHTML = ''; 
   }
 
-  // --- FUNÇÃO ATUALIZADA: COMPARTILHAMENTO NATIVO ---
   function compartilharComprovanteImagem(id) {
       if (!empDados.end) { Swal.fire({ title: 'Aguarde...', text: 'Carregando dados...', icon: 'info', timer: 3000 }); return; } 
       
@@ -854,8 +857,6 @@
           html2canvas(area, { scale: 1.5, useCORS: true }).then(canvas => {
               canvas.toBlob(blob => {
                   const file = new File([blob], `comprovante_${c.nome.replace(/\s+/g, '_')}.jpg`, { type: "image/jpeg" });
-                  
-                  // TENTA USAR O COMPARTILHAMENTO NATIVO DO CELULAR
                   if (navigator.share && navigator.canShare({ files: [file] })) {
                        Swal.close();
                        navigator.share({
@@ -864,7 +865,6 @@
                           text: `Olá ${c.nome}, segue seu comprovante.`
                       }).then(() => console.log('Compartilhado com sucesso')).catch((error) => console.log('Erro ao compartilhar', error));
                   } else {
-                      // FALLBACK PARA PC (DOWNLOAD AUTOMÁTICO)
                       const link = document.createElement('a');
                       link.download = `comprovante_${c.nome}.jpg`;
                       link.href = canvas.toDataURL();
@@ -925,6 +925,80 @@
   function aplicarLogo(){if(logoBase64){document.getElementById('logoLeft').src=logoBase64;document.getElementById('logoRight').src=logoBase64;document.getElementById('logoLogin').src=logoBase64;document.getElementById('logoLogin').style.display='inline-block';}}
   function fazerBackupLocal() { if(!clientes.length)return Swal.fire('Erro','Vazio','error'); let b=new Blob([JSON.stringify(clientes)],{type:"application/json"}),l=document.createElement("a");l.href=URL.createObjectURL(b);l.download=`backup_${new Date().toISOString().split('T')[0]}.json`;document.body.appendChild(l);l.click();document.body.removeChild(l);Swal.fire('Sucesso','Backup salvo','success'); }
   
+  // --- FUNÇÕES DE RESTAURAÇÃO ---
+  function abrirRestauracao() {
+      document.getElementById('inputBackup').click();
+  }
+
+  async function processarRestauracao(input) {
+      if (!input.files || !input.files[0]) return;
+      const file = input.files[0];
+
+      const confirm = await Swal.fire({
+          title: 'CUIDADO: RESTAURAÇÃO',
+          text: 'Você está prestes a enviar os dados deste arquivo para o sistema. Isso atualizará clientes existentes e criará novos. Deseja continuar?',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#d33',
+          confirmButtonText: 'SIM, RESTAURAR',
+          cancelButtonText: 'Cancelar'
+      });
+
+      if (!confirm.isConfirmed) {
+          input.value = ''; 
+          return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+          try {
+              const dados = JSON.parse(e.target.result);
+              if (!Array.isArray(dados)) throw new Error("O arquivo não está no formato correto de backup.");
+
+              Swal.fire({title: 'Restaurando...', html: 'Aguarde enquanto os dados são processados.', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+
+              let batch = db.batch();
+              let count = 0;
+              let totalProcessado = 0;
+
+              for (const cliente of dados) {
+                  // Se tiver ID, usa ele. Se não, cria um novo (embora o backup geralmente tenha ID)
+                  let ref = cliente.id ? db.collection("clientes").doc(cliente.id) : db.collection("clientes").doc();
+                  
+                  // Copia os dados para evitar alterar o objeto original
+                  let dataToSave = { ...cliente };
+                  delete dataToSave.id; // O ID já é a chave do documento
+
+                  // Merge true garante que atualiza se existir, cria se não existir
+                  batch.set(ref, dataToSave, { merge: true });
+                  
+                  count++;
+                  totalProcessado++;
+
+                  // O Firestore limita batches a 500 operações
+                  if (count >= 450) {
+                      await batch.commit();
+                      batch = db.batch();
+                      count = 0;
+                  }
+              }
+
+              if (count > 0) {
+                  await batch.commit();
+              }
+
+              Swal.fire('Sucesso', `Backup restaurado! ${totalProcessado} registros processados.`, 'success');
+              input.value = ''; // Limpa o input
+
+          } catch (err) {
+              console.error(err);
+              Swal.fire('Erro', 'Falha ao restaurar: ' + err.message, 'error');
+              input.value = '';
+          }
+      };
+      reader.readAsText(file);
+  }
+
   function gerarRelatorioGeral() {
     const logoHtml = logoBase64 ? `<img src="${logoBase64}" style="max-height:50px; margin-right:15px;">` : '';
     let headerLayout = `
