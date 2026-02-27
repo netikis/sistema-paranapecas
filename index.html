@@ -191,10 +191,17 @@
       <input type="text" id="cidade" placeholder="Cidade - UF" list="listaCidadesIBGE">
       <datalist id="listaCidadesIBGE"></datalist>
     </div>
+    
     <div class="row-inputs">
-      <input type="text" id="endereco" placeholder="Endereço Completo" style="flex: 3;">
-      <button class="primary" onclick="adicionarCliente()" style="flex: 1;">💾 SALVAR</button>
+        <input type="text" id="logradouro" placeholder="Endereço (Rua/Av)" style="flex: 3;">
+        <input type="text" id="numero" placeholder="Nº" style="flex: 1;">
     </div>
+    <div class="row-inputs">
+        <input type="text" id="bairro" placeholder="Bairro" style="flex: 2;">
+        <input type="text" id="complemento" placeholder="Complemento (Opcional)" style="flex: 2;">
+        <button class="primary" onclick="adicionarCliente()" style="flex: 1;">💾 SALVAR</button>
+    </div>
+
   </div>
 
   <datalist id="opcoesCatalogo"></datalist>
@@ -308,7 +315,7 @@
     <label>Telefone:</label><input type="text" id="editCliTel">
     <label>CEP:</label><input type="text" id="editCliCep">
     <label>Cidade:</label><input type="text" id="editCliCidade">
-    <label>Endereço:</label><input type="text" id="editCliEnd">
+    <label>Endereço Completo:</label><input type="text" id="editCliEnd">
     <br><br>
     <button class="success" onclick="confirmarEdicaoCliente()">SALVAR ALTERAÇÕES</button>
     <button class="danger" onclick="document.getElementById('modalEditarCliente').style.display='none'">CANCELAR</button>
@@ -490,10 +497,25 @@
 
   function buscarCep() {
       let cep = document.getElementById('cep').value.replace(/\D/g, ''); if (cep.length !== 8) return;
-      document.getElementById('cidade').value = "Buscando..."; document.getElementById('endereco').value = "Buscando...";
+      document.getElementById('cidade').value = "Buscando..."; 
+      if(document.getElementById('logradouro')) document.getElementById('logradouro').value = "Buscando...";
       fetch(`https://viacep.com.br/ws/${cep}/json/`).then(res => res.json()).then(data => {
-          if (!data.erro) { document.getElementById('cidade').value = `${data.localidade} - ${data.uf}`; document.getElementById('endereco').value = data.logradouro; document.getElementById('telefone').focus(); }
-          else { Swal.fire('Atenção', 'CEP não encontrado.', 'warning'); document.getElementById('cidade').value = ""; document.getElementById('endereco').value = ""; }
+          if (!data.erro) { 
+              document.getElementById('cidade').value = `${data.localidade} - ${data.uf}`; 
+              
+              // PREENCHIMENTO AUTOMÁTICO DOS NOVOS CAMPOS
+              if(document.getElementById('logradouro')) {
+                  document.getElementById('logradouro').value = data.logradouro;
+                  document.getElementById('bairro').value = data.bairro;
+                  // FOCA NO NÚMERO PARA AGILIZAR
+                  document.getElementById('numero').focus();
+              }
+              // COMPATIBILIDADE COM O MODAL DE EDIÇÃO (QUE USA CAMPO ÚNICO)
+              if(document.getElementById('editCliEnd')) document.getElementById('editCliEnd').value = `${data.logradouro} - ${data.bairro}`;
+
+              document.getElementById('telefone').focus(); 
+          }
+          else { Swal.fire('Atenção', 'CEP não encontrado.', 'warning'); document.getElementById('cidade').value = ""; if(document.getElementById('logradouro')) document.getElementById('logradouro').value = ""; }
       }).catch(() => { });
   }
 
@@ -799,6 +821,7 @@
       document.getElementById('printContent').innerHTML = ''; 
   }
 
+  // --- FUNÇÃO ATUALIZADA: COMPARTILHAMENTO NATIVO ---
   function compartilharComprovanteImagem(id) {
       if (!empDados.end) { Swal.fire({ title: 'Aguarde...', text: 'Carregando dados...', icon: 'info', timer: 3000 }); return; } 
       
@@ -896,7 +919,52 @@
   }
 
   function atualizarSelect(){let s=document.getElementById('clienteSelect'),c=s.value;s.innerHTML='<option value="">Selecione...</option>';clientes.sort((a,b)=>a.nome.localeCompare(b.nome)).forEach((k)=>{let o=document.createElement('option');o.value=k.id;o.textContent=k.nome;s.appendChild(o)});if(c)s.value=c;}
-  function adicionarCliente(){let n=document.getElementById('nome').value.trim();if(!n)return Swal.fire('Erro','Nome obrigatório','error');db.collection("clientes").add({nome:n,cpf_cnpj:document.getElementById('cpf_cnpj').value,ie:document.getElementById('ie').value,telefone:document.getElementById('telefone').value,cep:document.getElementById('cep').value,cidade:document.getElementById('cidade').value,endereco:document.getElementById('endereco').value,itens:[]});Swal.fire('Sucesso','Cliente salvo','success');}
+  
+  // --- FUNÇÃO ATUALIZADA: SALVAR CLIENTE COM ENDEREÇO CONCATENADO ---
+  function adicionarCliente(){
+      let n=document.getElementById('nome').value.trim();
+      if(!n)return Swal.fire('Erro','Nome obrigatório','error');
+
+      // PEGA OS CAMPOS INDIVIDUAIS
+      let log = document.getElementById('logradouro').value;
+      let num = document.getElementById('numero').value;
+      let bai = document.getElementById('bairro').value;
+      let comp = document.getElementById('complemento').value;
+
+      // MONTA O ENDEREÇO COMPLETO PARA FICAR COMPATÍVEL COM O RESTO DO SISTEMA
+      let enderecoCompleto = "";
+      if(log) {
+          enderecoCompleto = `${log}, ${num} - ${bai}`;
+          if(comp) enderecoCompleto += ` (${comp})`;
+      } else {
+          // Fallback caso o usuário não preencha nada (para não dar erro)
+          enderecoCompleto = document.getElementById('endereco') ? document.getElementById('endereco').value : ""; 
+      }
+
+      db.collection("clientes").add({
+          nome:n,
+          cpf_cnpj:document.getElementById('cpf_cnpj').value,
+          ie:document.getElementById('ie').value,
+          telefone:document.getElementById('telefone').value,
+          cep:document.getElementById('cep').value,
+          cidade:document.getElementById('cidade').value,
+          endereco: enderecoCompleto, // SALVA TUDO JUNTO AQUI
+          itens:[]
+      });
+      Swal.fire('Sucesso','Cliente salvo','success');
+      
+      // Limpa os campos após salvar
+      document.getElementById('nome').value = '';
+      document.getElementById('cpf_cnpj').value = '';
+      document.getElementById('ie').value = '';
+      document.getElementById('telefone').value = '';
+      document.getElementById('cep').value = '';
+      document.getElementById('cidade').value = '';
+      document.getElementById('logradouro').value = '';
+      document.getElementById('numero').value = '';
+      document.getElementById('bairro').value = '';
+      document.getElementById('complemento').value = '';
+  }
   
   function adicionarItem(){
       let id=document.getElementById('clienteSelect').value;
