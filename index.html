@@ -490,11 +490,6 @@
       }); 
   }
 
-  function gerarLinkRemoto(id) { 
-      let baseUrl = window.location.href.split('?')[0]; let link = `${baseUrl}?cliente=${id}`;
-      navigator.clipboard.writeText(link).then(() => { Swal.fire({title: 'Link Copiado!', html: `Envie para o cliente:<br><br><b>${link}</b>`, icon: 'success'}); }); 
-  }
-
   function buscarCep() {
       let cep = document.getElementById('cep').value.replace(/\D/g, ''); if (cep.length !== 8) return;
       document.getElementById('cidade').value = "Buscando..."; 
@@ -587,7 +582,6 @@
   }
   function mudarPagina(delta) { paginaAtual += delta; render(); }
 
-  // --- NOVA FUNÇÃO DE VISUALIZAR ASSINATURA ---
   function verAssinatura(id, ii) {
       let item = clientes.find(c => c.id === id).itens[ii];
       if(!item || !item.assinatura) return;
@@ -602,7 +596,6 @@
       });
   }
 
-  // --- NOVA FUNÇÃO DE LANÇAMENTO RÁPIDO ---
   function abrirLancarRapido(id, nome) {
       document.getElementById('idCliRapido').value = id;
       document.getElementById('nomeCliRapido').innerText = "Cliente: " + nome;
@@ -821,7 +814,6 @@
       document.getElementById('printContent').innerHTML = ''; 
   }
 
-  // --- FUNÇÃO ATUALIZADA: COMPARTILHAMENTO NATIVO ---
   function compartilharComprovanteImagem(id) {
       if (!empDados.end) { Swal.fire({ title: 'Aguarde...', text: 'Carregando dados...', icon: 'info', timer: 3000 }); return; } 
       
@@ -920,7 +912,6 @@
 
   function atualizarSelect(){let s=document.getElementById('clienteSelect'),c=s.value;s.innerHTML='<option value="">Selecione...</option>';clientes.sort((a,b)=>a.nome.localeCompare(b.nome)).forEach((k)=>{let o=document.createElement('option');o.value=k.id;o.textContent=k.nome;s.appendChild(o)});if(c)s.value=c;}
   
-  // --- FUNÇÃO ATUALIZADA: SALVAR CLIENTE COM ENDEREÇO CONCATENADO ---
   function adicionarCliente(){
       let n=document.getElementById('nome').value.trim();
       if(!n)return Swal.fire('Erro','Nome obrigatório','error');
@@ -993,7 +984,6 @@
   function aplicarLogo(){if(logoBase64){document.getElementById('logoLeft').src=logoBase64;document.getElementById('logoRight').src=logoBase64;document.getElementById('logoLogin').src=logoBase64;document.getElementById('logoLogin').style.display='inline-block';}}
   function fazerBackupLocal() { if(!clientes.length)return Swal.fire('Erro','Vazio','error'); let b=new Blob([JSON.stringify(clientes)],{type:"application/json"}),l=document.createElement("a");l.href=URL.createObjectURL(b);l.download=`backup_${new Date().toISOString().split('T')[0]}.json`;document.body.appendChild(l);l.click();document.body.removeChild(l);Swal.fire('Sucesso','Backup salvo','success'); }
   
-  // --- FUNÇÕES DE RESTAURAÇÃO ---
   function abrirRestauracao() {
       document.getElementById('inputBackup').click();
   }
@@ -1030,20 +1020,15 @@
               let totalProcessado = 0;
 
               for (const cliente of dados) {
-                  // Se tiver ID, usa ele. Se não, cria um novo (embora o backup geralmente tenha ID)
                   let ref = cliente.id ? db.collection("clientes").doc(cliente.id) : db.collection("clientes").doc();
-                  
-                  // Copia os dados para evitar alterar o objeto original
                   let dataToSave = { ...cliente };
-                  delete dataToSave.id; // O ID já é a chave do documento
+                  delete dataToSave.id; 
 
-                  // Merge true garante que atualiza se existir, cria se não existir
                   batch.set(ref, dataToSave, { merge: true });
                   
                   count++;
                   totalProcessado++;
 
-                  // O Firestore limita batches a 500 operações
                   if (count >= 450) {
                       await batch.commit();
                       batch = db.batch();
@@ -1056,7 +1041,7 @@
               }
 
               Swal.fire('Sucesso', `Backup restaurado! ${totalProcessado} registros processados.`, 'success');
-              input.value = ''; // Limpa o input
+              input.value = ''; 
 
           } catch (err) {
               console.error(err);
@@ -1128,7 +1113,49 @@
   function atualizarDashboard(){let t=0,r=0;clientes.forEach(c=>c.itens.forEach(i=>{t+=(Number(i.valor)||0);r+=(Number(i.pagoValor)||0)}));document.getElementById('dashTotal').innerText=formatarMoeda(t);document.getElementById('dashRecebido').innerText=formatarMoeda(r);document.getElementById('dashDevedor').innerText=formatarMoeda(t-r);}
   function migrarDados(){let l=JSON.parse(localStorage.getItem('clientesParana'))||[];l.forEach(c=>db.collection("clientes").add(c));Swal.fire('OK','Sincronizado','success');}
   function cobrarWhatsApp(id, saldo) { let c = clientes.find(x => x.id === id); if(saldo<=0) return Swal.fire('Info','Sem débito','info'); if(!c.telefone) return Swal.fire('Erro','Sem telefone','error'); let t = `Olá *${c.nome}*, aqui é da *${empDados.nome}*.\nConsta saldo aberto de *${formatarMoeda(saldo)}*. Podemos acertar?`; window.open(`https://wa.me/55${c.telefone.replace(/\D/g,'')}?text=${encodeURIComponent(t)}`,'_blank'); }
-  function pagar(id, ii){let c=clientes.find(x=>x.id===id),itens=[...c.itens],v=Number(prompt(`Resta: ${formatarMoeda(itens[ii].valor-itens[ii].pagoValor)}\nQuanto pagou?`));if(v>0){itens[ii].pagoValor+=v;if(itens[ii].pagoValor>=itens[ii].valor)itens[ii].pago=true;db.collection("clientes").doc(id).update({itens});Swal.fire({icon:'success',title:'Pago',toast:true,position:'top-end',timer:1000,showConfirmButton:false});}}
+  
+  // Função Pagar Refatorada
+  function pagar(id, ii) {
+    let c = clientes.find(x => x.id === id);
+    let itens = [...c.itens]; 
+
+    const valorTotal = Number(itens[ii].valor) || 0;
+    const valorPago = Number(itens[ii].pagoValor) || 0;
+    const valorRestante = valorTotal - valorPago;
+      
+    let inputPagamento = prompt(
+      `Restante: ${formatarMoeda(valorRestante)}\nQuanto foi pago? (Ex: 50.50 ou 50,50)`,
+       valorRestante.toFixed(2)
+    );
+    
+    if (inputPagamento === null) {
+        return; 
+    }
+      
+    let inputFormatado = inputPagamento.trim().replace(',', '.');
+    let v = parseFloat(inputFormatado);
+
+    if (!isNaN(v) && v > 0) {
+        itens[ii].pagoValor = valorPago + v;
+
+         if(itens[ii].pagoValor >= valorTotal) {
+             itens[ii].pagoValor = valorTotal; 
+             itens[ii].pago = true;
+         }
+         
+        db.collection("clientes").doc(id).update({itens})
+          .then(() => {
+            Swal.fire({icon: 'success', title: 'Pagamento Registrado!', toast: true, position: 'top-end', timer: 1000, showConfirmButton: false});
+          })
+          .catch(error => {
+              console.error("Erro ao registrar pagamento: ", error);
+               Swal.fire('Erro', 'Ocorreu um erro ao salvar o pagamento.', 'error');
+          });
+    } else {
+        Swal.fire('Erro', 'Valor inválido. Por favor, insira um número.', 'error');
+    }
+  }
+
   function abrirEditar(id,ii){let c=clientes.find(x=>x.id===id),i=c.itens[ii];editRef={id,ii};document.getElementById('editDesc').value=i.desc;document.getElementById('editQtd').value=i.qtd||1;document.getElementById('editValor').value=i.valor;document.getElementById('editData').value=i.data||"";document.getElementById('editVenc').value=i.venc||"";document.getElementById('editModal').style.display='flex';}
   function salvarEdicao(){let {id,ii}=editRef,c=clientes.find(x=>x.id===id),itens=[...c.itens];itens[ii].desc=document.getElementById('editDesc').value;itens[ii].qtd=Number(document.getElementById('editQtd').value);itens[ii].valor=Number(document.getElementById('editValor').value);itens[ii].data=document.getElementById('editData').value;itens[ii].venc=document.getElementById('editVenc').value;db.collection("clientes").doc(id).update({itens}).then(()=>fecharModal());}
   function fecharModal(){document.getElementById('editModal').style.display='none';}
@@ -1245,4 +1272,3 @@
 </script>
 </body>
 </html>
-
