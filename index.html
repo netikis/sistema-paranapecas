@@ -257,7 +257,7 @@
   </div>
 
   <div class="card clientes">
-    <input type="text" id="searchBox" class="search-box admin-only" placeholder="🔍 Buscar..." onkeyup="render()" autocomplete="off">
+    <input type="text" id="searchBox" class="search-box" placeholder="🔍 Buscar Cliente..." onkeyup="render()" autocomplete="off">
     <div id="listaClientes">Carregando...</div>
     <div class="pagination" id="paginacaoControles">
         <button class="btn-page" id="btnAnt" onclick="mudarPagina(-1)">⬅ Anterior</button>
@@ -435,6 +435,10 @@
                   document.getElementById('userDisplay').innerHTML = `👤 ${nome}<br><span style="color:#aaa">${role.toUpperCase()}</span>`;
                   document.getElementById('loginOverlay').style.display = 'none';
                   document.getElementById('searchBox').value = ''; 
+                  
+                  // AQUI OCORRE O AUTOFOCUS ASSIM QUE LOGAR
+                  setTimeout(() => document.getElementById('searchBox').focus(), 300); 
+
                   iniciarSincronizacao();
               });
           } else {
