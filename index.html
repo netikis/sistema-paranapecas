@@ -93,6 +93,24 @@
   th { background: #444; color: #fff; padding: 10px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
   td { border-bottom: 1px solid #eee; padding: 8px; text-align: center; font-size: 13px; }
   .vencido { color: #c62828 !important; font-weight: bold; background-color: #ffebee; }
+  
+  /* ESTILO DO CARIMBO PAGO */
+  .carimbo-pago {
+      display: inline-block;
+      border: 3px solid #2e7d32;
+      color: #2e7d32;
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transform: rotate(-5deg);
+      background: rgba(46, 125, 50, 0.1);
+      letter-spacing: 1px;
+      line-height: 1.2;
+      box-shadow: 0 0 5px rgba(46, 125, 50, 0.3);
+  }
+
   .search-box { width: 100%; padding: 12px; font-size: 16px; border: 2px solid #0d47a1; border-radius: 8px; margin-bottom: 20px; background: #f0f8ff; color: #000; font-weight: bold; box-sizing: border-box; }
   
   .client-card { background: #f9f9f9; color: #000; padding: 15px; margin-top: 20px; margin-bottom: 30px; border-radius: 15px; border: 3px solid #333; box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
@@ -101,7 +119,7 @@
   .table-actions button, .table-actions label { margin: 0; padding: 0 10px; height: 32px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; font-size: 12px; border-radius: 5px; font-weight: bold; cursor: pointer; color: #fff; }
   
   .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 1000; }
-  .modal-content { background: #222; padding: 25px; border-radius: 10px; width: 90%; max-width: 450px; color: #fff; border: 1px solid #555; }
+  .modal-content { background: #222; padding: 25px; border-radius: 10px; width: 90%; max-width: 450px; color: #fff; border: 1px solid #555; max-height: 90vh; overflow-y: auto; }
   .modal-content input, .modal-content select { width: 95%; margin-bottom: 10px; }
   
   #canvasAssinatura, #canvasRemoto { background: #fff; border: 2px dashed #555; cursor: crosshair; touch-action: none; width: 100%; height: 200px; border-radius: 5px; margin-bottom: 10px; display: block; }
@@ -269,26 +287,35 @@
 
 <div class="modal" id="assinaturaModal">
   <div class="modal-content" style="text-align:center;">
-    <h3>✍️ Assinatura</h3>
+    <h3 style="margin-top:0;">✍️ Assinatura</h3>
     <div style="background:#fff; padding:5px; border-radius:5px; margin-bottom:10px;">
         <canvas id="canvasAssinatura"></canvas>
     </div>
     
-    <button class="fiscal" onclick="capturarDigital()" style="width:100%; margin-bottom:15px; background:#fb8c00;">👆 DIGITAL (FOTO)</button>
+    <div style="display:flex; gap:10px; margin-bottom:10px;">
+        <button class="fiscal" onclick="capturarDigital()" style="flex:1; background:#fb8c00;">👆 FOTO</button>
+        <button class="success" onclick="adicionarCarimboNoCanvas()" style="flex:1;">✅ CARIMBAR PAGO</button>
+    </div>
     <input type="file" id="inputDigital" accept="image/*" capture="environment" style="display:none" onchange="colocarDigitalNoCanvas(this)">
     
-    <div class="check-save"><input type="checkbox" id="salvarAssinaturaCheck" checked><span>Salvar</span></div>
-    <div style="display:flex; gap:10px; justify-content:center; margin-bottom:15px;">
-      <button class="dark" onclick="limparAssinatura()">Limpar</button>
-      <button class="danger" onclick="fecharAssinatura()">Cancelar</button>
+    <div class="check-save" style="padding:5px; margin-bottom:10px;"><input type="checkbox" id="salvarAssinaturaCheck" checked><span>Salvar</span></div>
+    
+    <div style="display:flex; gap:10px; justify-content:center; margin-bottom:10px;">
+      <button class="dark" onclick="limparAssinatura()" style="flex:1;">Limpar</button>
+      <button class="danger" onclick="fecharAssinatura()" style="flex:1;">Cancelar</button>
     </div>
-    <button class="success" onclick="finalizarAssinatura('salvar_apenas')" style="width:100%; margin-bottom:10px;">💾 SALVAR</button>
-    <button class="wapp" onclick="gerarImagemWhatsApp()" style="width:100%; margin-bottom:10px; background:#25D366;">📱 ZAP</button>
+    
+    <div style="display:flex; gap:10px; justify-content:center; margin-bottom:10px;">
+        <button class="success" onclick="finalizarAssinatura('salvar_apenas')" style="flex:1;">💾 SALVAR</button>
+        <button class="wapp" onclick="gerarImagemWhatsApp()" style="flex:1; background:#25D366;">📱 ZAP</button>
+    </div>
+    
     <hr style="border:1px solid #444; margin: 10px 0;">
-    <p>IMPRIMIR:</p>
-    <div style="display:flex; gap:10px; justify-content:center;">
-        <button class="primary" onclick="finalizarAssinatura('extrato')">📄 IMPRIMIR A4</button>
-        <button class="warning" onclick="finalizarAssinatura('cupom')">🖨️ IMPRIMIR CUPOM</button>
+    <p style="margin:5px 0 10px 0;">IMPRIMIR:</p>
+    
+    <div style="display:flex; gap:10px; justify-content:center; padding-bottom:5px;">
+        <button class="primary" onclick="finalizarAssinatura('extrato')" style="flex:1;">📄 A4</button>
+        <button class="warning" onclick="finalizarAssinatura('cupom')" style="flex:1;">🖨️ CUPOM</button>
     </div>
   </div>
 </div>
@@ -436,7 +463,6 @@
                   document.getElementById('loginOverlay').style.display = 'none';
                   document.getElementById('searchBox').value = ''; 
                   
-                  // AQUI OCORRE O AUTOFOCUS ASSIM QUE LOGAR
                   setTimeout(() => document.getElementById('searchBox').focus(), 300); 
 
                   iniciarSincronizacao();
@@ -482,6 +508,29 @@
           reader.readAsDataURL(input.files[0]);
       }
   }
+
+  function adicionarCarimboNoCanvas() {
+      let cvs = document.getElementById('canvasAssinatura');
+      let ctx = cvs.getContext('2d');
+      ctx.clearRect(0, 0, cvs.width, cvs.height);
+      
+      ctx.save();
+      ctx.translate(cvs.width / 2, cvs.height / 2);
+      ctx.rotate(-10 * Math.PI / 180);
+      
+      ctx.font = "900 24px Arial";
+      ctx.fillStyle = "#2e7d32";
+      ctx.strokeStyle = "#2e7d32";
+      ctx.lineWidth = 4;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      
+      ctx.fillText("PAGO!", 0, -15);
+      ctx.fillText("PRODUTO ENTREGUE", 0, 15);
+      ctx.strokeRect(-135, -40, 270, 80);
+      
+      ctx.restore();
+  }
   
   function salvarAssinaturaRemota() { 
       let cvs = document.getElementById('canvasRemoto'); let img = cvs.toDataURL(); 
@@ -501,17 +550,12 @@
       fetch(`https://viacep.com.br/ws/${cep}/json/`).then(res => res.json()).then(data => {
           if (!data.erro) { 
               document.getElementById('cidade').value = `${data.localidade} - ${data.uf}`; 
-              
-              // PREENCHIMENTO AUTOMÁTICO DOS NOVOS CAMPOS
               if(document.getElementById('logradouro')) {
                   document.getElementById('logradouro').value = data.logradouro;
                   document.getElementById('bairro').value = data.bairro;
-                  // FOCA NO NÚMERO PARA AGILIZAR
                   document.getElementById('numero').focus();
               }
-              // COMPATIBILIDADE COM O MODAL DE EDIÇÃO (QUE USA CAMPO ÚNICO)
               if(document.getElementById('editCliEnd')) document.getElementById('editCliEnd').value = `${data.logradouro} - ${data.bairro}`;
-
               document.getElementById('telefone').focus(); 
           }
           else { Swal.fire('Atenção', 'CEP não encontrado.', 'warning'); document.getElementById('cidade').value = ""; if(document.getElementById('logradouro')) document.getElementById('logradouro').value = ""; }
@@ -576,9 +620,10 @@
       
       let pg = Number(i.pagoValor) || 0;
       let isVencido = (!i.pago && i.venc && i.venc < new Date().toISOString().split('T')[0]);
-      let sit = i.pago ? '<span style="color:green;font-weight:900">PAGO</span>' : (pg > 0 ? `<span style="color:#fbc02d;font-weight:900">PARCIAL<br><small style="color:#000">Pago: ${formatarMoeda(pg)}</small></span>` : `<span style="font-weight:900">${isVencido?'VENCIDO':'Aberto'}</span>`);
       
-      let btnVerAssinatura = i.assinatura ? `<button class="dark" style="padding:2px 5px; font-size:10px; margin-left:5px;" onclick="verAssinatura('${c.id}', ${ii})">👁️ VER</button>` : '';
+      let sit = i.pago ? '<div class="carimbo-pago">PAGO!<br>PRODUTO ENTREGUE</div>' : (pg > 0 ? `<span style="color:#fbc02d;font-weight:900">PARCIAL<br><small style="color:#000">Pago: ${formatarMoeda(pg)}</small></span>` : `<span style="font-weight:900">${isVencido?'VENCIDO':'Aberto'}</span>`);
+      
+      let btnVerAssinatura = i.assinatura ? `<button class="dark" style="padding:2px 5px; font-size:10px; margin-left:5px;" onclick="verAssinatura('${c.id}', ${ii})">👁️ VER</button><button class="danger admin-only" style="padding:2px 5px; font-size:10px; margin-left:2px;" onclick="excluirAssinatura('${c.id}', ${ii})" title="Excluir Assinatura">🗑️ ASS.</button>` : '';
 
       return `<tr ${isVencido?'class="vencido"':''}><td><input type="checkbox" class="sel-${c.id}" value="${ii}" style="width:18px; height:18px;"></td><td style="text-align:left; font-weight:900; font-size:14px;">${i.desc}${btnVerAssinatura}</td><td style="font-weight:900; font-size:14px;">${i.qtd||1}</td><td style="font-weight:900; font-size:14px;">${formatarMoeda(i.valor)}</td><td style="font-weight:900; font-size:14px;">${formatarDataBR(i.data)}</td><td style="font-weight:900; font-size:14px;">${formatarDataBR(i.venc)}</td><td style="font-weight:900; font-size:14px;">${sit}</td><td><div class="table-actions"><button class="success" onclick="pagar('${c.id}',${ii})">$</button><button class="primary admin-only" onclick="abrirEditar('${c.id}',${ii})">✏️</button><button class="danger admin-only" onclick="excluirLançamento('${c.id}',${ii})">X</button></div></td></tr>`}).join('')}</tbody></table></div>`;
       div.innerHTML += html;
@@ -597,6 +642,30 @@
           imageWidth: 400,
           imageAlt: 'Assinatura do Cliente',
           confirmButtonText: 'Fechar'
+      });
+  }
+
+  function excluirAssinatura(id, ii) {
+      Swal.fire({
+          title: 'Excluir esta assinatura?',
+          text: 'Esta ação não pode ser desfeita!',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#d33',
+          cancelButtonColor: '#3085d6',
+          confirmButtonText: 'Sim, excluir',
+          cancelButtonText: 'Cancelar'
+      }).then((result) => {
+          if (result.isConfirmed) {
+              let c = clientes.find(x => x.id === id);
+              let itens = [...c.itens];
+              itens[ii].assinatura = null;
+              db.collection("clientes").doc(id).update({ itens }).then(() => {
+                  Swal.fire({ icon: 'success', title: 'Excluída!', text: 'Assinatura removida com sucesso.', timer: 1500, showConfirmButton: false });
+              }).catch(err => {
+                  Swal.fire('Erro', 'Erro ao excluir assinatura: ' + err.message, 'error');
+              });
+          }
       });
   }
 
@@ -792,6 +861,9 @@
                     let descExtra = "";
                     let pg = Number(i.pagoValor) || 0;
                     if(pg > 0 && !i.pago) descExtra = ` <br><small style="font-weight:normal;">(Pago: ${formatarMoeda(pg)})</small>`;
+                    
+                    if(i.pago) descExtra += ` <br><span style="border: 2px solid #2e7d32; color: #2e7d32; padding: 2px 4px; font-size: 10px; border-radius: 4px; font-weight: 900; transform: rotate(-5deg); display: inline-block; margin-top: 4px; background: rgba(46,125,50,0.1);">PAGO! PRODUTO ENTREGUE</span>`;
+
                     return `<tr><td>${i.desc.toUpperCase()}${descExtra}</td><td>${i.qtd||1}</td><td>${formatarMoeda(i.valor)}</td></tr>`;
                 }).join('')}</tbody>
             </table>
@@ -920,19 +992,16 @@
       let n=document.getElementById('nome').value.trim();
       if(!n)return Swal.fire('Erro','Nome obrigatório','error');
 
-      // PEGA OS CAMPOS INDIVIDUAIS
       let log = document.getElementById('logradouro').value;
       let num = document.getElementById('numero').value;
       let bai = document.getElementById('bairro').value;
       let comp = document.getElementById('complemento').value;
 
-      // MONTA O ENDEREÇO COMPLETO PARA FICAR COMPATÍVEL COM O RESTO DO SISTEMA
       let enderecoCompleto = "";
       if(log) {
           enderecoCompleto = `${log}, ${num} - ${bai}`;
           if(comp) enderecoCompleto += ` (${comp})`;
       } else {
-          // Fallback caso o usuário não preencha nada (para não dar erro)
           enderecoCompleto = document.getElementById('endereco') ? document.getElementById('endereco').value : ""; 
       }
 
@@ -943,12 +1012,11 @@
           telefone:document.getElementById('telefone').value,
           cep:document.getElementById('cep').value,
           cidade:document.getElementById('cidade').value,
-          endereco: enderecoCompleto, // SALVA TUDO JUNTO AQUI
+          endereco: enderecoCompleto, 
           itens:[]
       });
       Swal.fire('Sucesso','Cliente salvo','success');
       
-      // Limpa os campos após salvar
       document.getElementById('nome').value = '';
       document.getElementById('cpf_cnpj').value = '';
       document.getElementById('ie').value = '';
@@ -1118,7 +1186,6 @@
   function migrarDados(){let l=JSON.parse(localStorage.getItem('clientesParana'))||[];l.forEach(c=>db.collection("clientes").add(c));Swal.fire('OK','Sincronizado','success');}
   function cobrarWhatsApp(id, saldo) { let c = clientes.find(x => x.id === id); if(saldo<=0) return Swal.fire('Info','Sem débito','info'); if(!c.telefone) return Swal.fire('Erro','Sem telefone','error'); let t = `Olá *${c.nome}*, aqui é da *${empDados.nome}*.\nConsta saldo aberto de *${formatarMoeda(saldo)}*. Podemos acertar?`; window.open(`https://wa.me/55${c.telefone.replace(/\D/g,'')}?text=${encodeURIComponent(t)}`,'_blank'); }
   
-  // Função Pagar Refatorada
   function pagar(id, ii) {
     let c = clientes.find(x => x.id === id);
     let itens = [...c.itens]; 
