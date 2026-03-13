@@ -113,7 +113,36 @@
   .search-box { width: 100%; padding: 12px; font-size: 16px; border: 2px solid #0d47a1; border-radius: 8px; margin-bottom: 20px; background: #f0f8ff; color: #000; font-weight: bold; box-sizing: border-box; }
   
   .client-card { background: #f9f9f9; color: #000; padding: 15px; margin-top: 20px; margin-bottom: 30px; border-radius: 15px; border: 3px solid #333; box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
-  .top-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 15px; align-items: center; }
+  
+  /* BARRA DE FERRAMENTAS ORGANIZADA */
+  .top-actions { 
+      display: flex; flex-wrap: wrap; gap: 10px; 
+      margin-top: 15px; margin-bottom: 10px; 
+      background: #eeeeee; padding: 10px; 
+      border-radius: 8px; border: 1px solid #ddd; 
+  }
+  .action-group { 
+      display: flex; flex-wrap: wrap; gap: 5px; 
+      border-right: 2px solid #ccc; padding-right: 10px; 
+      align-items: center; 
+  }
+  .action-group:last-child { border-right: none; padding-right: 0; }
+  .btn-action { 
+      padding: 8px 12px; border-radius: 6px; cursor: pointer; 
+      font-weight: 800; border: none; color: #fff; 
+      text-transform: uppercase; font-size: 10px; 
+      letter-spacing: 0.5px; transition: 0.2s; 
+      display: flex; align-items: center; gap: 5px;
+  }
+  .btn-action:hover { filter: brightness(1.2); transform: translateY(-1px); }
+  .btn-action:active { transform: scale(0.98); }
+  .btn-action.blue { background: #1565c0; }
+  .btn-action.gray { background: #616161; }
+  .btn-action.dark { background: #212121; }
+  .btn-action.wapp { background: #2e7d32; }
+  .btn-action.red { background: #c62828; }
+  .btn-action.orange { background: #f57c00; color: #fff; }
+
   .table-actions { display: flex; justify-content: center; align-items: center; gap: 5px; flex-wrap: nowrap; }
   .table-actions button, .table-actions label { margin: 0; padding: 0 10px; height: 32px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; font-size: 12px; border-radius: 5px; font-weight: bold; cursor: pointer; color: #fff; }
   
@@ -127,8 +156,23 @@
   #hiddenPrintArea { position: absolute; top: -9999px; left: -9999px; width: 794px; background: #fff; color: #000; padding: 20px; } 
   #userInfo { position: absolute; top: 10px; left: 10px; font-size: 10px; color: #aaa; z-index: 10001; }
 
+  /* NOTIFICAÇÃO DE DESFAZER EXCLUSÃO (TOAST) */
+  #undoToast {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: #323232; color: #fff; padding: 15px 20px; border-radius: 8px;
+      display: none; align-items: center; gap: 15px; z-index: 100000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5); border: 1px solid #555;
+  }
+  #undoToast span { font-size: 14px; font-weight: bold; }
+  #undoToast button { margin: 0; padding: 8px 15px; font-size: 12px; }
+
   @media (max-width: 768px) {
-    .container { padding: 10px; width: 100%; } .header { padding: 10px; } .titulo { font-size: 16px; } .dash-card { padding: 10px 2px; } .top-actions button { flex: 1; min-width: 120px; }
+    .container { padding: 10px; width: 100%; } .header { padding: 10px; } .titulo { font-size: 16px; } .dash-card { padding: 10px 2px; } 
+    .top-actions { padding: 5px; }
+    .action-group { border-right: none; border-bottom: 1px solid #ccc; padding-right: 0; padding-bottom: 10px; width: 100%; justify-content: center; }
+    .action-group:last-child { border-bottom: none; padding-bottom: 0; }
+    .btn-action { flex: 1; text-align: center; justify-content: center; }
+    #undoToast { width: 90%; flex-direction: column; text-align: center; gap: 10px; }
   }
 </style>
 </head>
@@ -387,6 +431,12 @@
 
 <div id="hiddenPrintArea"></div>
 
+<div id="undoToast">
+    <span>🗑️ Itens excluídos.</span>
+    <button class="warning" onclick="desfazerExclusao()">↩️ DESFAZER</button>
+    <button class="dark" onclick="fecharToastUndo()" style="padding: 5px 10px;">X</button>
+</div>
+
 <script>
   const firebaseConfig = {
     apiKey: "AIzaSyDx0wGiH9IdMH6_8RSi-2upT-UnZqZ_UmE",
@@ -406,6 +456,41 @@
   let currentUserRole = 'func'; let roleSelected = '';
   let paginaAtual = 1; const itensPorPagina = 10;
   let unsubscribeClientes = null; let unsubscribeCatalogo = null; let unsubscribeEmpresa = null;
+
+  // Variáveis para a Lixeira (Desfazer Exclusão)
+  let backupClienteId = null;
+  let backupItens = null;
+  let undoTimeout = null;
+
+  function mostrarToastUndo() {
+      let toast = document.getElementById('undoToast');
+      toast.style.display = 'flex';
+      if(undoTimeout) clearTimeout(undoTimeout);
+      // Fica na tela só por 5 segundos para não atrapalhar, mas o backup CONTINUA salvo na memória
+      undoTimeout = setTimeout(() => { document.getElementById('undoToast').style.display = 'none'; }, 5000); 
+  }
+
+  function fecharToastUndo() {
+      document.getElementById('undoToast').style.display = 'none';
+      // Removido o bloqueio das variáveis aqui, para que o botão fixo da barra funcione sempre.
+  }
+
+  // Função Desfazer Inteligente
+  function desfazerExclusao(idContexto = null) {
+      let alvo = idContexto || backupClienteId;
+
+      if(backupClienteId && backupItens && backupClienteId === alvo) {
+          db.collection("clientes").doc(backupClienteId).update({ itens: backupItens }).then(() => {
+              Swal.fire({icon: 'success', title: 'Restaurado!', text: 'Os itens voltaram para a lista.', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false});
+              document.getElementById('undoToast').style.display = 'none';
+              // Limpa a lixeira após restaurar
+              backupClienteId = null;
+              backupItens = null;
+          });
+      } else {
+          Swal.fire('Aviso', 'Não há exclusões recentes para desfazer neste cliente.', 'info');
+      }
+  }
 
   function setupCanvasEvents(canvas) {
       if(!canvas) return;
@@ -600,21 +685,38 @@
 
     itensDaPagina.forEach((c) => {
       let saldoCli = c.itens.reduce((acc, i) => acc + (Number(i.valor)||0) - (Number(i.pagoValor)||0), 0);
-      let html = `<div class="client-card"><div style="display:flex; justify-content:space-between; align-items:flex-start"><div><b style="font-size:24px; font-weight:900; color:#0d47a1; text-transform:uppercase;">${c.nome}</b><br><span style="font-size:14px; color:#333; font-weight:bold">${c.cpf_cnpj ? 'CPF: '+c.cpf_cnpj : ''} ${c.telefone ? '| '+c.telefone : ''}<br>${c.endereco ? c.endereco : ''}</span></div><div style="text-align:right">Saldo Devedor<br><span style="color:red; font-size:24px; font-weight:900">${formatarMoeda(saldoCli)}</span></div></div>
+      
+      // NOVA BARRA DE FERRAMENTAS ORGANIZADA COM BOTÃO DESFAZER
+      let btnHtml = `
       <div class="top-actions">
-        <button class="warning" onclick="editarDadosCliente('${c.id}')" style="background:#f9a825; color:#000;">✏️ EDITAR DADOS</button>
-        <button class="primary" onclick="imprimirSelecionados('${c.id}', 'extrato')">📄 IMPRIMIR A4</button>
-        <button class="warning" onclick="imprimirSelecionados('${c.id}', 'cupom')">🖨️ IMPRIMIR CUPOM</button>
-        <button class="share" onclick="compartilharComprovanteImagem('${c.id}')">📤 ENVIAR DOC (ZAP)</button>
-        <button class="dark" onclick="imprimirExtratoDebitos('${c.id}')" style="background:#d32f2f;">📄 EXTRATO DÉBITOS</button>
-        <button class="purple" onclick="gerarRelatorioAssinaturas('${c.id}')">🕵️ AUDITORIA ASSINATURAS</button>
-        <button class="fiscal" onclick="abrirLancarRapido('${c.id}', '${c.nome}')" style="background:#2e7d32;">➕ ADC. PEÇA</button>
-        <button class="dark" onclick="abrirAssinatura('${c.id}')">✍️ ASSINAR PRESENCIAL</button>
-        <button class="primary" style="background:#0277bd" onclick="gerarLinkRemoto('${c.id}')">🔗 LINK PARA ASSINAR</button>
-        <button class="wapp" onclick="cobrarWhatsApp('${c.id}', ${saldoCli})">💬 COBRAR ONLINE</button>
-        <button class="danger admin-only" onclick="excluirCliente('${c.id}')">🗑️</button>
-      </div>
-      <table><thead><tr><th><input type="checkbox" onchange="toggleAll('${c.id}', this)"></th><th>Peça</th><th>Qtd</th><th>Valor</th><th>Data</th><th>Venc.</th><th>Situação</th><th>Ações</th></tr></thead><tbody>${c.itens.map((i, ii) => {
+        <div class="action-group">
+            <button class="btn-action blue" onclick="abrirLancarRapido('${c.id}', '${c.nome}')" title="Adicionar Nova Peça">➕ ADC. PEÇA</button>
+            <button class="btn-action blue" onclick="editarDadosCliente('${c.id}')" title="Editar Dados do Cliente">✏️ EDITAR</button>
+        </div>
+        <div class="action-group">
+            <button class="btn-action gray" onclick="imprimirSelecionados('${c.id}', 'extrato')" title="Imprimir em folha A4">📄 A4</button>
+            <button class="btn-action gray" onclick="imprimirSelecionados('${c.id}', 'cupom')" title="Imprimir em Cupom Térmico">🖨️ CUPOM</button>
+            <button class="btn-action gray" onclick="imprimirExtratoDebitos('${c.id}')" title="Imprimir Extrato de Débitos">📄 EXTRATO</button>
+        </div>
+        <div class="action-group">
+            <button class="btn-action dark" onclick="abrirAssinatura('${c.id}')" title="Assinar na Tela">✍️ ASSINAR</button>
+            <button class="btn-action dark" onclick="gerarLinkRemoto('${c.id}')" title="Copiar Link para Assinar">🔗 LINK</button>
+            <button class="btn-action dark" onclick="gerarRelatorioAssinaturas('${c.id}')" title="Auditoria de Assinaturas">🕵️ AUDITORIA</button>
+        </div>
+        <div class="action-group">
+            <button class="btn-action wapp" onclick="cobrarWhatsApp('${c.id}')" title="Cobrar por WhatsApp">💬 COBRAR</button>
+            <button class="btn-action wapp" onclick="compartilharComprovanteImagem('${c.id}')" title="Enviar Comprovante no WhatsApp">📤 ZAP DOC</button>
+        </div>
+        <div class="action-group admin-only">
+            <button class="btn-action red" onclick="excluirSelecionados('${c.id}')" title="Excluir Itens Marcados na Tabela">🗑️ ITENS SEL.</button>
+            <button class="btn-action orange" onclick="desfazerExclusao('${c.id}')" title="Desfazer exclusão de itens neste cliente">↩️ DESFAZER</button>
+            <button class="btn-action red" onclick="excluirCliente('${c.id}')" title="Excluir Cadastro Inteiro do Cliente">🗑️ CLIENTE</button>
+        </div>
+      </div>`;
+
+      let html = `<div class="client-card"><div style="display:flex; justify-content:space-between; align-items:flex-start"><div><b style="font-size:24px; font-weight:900; color:#0d47a1; text-transform:uppercase;">${c.nome}</b><br><span style="font-size:14px; color:#333; font-weight:bold">${c.cpf_cnpj ? 'CPF: '+c.cpf_cnpj : ''} ${c.telefone ? '| '+c.telefone : ''}<br>${c.endereco ? c.endereco : ''}</span></div><div style="text-align:right">Saldo Devedor<br><span style="color:red; font-size:24px; font-weight:900">${formatarMoeda(saldoCli)}</span></div></div>
+      ${btnHtml}
+      <table><thead><tr><th title="Selecionar Todos os Itens"><input type="checkbox" onchange="toggleAll('${c.id}', this)"></th><th>Peça</th><th>Qtd</th><th>Valor</th><th>Data</th><th>Venc.</th><th>Situação</th><th>Ações</th></tr></thead><tbody>${c.itens.map((i, ii) => {
       
       let pg = Number(i.pagoValor) || 0;
       let isVencido = (!i.pago && i.venc && i.venc < new Date().toISOString().split('T')[0]);
@@ -888,6 +990,45 @@
       document.getElementById('printContent').innerHTML = ''; 
   }
 
+  // FUNÇÃO DE COBRAR VIA WHATSAPP REFATORADA
+  function cobrarWhatsApp(id) { 
+      let c = clientes.find(x => x.id === id); 
+      if(!c.telefone) return Swal.fire('Erro','Cliente sem telefone cadastrado.','error'); 
+
+      let checks = document.querySelectorAll(`.sel-${id}:checked`);
+      let itensParaCobrar = [];
+
+      // Se marcou algum checkbox, filtra apenas as peças marcadas e que não foram pagas
+      if (checks.length > 0) {
+          let indices = Array.from(checks).map(cb => parseInt(cb.value));
+          itensParaCobrar = indices.map(idx => c.itens[idx]).filter(i => !i.pago);
+      } else {
+          // Se não marcou nada, puxa todas as peças do cliente que não estão pagas
+          itensParaCobrar = c.itens.filter(i => !i.pago);
+      }
+
+      if(itensParaCobrar.length === 0) return Swal.fire('Info','Nenhum débito pendente nos itens verificados.','info');
+
+      let totalCobrado = 0;
+      let listaPecas = "";
+
+      itensParaCobrar.forEach(i => {
+          let valTotal = Number(i.valor) || 0;
+          let valPago = Number(i.pagoValor) || 0;
+          let valRestante = valTotal - valPago;
+          totalCobrado += valRestante;
+          
+          listaPecas += `▪️ *${i.desc.toUpperCase()}* - Restante: ${formatarMoeda(valRestante)}\n`;
+      });
+
+      if (totalCobrado <= 0) return Swal.fire('Info','Sem débito pendente.','info');
+
+      // MENSAGEM DINÂMICA
+      let t = `Olá, tudo bem, aqui é da assistência de cobrança automática da empresa *${empDados.nome}*, segue em aberto/vencidos os seguintes itens abaixo:\n\n${listaPecas}\n*Total em aberto: ${formatarMoeda(totalCobrado)}*`; 
+      
+      window.open(`https://wa.me/55${c.telefone.replace(/\D/g,'')}?text=${encodeURIComponent(t)}`,'_blank'); 
+  }
+
   function compartilharComprovanteImagem(id) {
       if (!empDados.end) { Swal.fire({ title: 'Aguarde...', text: 'Carregando dados...', icon: 'info', timer: 3000 }); return; } 
       
@@ -990,16 +1131,19 @@
       let n=document.getElementById('nome').value.trim();
       if(!n)return Swal.fire('Erro','Nome obrigatório','error');
 
+      // PEGA OS CAMPOS INDIVIDUAIS
       let log = document.getElementById('logradouro').value;
       let num = document.getElementById('numero').value;
       let bai = document.getElementById('bairro').value;
       let comp = document.getElementById('complemento').value;
 
+      // MONTA O ENDEREÇO COMPLETO PARA FICAR COMPATÍVEL COM O RESTO DO SISTEMA
       let enderecoCompleto = "";
       if(log) {
           enderecoCompleto = `${log}, ${num} - ${bai}`;
           if(comp) enderecoCompleto += ` (${comp})`;
       } else {
+          // Fallback caso o usuário não preencha nada (para não dar erro)
           enderecoCompleto = document.getElementById('endereco') ? document.getElementById('endereco').value : ""; 
       }
 
@@ -1010,11 +1154,12 @@
           telefone:document.getElementById('telefone').value,
           cep:document.getElementById('cep').value,
           cidade:document.getElementById('cidade').value,
-          endereco: enderecoCompleto, 
+          endereco: enderecoCompleto, // SALVA TUDO JUNTO AQUI
           itens:[]
       });
       Swal.fire('Sucesso','Cliente salvo','success');
       
+      // Limpa os campos após salvar
       document.getElementById('nome').value = '';
       document.getElementById('cpf_cnpj').value = '';
       document.getElementById('ie').value = '';
@@ -1182,8 +1327,8 @@
 
   function atualizarDashboard(){let t=0,r=0;clientes.forEach(c=>c.itens.forEach(i=>{t+=(Number(i.valor)||0);r+=(Number(i.pagoValor)||0)}));document.getElementById('dashTotal').innerText=formatarMoeda(t);document.getElementById('dashRecebido').innerText=formatarMoeda(r);document.getElementById('dashDevedor').innerText=formatarMoeda(t-r);}
   function migrarDados(){let l=JSON.parse(localStorage.getItem('clientesParana'))||[];l.forEach(c=>db.collection("clientes").add(c));Swal.fire('OK','Sincronizado','success');}
-  function cobrarWhatsApp(id, saldo) { let c = clientes.find(x => x.id === id); if(saldo<=0) return Swal.fire('Info','Sem débito','info'); if(!c.telefone) return Swal.fire('Erro','Sem telefone','error'); let t = `Olá *${c.nome}*, aqui é da *${empDados.nome}*.\nConsta saldo aberto de *${formatarMoeda(saldo)}*. Podemos acertar?`; window.open(`https://wa.me/55${c.telefone.replace(/\D/g,'')}?text=${encodeURIComponent(t)}`,'_blank'); }
   
+  // Função Pagar Refatorada
   function pagar(id, ii) {
     let c = clientes.find(x => x.id === id);
     let itens = [...c.itens]; 
@@ -1228,14 +1373,77 @@
   function abrirEditar(id,ii){let c=clientes.find(x=>x.id===id),i=c.itens[ii];editRef={id,ii};document.getElementById('editDesc').value=i.desc;document.getElementById('editQtd').value=i.qtd||1;document.getElementById('editValor').value=i.valor;document.getElementById('editData').value=i.data||"";document.getElementById('editVenc').value=i.venc||"";document.getElementById('editModal').style.display='flex';}
   function salvarEdicao(){let {id,ii}=editRef,c=clientes.find(x=>x.id===id),itens=[...c.itens];itens[ii].desc=document.getElementById('editDesc').value;itens[ii].qtd=Number(document.getElementById('editQtd').value);itens[ii].valor=Number(document.getElementById('editValor').value);itens[ii].data=document.getElementById('editData').value;itens[ii].venc=document.getElementById('editVenc').value;db.collection("clientes").doc(id).update({itens}).then(()=>fecharModal());}
   function fecharModal(){document.getElementById('editModal').style.display='none';}
-  function excluirLançamento(id,ii){Swal.fire({title:'Excluir item?',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33',confirmButtonText:'Sim'}).then((r)=>{if(r.isConfirmed){let c=clientes.find(x=>x.id===id),itens=[...c.itens];itens.splice(ii,1);db.collection("clientes").doc(id).update({itens});}});}
+
+  function excluirLançamento(id, ii) {
+      Swal.fire({
+          title: 'Excluir item?', 
+          icon: 'warning', 
+          showCancelButton: true, 
+          confirmButtonColor: '#d33', 
+          confirmButtonText: 'Sim'
+      }).then((r) => {
+          if (r.isConfirmed) {
+              let c = clientes.find(x => x.id === id);
+              
+              // SALVA O BACKUP PARA O DESFAZER
+              backupClienteId = id;
+              backupItens = [...c.itens];
+              
+              let novosItens = [...c.itens];
+              novosItens.splice(ii, 1);
+              
+              db.collection("clientes").doc(id).update({itens: novosItens}).then(() => {
+                  mostrarToastUndo();
+              });
+          }
+      });
+  }
+
+  function excluirSelecionados(id) {
+      let c = clientes.find(x => x.id === id);
+      let checks = document.querySelectorAll(`.sel-${id}:checked`);
+      
+      // Pega os índices e ordena do maior para o menor para evitar erro ao usar o splice()
+      let indices = Array.from(checks).map(cb => parseInt(cb.value)).sort((a,b) => b - a);
+      
+      if (indices.length === 0) {
+          return Swal.fire('Aviso', "Selecione pelo menos um item usando a caixinha na tabela antes de excluir.", 'warning');
+      }
+
+      Swal.fire({
+          title: `Excluir ${indices.length} item(ns)?`,
+          text: "Você poderá desfazer na barra de botões.",
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#d33',
+          cancelButtonColor: '#3085d6',
+          cancelButtonText: 'Cancelar',
+          confirmButtonText: 'Sim, excluir'
+      }).then((result) => {
+          if (result.isConfirmed) {
+              // SALVA O BACKUP PARA O DESFAZER
+              backupClienteId = id;
+              backupItens = [...c.itens];
+
+              let novosItens = [...c.itens];
+              // Remove os itens selecionados do array
+              indices.forEach(idx => {
+                  novosItens.splice(idx, 1);
+              });
+
+              db.collection("clientes").doc(id).update({itens: novosItens}).then(() => {
+                  mostrarToastUndo();
+              });
+          }
+      });
+  }
+
   function excluirCliente(id){Swal.fire({title:'Excluir Cliente?',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33',confirmButtonText:'Excluir Tudo'}).then((r)=>{if(r.isConfirmed)db.collection("clientes").doc(id).delete();});}
   function limparAssinatura() { let cvs = document.getElementById('canvasAssinatura'); let ctx = cvs.getContext('2d'); ctx.clearRect(0,0,cvs.width,cvs.height); }
   function limparRemoto() { let cvs = document.getElementById('canvasRemoto'); let ctx = cvs.getContext('2d'); ctx.clearRect(0,0,cvs.width,cvs.height); }
   function fecharAssinatura() { document.getElementById('assinaturaModal').style.display = 'none'; signId = null; }
   function finalizarAssinatura(tipo) { let imgAssinatura = document.getElementById('canvasAssinatura').toDataURL(); let salvar = document.getElementById('salvarAssinaturaCheck').checked; if (salvar && signId) { let c = clientes.find(x => x.id === signId); let itens = [...c.itens]; let checks = document.querySelectorAll(`.sel-${signId}:checked`); checks.forEach(cb => { let idx = parseInt(cb.value); if(itens[idx]) itens[idx].assinatura = imgAssinatura; }); db.collection("clientes").doc(signId).update({ itens }); } if (tipo === 'salvar_apenas') { Swal.fire({icon:'success',title:'Salvo!',timer:1000,showConfirmButton:false}); fecharAssinatura(); return; } imprimirSelecionados(signId, tipo, imgAssinatura); fecharAssinatura(); }
   function gerarLinkRemoto(id) { let l = `${window.location.href.split('?')[0]}?cliente=${id}`; navigator.clipboard.writeText(l).then(() => Swal.fire({title: 'Link Copiado!', html: `Envie para o cliente:<br><br><b>${l}</b>`, icon: 'success'})); }
-  function gerarImagemWhatsApp() { if (!empDados.end) { Swal.fire({ title: 'Aguarde...', text: 'Carregando dados...', icon: 'info', timer: 3000 }); return; } let c = clientes.find(x => x.id === signId); const checks = document.querySelectorAll(`.sel-${signId}:checked`); const indices = Array.from(checks).map(cb => parseInt(cb.value)); const selecionados = indices.map(idx => c.itens[idx]); const totalS = selecionados.reduce((a, i) => a + (Number(i.valor) || 0), 0); const totalPago = selecionados.reduce((a, i) => a + (Number(i.pagoValor) || 0), 0); const assinatura = document.getElementById('canvasAssinatura').toDataURL(); let html = `<div style="background:#fff; font-family:'Courier New'; padding:15px; border:1px solid #ccc; width:350px;"><div style="text-align:center; font-weight:bold; margin-bottom:5px; font-size:16px;">${empDados.nome}</div><div style="text-align:center; font-size:11px; margin-bottom:10px; color:#333;">${empDados.end}<br>${empDados.tel}</div><hr style="border:0; border-top:1px dashed #000;"><div style="font-size:12px; margin-bottom:10px;"><b>CLIENTE:</b> ${c.nome.toUpperCase()}</div><table style="width:100%; font-size:11px; border-collapse:collapse; margin-bottom:10px;"><tr style="border-bottom:1px solid #000;"><th style="text-align:left;">Peça</th><th style="text-align:right;">Valor</th></tr>${selecionados.map(i => `<tr><td style="text-align:left; padding:3px 0;">${i.desc}</td><td style="text-align:right; padding:3px 0;">${formatarMoeda(i.valor)}</td></tr>`).join('')}</table><hr style="border:0; border-top:1px dashed #000;"><div style="text-align:right; font-size:14px; font-weight:bold;">TOTAL: ${formatarMoeda(totalS)}</div><div style="text-align:right; font-size:12px;">PAGO: ${formatarMoeda(totalPago)}</div><div style="text-align:right; font-size:14px; font-weight:bold; color:red;">SALDO DEVEDOR: ${formatarMoeda(totalS-totalPago)}</div><div style="margin-top:20px; text-align:center;"><img src="${assinatura}" style="max-height:50px;"><br><span style="font-size:10px; color:#555;">Assinado Digitalmente</span></div><div style="margin-top:10px; text-align:center; font-size:9px; color:#aaa;">Emitido em: ${new Date().toLocaleString('pt-BR')}</div></div>`; let area = document.getElementById('hiddenPrintArea'); area.innerHTML = html; setTimeout(() => { html2canvas(area, { scale: 2 }).then(canvasImg => { Swal.fire({ title: 'Imagem Gerada!', text: 'Segure na imagem para copiar.', imageUrl: canvasImg.toDataURL("image/jpeg", 0.9), imageWidth: 300, confirmButtonText: 'Fechar' }); area.innerHTML = ''; fecharAssinatura(); }); }, 500); }
 
   async function limparSistema() {
       const confirmacao = await Swal.fire({
