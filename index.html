@@ -531,22 +531,46 @@
       const style = document.createElement('style'); style.innerHTML = '#loginOverlay { display: none !important; }'; document.head.appendChild(style);
   }
 
-  $(document).ready(function(){
+$(document).ready(function(){
       $('#cep, #editCliCep').mask('00000-000'); 
       $('#telefone, #editCliTel').mask('(00) 00000-0000');
       $('#cpf_cnpj, #editCliCpf').mask('000.000.000-00', {onKeyPress: function(val, e, field, options) { field.mask(val.length > 14 ? '00.000.000/0000-00' : '000.000.000-000'); }});
+      
       if(clienteIdUrl) {
+          const itensParams = urlParams.get('itens');
+          let indicesAssinar = itensParams ? itensParams.split(',').map(Number) : [];
+
           const cvsRemoto = document.getElementById('canvasRemoto');
           cvsRemoto.width = cvsRemoto.offsetWidth; cvsRemoto.height = 200;
           const ctxR = cvsRemoto.getContext('2d'); ctxR.lineWidth = 2; ctxR.strokeStyle = '#000';
           setupCanvasEvents(cvsRemoto);
+          
           db.collection("clientes").doc(clienteIdUrl).onSnapshot((doc) => {
               if(doc.exists) {
                   let data = doc.data();
-                  let html = `<b>Olá, ${data.nome}</b><br>Confira seus itens pendentes:<br><br>`;
+                  let html = `<b>Olá, ${data.nome}</b><br>Por favor, confira e assine a retirada dos itens abaixo:<br><br>`;
                   let total = 0;
-                  data.itens.forEach(i => { if(!i.pago) { html += `📦 ${i.desc} - ${formatarMoeda(i.valor)}<br>`; total += (Number(i.valor)||0); } });
-                  html += `<hr><b>TOTAL A PAGAR: ${formatarMoeda(total)}</b>`;
+                  
+                  if(indicesAssinar.length > 0) {
+                      // Mostra APENAS os itens que você selecionou no sistema
+                      indicesAssinar.forEach(idx => {
+                          let i = data.itens[idx];
+                          if(i) {
+                              html += `📦 ${i.desc} - ${formatarMoeda(i.valor)}<br>`; 
+                              total += (Number(i.valor)||0);
+                          }
+                      });
+                  } else {
+                      // Fallback: se usar um link antigo, mostra o padrão anterior
+                      data.itens.forEach(i => { 
+                          if(!i.pago) { 
+                              html += `📦 ${i.desc} - ${formatarMoeda(i.valor)}<br>`; 
+                              total += (Number(i.valor)||0); 
+                          } 
+                      });
+                  }
+                  
+                  html += `<hr><b>TOTAL DOS ITENS: ${formatarMoeda(total)}</b>`;
                   document.getElementById('listaItensRemoto').innerHTML = html;
               }
           });
@@ -637,11 +661,27 @@
   
   function salvarAssinaturaRemota() { 
       let cvs = document.getElementById('canvasRemoto'); let img = cvs.toDataURL(); 
-      db.collection("clientes").doc(clienteIdUrl).get().then(doc => { 
-          let itens = doc.data().itens; itens.forEach(i => { if(!i.pago) i.assinatura = img; }); 
-          db.collection("clientes").doc(clienteIdUrl).update({ itens }).then(() => { 
+      const urlParams = new URLSearchParams(window.location.search);
+      const clienteUrlID = urlParams.get('cliente');
+      const itensParams = urlParams.get('itens');
+      
+      db.collection("clientes").doc(clienteUrlID).get().then(doc => { 
+          let itens = doc.data().itens; 
+          
+          if (itensParams) {
+              // Aplica a assinatura APENAS nos itens passados pelo link
+              let indicesAssinar = itensParams.split(',').map(Number);
+              indicesAssinar.forEach(idx => {
+                  if(itens[idx]) itens[idx].assinatura = img;
+              });
+          } else {
+              // Fallback para não quebrar links antigos já enviados
+              itens.forEach(i => { if(!i.pago) i.assinatura = img; }); 
+          }
+          
+          db.collection("clientes").doc(clienteUrlID).update({ itens }).then(() => { 
               Swal.fire({ icon: 'success', title: 'Assinado!', text: 'Obrigado!', showConfirmButton: false }); 
-              setTimeout(() => document.body.innerHTML = "<h2 style='text-align:center;padding:50px;color:#fff;'>Tudo certo! Pode fechar.</h2>", 2000);
+              setTimeout(() => document.body.innerHTML = "<h2 style='text-align:center;padding:50px;color:#fff;'>Tudo certo! Pode fechar a janela.</h2>", 2000);
           }); 
       }); 
   }
@@ -724,8 +764,9 @@
       // NOVA BARRA DE FERRAMENTAS ORGANIZADA COM BOTÃO DESFAZER
       let btnHtml = `
       <div class="top-actions">
-        <div class="action-group">
+       <div class="action-group">
             <button class="btn-action blue" onclick="abrirLancarRapido('${c.id}', '${c.nome}')" title="Adicionar Nova Peça">➕ ADC. PEÇA</button>
+            <button class="btn-action wapp" onclick="pagarSelecionados('${c.id}')" title="Receber todos os itens marcados">💲 REC. SELEÇÃO</button>
             <button class="btn-action blue" onclick="editarDadosCliente('${c.id}')" title="Editar Dados do Cliente">✏️ EDITAR</button>
         </div>
         <div class="action-group">
@@ -1516,7 +1557,18 @@
   function limparRemoto() { let cvs = document.getElementById('canvasRemoto'); let ctx = cvs.getContext('2d'); ctx.clearRect(0,0,cvs.width,cvs.height); }
   function fecharAssinatura() { document.getElementById('assinaturaModal').style.display = 'none'; signId = null; }
   function finalizarAssinatura(tipo) { let imgAssinatura = document.getElementById('canvasAssinatura').toDataURL(); let salvar = document.getElementById('salvarAssinaturaCheck').checked; if (salvar && signId) { let c = clientes.find(x => x.id === signId); let itens = [...c.itens]; let checks = document.querySelectorAll(`.sel-${signId}:checked`); checks.forEach(cb => { let idx = parseInt(cb.value); if(itens[idx]) itens[idx].assinatura = imgAssinatura; }); db.collection("clientes").doc(signId).update({ itens }); } if (tipo === 'salvar_apenas') { Swal.fire({icon:'success',title:'Salvo!',timer:1000,showConfirmButton:false}); fecharAssinatura(); return; } imprimirSelecionados(signId, tipo, imgAssinatura); fecharAssinatura(); }
-  function gerarLinkRemoto(id) { let l = `${window.location.href.split('?')[0]}?cliente=${id}`; navigator.clipboard.writeText(l).then(() => Swal.fire({title: 'Link Copiado!', html: `Envie para o cliente:<br><br><b>${l}</b>`, icon: 'success'})); }
+ function gerarLinkRemoto(id) { 
+      let checks = document.querySelectorAll(`.sel-${id}:checked`);
+      if (checks.length === 0) {
+          return Swal.fire('Aviso', 'Selecione na tabela quais itens o cliente vai assinar agora.', 'warning');
+      }
+      
+      // Pega os números das linhas marcadas e junta com vírgula (ex: 0,2,3)
+      let indices = Array.from(checks).map(cb => cb.value).join(',');
+      
+      let l = `${window.location.href.split('?')[0]}?cliente=${id}&itens=${indices}`; 
+      navigator.clipboard.writeText(l).then(() => Swal.fire({title: 'Link Copiado!', html: `Envie para o cliente assinar os itens selecionados:<br><br><b>${l}</b>`, icon: 'success'})); 
+  }
 
   async function limparSistema() {
       const confirmacao = await Swal.fire({
@@ -1619,6 +1671,85 @@
           Swal.fire('Erro', 'Ocorreu um erro ao tentar limpar: ' + error.message, 'error');
       }
   }
+
+function pagarSelecionados(id) {
+      let c = clientes.find(x => x.id === id);
+      let checks = document.querySelectorAll(`.sel-${id}:checked`);
+      
+      if (checks.length === 0) {
+          return Swal.fire('Aviso', 'Selecione os itens que deseja receber marcando as caixinhas na tabela.', 'warning');
+      }
+      
+      let indices = Array.from(checks).map(cb => parseInt(cb.value));
+      let itens = [...c.itens];
+      
+      let totalFaltante = 0;
+      let qtdPendentes = 0;
+      
+      // Calcula quanto falta receber dos itens marcados
+      indices.forEach(idx => {
+          let i = itens[idx];
+          if (!i.pago) {
+              let valTotal = Number(i.valor) || 0;
+              let valPago = Number(i.pagoValor) || 0;
+              totalFaltante += (valTotal - valPago);
+              qtdPendentes++;
+          }
+      });
+      
+      if (totalFaltante <= 0) {
+          return Swal.fire('Info', 'Os itens selecionados já estão pagos.', 'info');
+      }
+      
+      // Pergunta o valor que está sendo pago
+      let inputPagamento = prompt(
+          `Você selecionou ${qtdPendentes} item(ns) pendente(s).\nTotal Restante: ${formatarMoeda(totalFaltante)}\n\nInforme o valor recebido:`,
+          totalFaltante.toFixed(2)
+      );
+      
+      if (inputPagamento === null) return; // Se cancelar, não faz nada
+      
+      let inputFormatado = inputPagamento.trim().replace(',', '.');
+      let valorRecebido = parseFloat(inputFormatado);
+
+      if (isNaN(valorRecebido) || valorRecebido <= 0) {
+          return Swal.fire('Erro', 'Valor inválido. Insira apenas números.', 'error');
+      }
+      
+      // Distribui o dinheiro entre os itens selecionados (permite pagamento parcial)
+      indices.forEach(idx => {
+          let i = itens[idx];
+          if (!i.pago && valorRecebido > 0) {
+              let valTotal = Number(i.valor) || 0;
+              let valPago = Number(i.pagoValor) || 0;
+              let faltante = valTotal - valPago;
+              
+              if (valorRecebido >= faltante) {
+                  // Paga o item inteiro
+                  i.pagoValor = valTotal;
+                  i.pago = true;
+                  valorRecebido -= faltante; // Tira do bolo o que acabou de pagar
+              } else {
+                  // Dinheiro não deu pra tudo, paga parcial
+                  i.pagoValor = valPago + valorRecebido;
+                  valorRecebido = 0; // Acabou o dinheiro
+              }
+          }
+      });
+      
+      // Salva no banco de dados
+      db.collection("clientes").doc(id).update({itens})
+        .then(() => {
+            Swal.fire({icon: 'success', title: 'Pagamento Registrado!', text: 'Baixa múltipla realizada com sucesso.', timer: 2000, showConfirmButton: false});
+            // Desmarca as caixinhas após pagar para não confundir
+            document.querySelectorAll(`.sel-${id}`).forEach(c => c.checked = false);
+        })
+        .catch(error => {
+            console.error("Erro ao registrar pagamento: ", error);
+            Swal.fire('Erro', 'Ocorreu um erro ao salvar o pagamento.', 'error');
+        });
+  }
+
 </script>
 </body>
 </html>
