@@ -286,8 +286,20 @@
   <div class="card admin-only">
     <h3>⚙️ Configurações</h3>
     <div style="display: flex; flex-wrap: wrap; gap: 20px;">
-      <div style="flex: 1; min-width: 250px;">
+    <div style="flex: 1; min-width: 250px;">
         <h4>🏢 Empresa</h4>
+        
+        <!-- NOVO: Seleção de Loja e Ativação -->
+        <select id="selectEmpresaConf" onchange="carregarFormEmpresa()" style="margin-bottom: 10px; font-weight: bold; background: #0d47a1;">
+            <option value="1">Loja 1 (Principal)</option>
+            <option value="2">Loja 2 (Filial)</option>
+        </select>
+        
+        <div style="display:flex; align-items:center; margin-bottom:10px; background: #222; padding: 10px; border-radius: 5px; border: 1px solid #444;">
+            <input type="checkbox" id="empresaAtivaCheckbox" style="width: 20px; height: 20px; margin: 0 10px 0 0;"> 
+            <label for="empresaAtivaCheckbox" style="font-size:11px; font-weight:bold; color:#38ef7d; cursor:pointer;">USAR ESTA LOJA NAS IMPRESSÕES</label>
+        </div>
+
         <input type="text" id="confEmpNome" placeholder="Nome da Empresa">
         <input type="text" id="confEmpEnd" placeholder="Endereço">
         <input type="text" id="confEmpTel" placeholder="Telefone">
@@ -452,7 +464,15 @@
   const auth = firebase.auth();
   
   let clientes = []; let catalogo = []; let logoBase64 = localStorage.getItem('logoParana') || "";
-  let empDados = { nome: "PARANÁ PEÇAS - COMÉRCIO DE PEÇAS AUTOMOTIVAS", end: "", tel: "", cnpj: "" };
+  
+  // NOVA ESTRUTURA PARA DUAS EMPRESAS
+  let configEmpresas = {
+      ativo: 1,
+      emp1: { nome: "PARANÁ PEÇAS - COMÉRCIO DE PEÇAS AUTOMOTIVAS", end: "", tel: "", cnpj: "" },
+      emp2: { nome: "", end: "", tel: "", cnpj: "" }
+  };
+  // O empDados vai continuar existindo para não quebrar seu sistema, mas ele vai receber sempre a loja ativa
+  let empDados = configEmpresas.emp1; 
   let currentUserRole = 'func'; let roleSelected = '';
   let paginaAtual = 1; const itensPorPagina = 10;
   let unsubscribeClientes = null; let unsubscribeCatalogo = null; let unsubscribeEmpresa = null;
@@ -657,17 +677,32 @@
       unsubscribeClientes = db.collection("clientes").orderBy("nome").onSnapshot((snapshot) => { clientes = []; snapshot.forEach((doc) => { clientes.push({ id: doc.id, ...doc.data() }); }); atualizarSelect(); atualizarDashboard(); render(); });
       unsubscribeCatalogo = db.collection("catalogo").onSnapshot((s)=>{ catalogo=[]; let d=document.getElementById('opcoesCatalogo'); if(!d) return; d.innerHTML=''; s.forEach((doc)=>{ let k=doc.data(); catalogo.push({id:doc.id,...k}); d.innerHTML+=`<option value="${k.nome}">R$ ${k.valor}</option>`; }); });
       
-      unsubscribeEmpresa = db.collection("config").doc("empresa").onSnapshot((doc) => {
+   unsubscribeEmpresa = db.collection("config").doc("empresa").onSnapshot((doc) => {
           if (doc.exists) { 
               let d = doc.data(); 
-              if (d.nome === "PARANA PEÇAS - COMERCIO DE PEÇAS AUTOMOTIVAS" || !d.nome) {
-                  db.collection("config").doc("empresa").set({ nome: "PARANÁ PEÇAS - COMÉRCIO DE PEÇAS AUTOMOTIVAS" }, { merge: true });
+              
+              // Se for o formato antigo (só tinha o nome solto), migra para o formato de duas lojas
+              if (d.nome && !d.emp1) {
+                  configEmpresas.emp1 = { nome: d.nome, end: d.end || "", tel: d.tel || "", cnpj: d.cnpj || "" };
+                  configEmpresas.ativo = 1;
+                  db.collection("config").doc("empresa").set(configEmpresas, { merge: true });
+              } else {
+                  // Carrega o formato novo
+                  configEmpresas.ativo = d.ativo || 1;
+                  configEmpresas.emp1 = d.emp1 || { nome: "", end: "", tel: "", cnpj: "" };
+                  configEmpresas.emp2 = d.emp2 || { nome: "", end: "", tel: "", cnpj: "" };
               }
-              empDados = { nome: d.nome, end: d.end, tel: d.tel, cnpj: d.cnpj || '' }; 
-              if(document.getElementById('confEmpNome')) { document.getElementById('confEmpNome').value = empDados.nome; document.getElementById('confEmpEnd').value = empDados.end; document.getElementById('confEmpTel').value = empDados.tel; document.getElementById('confEmpCnpj').value = empDados.cnpj; }
+
+              // Define a loja ativa globalmente para as impressões usarem
+              empDados = configEmpresas.ativo === 2 ? configEmpresas.emp2 : configEmpresas.emp1; 
+              
               if(d.logo) { logoBase64 = d.logo; aplicarLogo(); }
+              
+              // Preenche os campos da tela de configuração
+              carregarFormEmpresa();
           }
       });
+
       aplicarLogo();
   }
   function pararSincronizacao() { if(unsubscribeClientes) { unsubscribeClientes(); unsubscribeClientes = null; } clientes = []; }
@@ -1106,9 +1141,47 @@
           });
       }, 800);
   }
+// Função que carrega os inputs dependendo se escolheu Loja 1 ou Loja 2 no seletor
+  function carregarFormEmpresa() {
+      let s = document.getElementById('selectEmpresaConf');
+      if (!s) return;
+      let idSelected = parseInt(s.value);
+      let emp = idSelected === 2 ? configEmpresas.emp2 : configEmpresas.emp1;
 
-  function salvarDadosEmpresa() { let n=document.getElementById('confEmpNome').value, e=document.getElementById('confEmpEnd').value, t=document.getElementById('confEmpTel').value, c=document.getElementById('confEmpCnpj').value; db.collection("config").doc("empresa").set({ nome: n, end: e, tel: t, cnpj: c }, {merge: true}).then(() => Swal.fire({ icon: 'success', title: 'Salvo!', timer: 1500, showConfirmButton:false })); }
-  function salvarCatalogo() { let n=document.getElementById('catNome').value,v=Number(document.getElementById('catValor').value); if(n&&v){db.collection("catalogo").add({nome:n.toUpperCase(),valor:v});document.getElementById('catNome').value='';document.getElementById('catValor').value='';} }
+      document.getElementById('confEmpNome').value = emp.nome || '';
+      document.getElementById('confEmpEnd').value = emp.end || '';
+      document.getElementById('confEmpTel').value = emp.tel || '';
+      document.getElementById('confEmpCnpj').value = emp.cnpj || '';
+      
+      // Marca o checkbox se a loja selecionada no menu for a que está ativa no sistema
+      document.getElementById('empresaAtivaCheckbox').checked = (configEmpresas.ativo === idSelected);
+  }
+
+  // Função nova que salva a loja 1 ou 2 dependendo do menu
+  function salvarDadosEmpresa() { 
+      let idSelected = document.getElementById('selectEmpresaConf').value;
+      let isAtiva = document.getElementById('empresaAtivaCheckbox').checked;
+
+      let novaEmp = {
+          nome: document.getElementById('confEmpNome').value,
+          end: document.getElementById('confEmpEnd').value,
+          tel: document.getElementById('confEmpTel').value,
+          cnpj: document.getElementById('confEmpCnpj').value
+      };
+
+      let updatePayload = {};
+      
+      // Salva no bloco correspondente no Firebase
+      if (idSelected === '1') updatePayload.emp1 = novaEmp;
+      else updatePayload.emp2 = novaEmp;
+
+      // Se marcou a caixinha, define essa loja como a ativa do sistema inteiro
+      if (isAtiva) updatePayload.ativo = parseInt(idSelected);
+
+      db.collection("config").doc("empresa").set(updatePayload, {merge: true})
+        .then(() => Swal.fire({ icon: 'success', title: 'Salvo!', timer: 1500, showConfirmButton:false })); 
+  }
+
   function apagarCat(id){db.collection("catalogo").doc(id).delete();}
   
   function preencherValorCatPrincipal(){
