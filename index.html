@@ -12,6 +12,7 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
 
@@ -25,7 +26,7 @@
   
   /* OVERLAY DE IMPRESSÃO */
   #printOverlay { display: none; background: #fff; color: #000 !important; z-index: 100000; text-align: center; }
-  .print-controls { position: fixed; top: 0; left: 0; width: 100%; background: #222; padding: 10px; display: flex; gap: 10px; justify-content: center; z-index: 100001; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+  .print-controls { position: fixed; top: 0; left: 0; width: 100%; background: #222; padding: 10px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; z-index: 100001; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
   .print-content { margin-top: 70px; padding: 20px; min-height: 100vh; background: #fff; color: #000 !important; }
   
   @media print {
@@ -180,8 +181,10 @@
 
 <div id="printOverlay">
     <div class="print-controls">
-        <button class="danger" onclick="fecharImpressao()" style="font-size:14px; padding:10px 20px;">❌ FECHAR / VOLTAR</button>
-        <button class="primary" onclick="window.print()" style="font-size:14px; padding:10px 20px;">🖨️ IMPRIMIR</button>
+        <button class="danger" onclick="fecharImpressao()" style="font-size:13px; padding:10px 16px;">❌ FECHAR</button>
+        <button class="primary" onclick="window.print()" style="font-size:13px; padding:10px 16px;">🖨️ IMPRIMIR</button>
+        <button class="warning" onclick="salvarImpressaoPDF()" style="font-size:13px; padding:10px 16px;">📄 SALVAR PDF</button>
+        <button class="success" onclick="salvarImpressaoJPEG()" style="font-size:13px; padding:10px 16px;">🖼️ SALVAR JPEG</button>
     </div>
     <div id="printContent" class="print-content"></div>
 </div>
@@ -968,7 +971,7 @@ $(document).ready(function(){
       `;
       document.getElementById('printContent').innerHTML = html;
       document.getElementById('printOverlay').style.display = 'block';
-      setTimeout(function(){ window.print(); }, 800);
+      window._ultimoPrintNome = (c.nome || 'auditoria').replace(/[^\w\s-]/g, '').replace(/\s+/g, '_');
   }
 
   function gerarImpressao(c, itens, total, tipo, titulo, assinaturaNova = null) {
@@ -1051,19 +1054,88 @@ $(document).ready(function(){
     
     document.getElementById('printContent').innerHTML = conteudo;
     document.getElementById('printOverlay').style.display = 'block';
-    
-    setTimeout(function(){
-        window.print();
-    }, 800);
+    window._ultimoPrintNome = (c.nome || 'extrato').replace(/[^\w\s-]/g, '').replace(/\s+/g, '_');
   }
 
   window.onafterprint = function() {
-      fecharImpressao();
+      // Mantém o preview aberto para o usuário poder salvar PDF/JPEG após imprimir
   };
 
   function fecharImpressao() {
       document.getElementById('printOverlay').style.display = 'none';
       document.getElementById('printContent').innerHTML = ''; 
+  }
+
+  function _obterAreaImpressao() {
+      return document.querySelector('#printContent .print-area-container') || document.getElementById('printContent');
+  }
+
+  function _nomeArquivoImpressao(ext) {
+      const base = window._ultimoPrintNome || 'extrato';
+      const data = new Date().toISOString().slice(0, 10);
+      return `extrato_${base}_${data}.${ext}`;
+  }
+
+  function salvarImpressaoJPEG() {
+      const area = _obterAreaImpressao();
+      if (!area || !area.innerHTML.trim()) {
+          return Swal.fire('Aviso', 'Nenhum extrato aberto para salvar.', 'warning');
+      }
+      Swal.fire({ title: 'Gerando JPEG...', text: 'Aguarde...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      setTimeout(() => {
+          html2canvas(area, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false }).then(canvas => {
+              canvas.toBlob(blob => {
+                  const link = document.createElement('a');
+                  link.download = _nomeArquivoImpressao('jpg');
+                  link.href = URL.createObjectURL(blob);
+                  link.click();
+                  setTimeout(() => URL.revokeObjectURL(link.href), 2000);
+                  Swal.fire('Pronto!', 'JPEG salvo no seu dispositivo.', 'success');
+              }, 'image/jpeg', 0.92);
+          }).catch(err => {
+              Swal.fire('Erro', 'Não foi possível gerar o JPEG: ' + err.message, 'error');
+          });
+      }, 200);
+  }
+
+  function salvarImpressaoPDF() {
+      const area = _obterAreaImpressao();
+      if (!area || !area.innerHTML.trim()) {
+          return Swal.fire('Aviso', 'Nenhum extrato aberto para salvar.', 'warning');
+      }
+      if (!window.jspdf || !window.jspdf.jsPDF) {
+          return Swal.fire('Erro', 'Biblioteca de PDF não carregou. Verifique a internet e atualize a página.', 'error');
+      }
+      Swal.fire({ title: 'Gerando PDF...', text: 'Aguarde...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      setTimeout(() => {
+          html2canvas(area, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false }).then(canvas => {
+              const imgData = canvas.toDataURL('image/jpeg', 0.92);
+              const { jsPDF } = window.jspdf;
+              const pdf = new jsPDF('p', 'mm', 'a4');
+              const pageWidth = pdf.internal.pageSize.getWidth();
+              const pageHeight = pdf.internal.pageSize.getHeight();
+              const margin = 8;
+              const imgWidth = pageWidth - (margin * 2);
+              const imgHeight = (canvas.height * imgWidth) / canvas.width;
+              let heightLeft = imgHeight;
+              let position = margin;
+
+              pdf.addImage(imgData, 'JPEG', margin, position, imgWidth, imgHeight);
+              heightLeft -= (pageHeight - margin);
+
+              while (heightLeft > 0) {
+                  position = margin - (imgHeight - heightLeft);
+                  pdf.addPage();
+                  pdf.addImage(imgData, 'JPEG', margin, position, imgWidth, imgHeight);
+                  heightLeft -= (pageHeight - margin);
+              }
+
+              pdf.save(_nomeArquivoImpressao('pdf'));
+              Swal.fire('Pronto!', 'PDF salvo no seu dispositivo.', 'success');
+          }).catch(err => {
+              Swal.fire('Erro', 'Não foi possível gerar o PDF: ' + err.message, 'error');
+          });
+      }, 200);
   }
 
   // FUNÇÃO DE COBRAR VIA WHATSAPP REFATORADA
@@ -1437,9 +1509,8 @@ $(document).ready(function(){
 
     document.getElementById('printContent').innerHTML = html;
     document.getElementById('printOverlay').style.display = 'block';
+    window._ultimoPrintNome = 'balanco_geral';
   }
-
-  function atualizarDashboard(){let t=0,r=0;clientes.forEach(c=>c.itens.forEach(i=>{t+=(Number(i.valor)||0);r+=(Number(i.pagoValor)||0)}));document.getElementById('dashTotal').innerText=formatarMoeda(t);document.getElementById('dashRecebido').innerText=formatarMoeda(r);document.getElementById('dashDevedor').innerText=formatarMoeda(t-r);}
   function migrarDados(){let l=JSON.parse(localStorage.getItem('clientesParana'))||[];l.forEach(c=>db.collection("clientes").add(c));Swal.fire('OK','Sincronizado','success');}
   
   // Função Pagar Refatorada
