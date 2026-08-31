@@ -1,0 +1,64 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Usuário logado (balcão ou admin)
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userProfile() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid))
+        && userProfile().perfil == 'admin';
+    }
+
+    // Perfil legado: sem doc em /usuarios, o app trata como admin
+    function isLegacyAdmin() {
+      return isSignedIn()
+        && !exists(/databases/$(database)/documents/usuarios/$(request.auth.uid));
+    }
+
+    function canManageUsers() {
+      return isAdmin() || isLegacyAdmin();
+    }
+
+    // --- USUÁRIOS (login / perfil) ---
+    match /usuarios/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || canManageUsers());
+      allow create: if canManageUsers();
+      allow update, delete: if canManageUsers();
+    }
+
+    // --- CLIENTES ---
+    // Staff: acesso total. Link remoto (?cliente=ID): só leitura do doc e grava assinatura em itens.
+    match /clientes/{clientId} {
+      allow list: if isSignedIn();
+      allow get: if isSignedIn() || request.auth == null;
+      allow create, delete: if isSignedIn();
+      allow update: if isSignedIn() || (
+        request.auth == null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['itens'])
+      );
+    }
+
+    // --- CATÁLOGO DE PEÇAS ---
+    match /catalogo/{docId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // --- CONFIG EMPRESA / LOGO ---
+    match /config/{docId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Bloqueia qualquer outra coleção
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
