@@ -94,8 +94,8 @@
       Swal.fire({ title: 'Gerando...', text: 'Preparando compartilhamento...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
 
       setTimeout(() => { 
-          html2canvas(area, { scale: 1.5, useCORS: true }).then(canvas => {
-              canvas.toBlob(blob => {
+          html2canvas(area, opcoesHtml2CanvasAltaQualidade(area)).then(canvas => {
+              canvasParaJpegBlob(canvas, blob => {
                   const file = new File([blob], `comprovante_${c.nome.replace(/\s+/g, '_')}.jpg`, { type: "image/jpeg" });
                   if (navigator.share && navigator.canShare({ files: [file] })) {
                        Swal.close();
@@ -107,12 +107,12 @@
                   } else {
                       const link = document.createElement('a');
                       link.download = `comprovante_${c.nome}.jpg`;
-                      link.href = canvas.toDataURL();
+                      link.href = canvasParaJpegDataUrl(canvas);
                       link.click();
                       Swal.fire('Baixado!', 'A imagem foi salva no seu dispositivo. Agora basta anexar no WhatsApp Web.', 'success');
                   }
                   area.innerHTML = '';
-              }, 'image/jpeg', 0.9);
+              });
           });
       }, 800);
   }

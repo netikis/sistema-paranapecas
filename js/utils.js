@@ -38,3 +38,30 @@ function toggleAll(id,s){document.querySelectorAll('.sel-'+id).forEach(function(
 function aplicarLogo(){if(logoBase64){document.getElementById('logoLeft').src=logoBase64;document.getElementById('logoRight').src=logoBase64;document.getElementById('logoLogin').src=logoBase64;document.getElementById('logoLogin').style.display='inline-block';}}
 function atualizarDashboard(){var t=0,r=0;clientes.forEach(function(c){c.itens.forEach(function(i){t+=(Number(i.valor)||0);r+=(Number(i.pagoValor)||0);});});document.getElementById('dashTotal').innerText=formatarMoeda(t);document.getElementById('dashRecebido').innerText=formatarMoeda(r);document.getElementById('dashDevedor').innerText=formatarMoeda(t-r);}
 
+/** Exportação JPEG/PDF — alta nitidez (A4 / comprovante) */
+var EXPORT_JPEG_QUALITY = 0.98;
+var EXPORT_CANVAS_SCALE = 3;
+
+function opcoesHtml2CanvasAltaQualidade(el) {
+  var w = el.scrollWidth || el.offsetWidth;
+  var h = el.scrollHeight || el.offsetHeight;
+  return {
+    scale: EXPORT_CANVAS_SCALE,
+    useCORS: true,
+    backgroundColor: '#ffffff',
+    logging: false,
+    width: w,
+    height: h,
+    windowWidth: w,
+    windowHeight: h
+  };
+}
+
+function canvasParaJpegDataUrl(canvas) {
+  return canvas.toDataURL('image/jpeg', EXPORT_JPEG_QUALITY);
+}
+
+function canvasParaJpegBlob(canvas, callback) {
+  canvas.toBlob(callback, 'image/jpeg', EXPORT_JPEG_QUALITY);
+}
+

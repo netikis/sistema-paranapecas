@@ -175,17 +175,17 @@
       if (!area || !area.innerHTML.trim()) {
           return Swal.fire('Aviso', 'Nenhum extrato aberto para salvar.', 'warning');
       }
-      Swal.fire({ title: 'Gerando JPEG...', text: 'Aguarde...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      Swal.fire({ title: 'Gerando JPEG...', text: 'Aguarde, gerando em alta qualidade...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
       setTimeout(() => {
-          html2canvas(area, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false }).then(canvas => {
-              canvas.toBlob(blob => {
+          html2canvas(area, opcoesHtml2CanvasAltaQualidade(area)).then(canvas => {
+              canvasParaJpegBlob(canvas, blob => {
                   const link = document.createElement('a');
                   link.download = _nomeArquivoImpressao('jpg');
                   link.href = URL.createObjectURL(blob);
                   link.click();
                   setTimeout(() => URL.revokeObjectURL(link.href), 2000);
-                  Swal.fire('Pronto!', 'JPEG salvo no seu dispositivo.', 'success');
-              }, 'image/jpeg', 0.92);
+                  Swal.fire('Pronto!', 'JPEG salvo em alta qualidade.', 'success');
+              });
           }).catch(err => {
               Swal.fire('Erro', 'Não foi possível gerar o JPEG: ' + err.message, 'error');
           });
@@ -200,10 +200,10 @@
       if (!window.jspdf || !window.jspdf.jsPDF) {
           return Swal.fire('Erro', 'Biblioteca de PDF não carregou. Verifique a internet e atualize a página.', 'error');
       }
-      Swal.fire({ title: 'Gerando PDF...', text: 'Aguarde...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      Swal.fire({ title: 'Gerando PDF...', text: 'Aguarde, gerando em alta qualidade...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
       setTimeout(() => {
-          html2canvas(area, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false }).then(canvas => {
-              const imgData = canvas.toDataURL('image/jpeg', 0.92);
+          html2canvas(area, opcoesHtml2CanvasAltaQualidade(area)).then(canvas => {
+              const imgData = canvasParaJpegDataUrl(canvas);
               const { jsPDF } = window.jspdf;
               const pdf = new jsPDF('p', 'mm', 'a4');
               const pageWidth = pdf.internal.pageSize.getWidth();

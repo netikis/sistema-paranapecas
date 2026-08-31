@@ -179,8 +179,8 @@ function gerarImagemWhatsApp() {
   var area = document.getElementById('hiddenPrintArea');
   area.innerHTML = html;
   setTimeout(function(){
-    html2canvas(area, { scale: 2 }).then(function(canvasImg){
-      Swal.fire({ title: 'Imagem Gerada!', text: 'Segure na imagem para copiar.', imageUrl: canvasImg.toDataURL('image/jpeg', 0.9), imageWidth: 300, confirmButtonText: 'Fechar' });
+    html2canvas(area, opcoesHtml2CanvasAltaQualidade(area)).then(function(canvasImg){
+      Swal.fire({ title: 'Imagem Gerada!', text: 'Segure na imagem para copiar.', imageUrl: canvasParaJpegDataUrl(canvasImg), imageWidth: 400, confirmButtonText: 'Fechar' });
       area.innerHTML = '';
       fecharAssinatura();
     });
