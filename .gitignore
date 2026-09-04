@@ -1,0 +1,16 @@
+﻿# Dependências / temporários
+node_modules/
+.DS_Store
+Thumbs.db
+*.tmp
+*.log
+
+# Segredos
+.env
+.env.*
+
+# Arquivos de exemplo / exportações geradas
+*.pdf
+ORÇAMENTO*.jpeg
+ORCAMENTO*.jpeg
+WhatsApp Image*
