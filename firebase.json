@@ -1,4 +1,14 @@
 {
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "index.monolith.bak.html",
+      "firebase-env.example.js"
+    ]
+  },
   "firestore": {
     "rules": "firestore.rules"
   },

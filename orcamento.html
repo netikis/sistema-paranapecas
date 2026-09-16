@@ -1,0 +1,1072 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paraná Peças - Orçamento</title>
+
+    <!-- Mesmas chaves do sistema principal — não substitui o index.html -->
+    <script src="firebase-config.js"></script>
+    <script src="firebase-env.js" onerror="/* opcional */"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f4f4f9;
+            padding: 20px;
+            color: #333;
+        }
+
+        .painel-config {
+            max-width: 800px;
+            margin: 20px auto 0;
+            background: #1e2430;
+            color: #fff;
+            border-radius: 8px;
+            padding: 18px 20px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+        }
+
+        .painel-config h2 {
+            margin: 0 0 6px;
+            font-size: 18px;
+        }
+
+        .painel-config h3 {
+            margin: 14px 0 10px;
+            font-size: 15px;
+            color: #9ec1ff;
+            font-weight: bold;
+        }
+
+        .painel-config label {
+            display: block;
+            font-size: 12px;
+            color: #c5cdd8;
+            margin-top: 10px;
+            margin-bottom: 4px;
+        }
+
+        .painel-config select,
+        .painel-config input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #4a5568;
+            border-radius: 4px;
+            background: #2a3344;
+            color: #fff;
+            margin-top: 0;
+        }
+
+        .painel-config select {
+            background: #2563eb;
+            border-color: #2563eb;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .check-impressao {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 12px 0 4px;
+            color: #22c55e;
+            font-weight: bold;
+            font-size: 13px;
+            text-transform: uppercase;
+        }
+
+        .check-impressao input {
+            width: 16px;
+            height: 16px;
+            accent-color: #22c55e;
+        }
+
+        .acoes-config {
+            display: flex;
+            gap: 10px;
+            margin-top: 14px;
+            flex-wrap: wrap;
+        }
+
+        .btn-salvar-loja {
+            background: #2563eb;
+        }
+
+        .btn-salvar-loja:hover {
+            background: #1d4ed8;
+        }
+
+        .status-salvo {
+            font-size: 12px;
+            color: #86efac;
+            margin-top: 8px;
+            min-height: 16px;
+        }
+
+        /* Container principal que será impresso/salvo */
+        #documento-orcamento {
+            background-color: #fff;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 30px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        /* Cabeçalho */
+        .cabecalho-orcamento {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            border-bottom: 3px solid #0033cc;
+            padding-bottom: 16px;
+            margin-bottom: 20px;
+            gap: 20px;
+        }
+
+        .area-logo {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            flex-shrink: 0;
+        }
+
+        .area-logo img {
+            width: 140px;
+            height: auto;
+            max-height: 140px;
+            object-fit: contain;
+            background-color: #000;
+            border-radius: 4px;
+        }
+
+        .area-titulo {
+            text-align: right;
+            flex: 1;
+        }
+
+        .area-titulo h1 {
+            font-size: 20px;
+            margin: 0 0 8px;
+            text-transform: uppercase;
+            color: #111;
+        }
+
+        .dados-empresa-doc {
+            font-size: 12px;
+            line-height: 1.45;
+            color: #333;
+        }
+
+        .dados-empresa-doc .nome-empresa {
+            font-weight: bold;
+            font-size: 13px;
+            margin-bottom: 2px;
+        }
+
+        /* Seção de Dados do Cliente e Veículo */
+        .dados-cliente {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .dados-cliente div {
+            display: flex;
+            flex-direction: column;
+        }
+
+        input[type="text"], input[type="number"] {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-top: 5px;
+        }
+
+        /* Formulário de Adição de Itens (Não sai na impressão) */
+        .form-add-item {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr auto;
+            gap: 10px;
+            background-color: #eef2f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            align-items: end;
+        }
+
+        button {
+            padding: 10px 15px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover { background-color: #218838; }
+        
+        .btn-remover { background-color: #dc3545; padding: 5px 10px; font-size: 12px;}
+        .btn-remover:hover { background-color: #c82333; }
+        
+        .btn-editar { background-color: #ffc107; color: #000; padding: 5px 10px; font-size: 12px; margin-right: 5px;}
+        .btn-editar:hover { background-color: #e0a800; }
+
+        /* Tabela de Itens */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th { background-color: #f8f9fa; }
+
+        .total-container {
+            text-align: right;
+            font-size: 20px;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+
+        .pix-orcamento {
+            margin-top: 18px;
+            padding-top: 14px;
+            border-top: 1px solid #ddd;
+            text-align: right;
+            font-size: 13px;
+            line-height: 1.5;
+            color: #222;
+        }
+
+        .pix-orcamento.oculto {
+            display: none;
+        }
+
+        .pix-orcamento .pix-chave {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .pix-orcamento .pix-beneficiario {
+            white-space: pre-line;
+            color: #444;
+        }
+
+        .painel-config textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #4a5568;
+            border-radius: 4px;
+            background: #2a3344;
+            color: #fff;
+            min-height: 70px;
+            resize: vertical;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Botões de Ação Final */
+        .acoes-finais {
+            max-width: 800px;
+            margin: 20px auto;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .btn-azul { background-color: #007bff; }
+        .btn-azul:hover { background-color: #0056b3; }
+        .btn-roxo { background-color: #6f42c1; }
+        .btn-roxo:hover { background-color: #5a32a3; }
+        .btn-limpar { background-color: #dc3545; }
+        .btn-limpar:hover { background-color: #c82333; }
+
+        .barra-sistema {
+            max-width: 800px;
+            margin: 0 auto 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            background: #0d47a1;
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 8px;
+        }
+
+        .barra-sistema a {
+            color: #fff;
+            text-decoration: none;
+            background: #1565c0;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .barra-sistema span {
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        /* REGRAS DE IMPRESSÃO */
+        @media print {
+            body { background-color: white; padding: 0; }
+            #documento-orcamento { box-shadow: none; padding: 0; }
+            .nao-imprimir { display: none !important; }
+            input { border: none; background: transparent; padding: 0; margin: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="barra-sistema nao-imprimir">
+        <a href="index.html">⬅ Voltar ao sistema</a>
+        <span>Paraná Peças — Orçamento</span>
+    </div>
+
+    <datalist id="opcoesCatalogo"></datalist>
+
+    <div id="documento-orcamento">
+        
+        <header class="cabecalho-orcamento">
+            <div class="area-logo">
+                <img id="logo-empresa" src="data:image/jpeg;base64,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" alt="Paraná Peças">
+            </div>
+            <div class="area-titulo">
+                <h1>ORÇAMENTO</h1>
+                <div class="dados-empresa-doc" id="dados-empresa-doc">
+                    <div class="nome-empresa" id="doc-nome"></div>
+                    <div id="doc-endereco"></div>
+                    <div id="doc-telefones"></div>
+                    <div id="doc-cnpj"></div>
+                </div>
+            </div>
+        </header>
+
+        <div class="dados-cliente">
+            <div>
+                <label>Cliente:</label>
+                <input type="text" id="nome-cliente" placeholder="Nome do cliente">
+            </div>
+            <div>
+                <label>Data:</label>
+                <input type="text" id="data-orcamento" placeholder="DD/MM/AAAA">
+            </div>
+            <div>
+                <label>Veículo (Modelo):</label>
+                <input type="text" id="modelo-carro" placeholder="Ex: Gol 1.0">
+            </div>
+            <div>
+                <label>Placa:</label>
+                <input type="text" id="placa-carro" placeholder="ABC-1234">
+            </div>
+        </div>
+
+        <div class="form-add-item nao-imprimir">
+            <div>
+                <label>Descrição (Peça ou Mão de Obra)</label>
+                <input type="text" id="desc-item" list="opcoesCatalogo" placeholder="Ex: Pastilha de freio">
+            </div>
+            <div>
+                <label>Qtd</label>
+                <input type="number" id="qtd-item" value="1" min="1">
+            </div>
+            <div>
+                <label>Valor Unit. (R$)</label>
+                <input type="number" id="valor-item" placeholder="0.00" step="0.01">
+            </div>
+            <button onclick="adicionarItem()">Adicionar</button>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Descrição</th>
+                    <th>Qtd</th>
+                    <th>V. Unit.</th>
+                    <th>Total</th>
+                    <th class="nao-imprimir">Ação</th>
+                </tr>
+            </thead>
+            <tbody id="tabela-itens">
+                </tbody>
+        </table>
+
+        <div class="total-container">
+            Total do Orçamento: R$ <span id="valor-total">0.00</span>
+        </div>
+
+        <div class="pix-orcamento oculto" id="pix-orcamento">
+            <div class="pix-chave">CHAVE PIX: <span id="doc-pix-chave"></span></div>
+            <div class="pix-beneficiario" id="doc-pix-beneficiario"></div>
+        </div>
+    </div>
+
+    <div class="acoes-finais nao-imprimir">
+        <button class="btn-azul" onclick="window.print()">Imprimir</button>
+        <button class="btn-roxo" onclick="gerarPDF()">Salvar PDF</button>
+        <button onclick="gerarJPEG()">Salvar JPEG</button>
+        <button class="btn-limpar" onclick="limparOrcamento()">Limpar orçamento</button>
+    </div>
+
+    <div class="painel-config nao-imprimir">
+        <h2>⚙ Configurações</h2>
+        <h3>🏢 Empresa / Filiais</h3>
+
+        <label for="select-loja">Loja para o orçamento</label>
+        <select id="select-loja" onchange="trocarLoja()"></select>
+
+        <label class="check-impressao">
+            <input type="checkbox" id="usar-nas-impressoes" checked onchange="salvarConfigGeral()">
+            Usar esta loja nas impressões
+        </label>
+
+        <label for="cfg-nome">Nome da empresa</label>
+        <input type="text" id="cfg-nome" placeholder="Nome da empresa">
+
+        <label for="cfg-endereco">Endereço</label>
+        <input type="text" id="cfg-endereco" placeholder="Rua, número, bairro, cidade - UF">
+
+        <label for="cfg-telefones">Telefones</label>
+        <input type="text" id="cfg-telefones" placeholder="(00) 00000-0000">
+
+        <label for="cfg-cnpj">CNPJ</label>
+        <input type="text" id="cfg-cnpj" placeholder="00.000.000/0000-00">
+
+        <div class="acoes-config">
+            <button class="btn-salvar-loja" type="button" onclick="salvarLojaAtual()">Salvar dados da loja</button>
+        </div>
+
+        <h3>💳 PIX</h3>
+
+        <label class="check-impressao">
+            <input type="checkbox" id="cfg-mostrar-pix" checked onchange="salvarConfigPix()">
+            Mostrar PIX no orçamento
+        </label>
+
+        <label for="cfg-pix-chave">Chave PIX</label>
+        <input type="text" id="cfg-pix-chave" placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória">
+
+        <label for="cfg-pix-beneficiario">Dados do beneficiário</label>
+        <textarea id="cfg-pix-beneficiario" placeholder="Nome completo&#10;CPF/CNPJ&#10;Banco (opcional)"></textarea>
+
+        <div class="acoes-config">
+            <button class="btn-salvar-loja" type="button" onclick="salvarConfigPix()">Salvar PIX</button>
+        </div>
+        <div class="status-salvo" id="status-salvo"></div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'parana_pecas_orcamento_empresas_v1';
+        const STORAGE_ORCAMENTO = 'parana_pecas_orcamento_rascunho_v1';
+
+        const firebaseConfigPage = window.PARANA_FIREBASE_CONFIG || window.FIREBASE_CONFIG;
+        if (firebaseConfigPage && firebaseConfigPage.apiKey && typeof firebase !== 'undefined' && !firebase.apps.length) {
+            firebase.initializeApp(firebaseConfigPage);
+        }
+        const dbOrc = (typeof firebase !== 'undefined' && firebase.apps.length) ? firebase.firestore() : null;
+        const authOrc = (typeof firebase !== 'undefined' && firebase.apps.length) ? firebase.auth() : null;
+
+        function aplicarEmpresaFirebase(d) {
+            if (!d) return;
+            const emp1 = d.emp1 || (d.nome ? { nome: d.nome, end: d.end || '', tel: d.tel || '', cnpj: d.cnpj || '' } : null);
+            const emp2 = d.emp2 || null;
+            if (emp1) {
+                configEmpresas.lojas[0].nome = emp1.nome || configEmpresas.lojas[0].nome;
+                configEmpresas.lojas[0].endereco = emp1.end || emp1.endereco || configEmpresas.lojas[0].endereco;
+                configEmpresas.lojas[0].telefones = emp1.tel || emp1.telefones || configEmpresas.lojas[0].telefones;
+                configEmpresas.lojas[0].cnpj = emp1.cnpj || configEmpresas.lojas[0].cnpj;
+            }
+            if (emp2) {
+                configEmpresas.lojas[1].nome = emp2.nome || configEmpresas.lojas[1].nome;
+                configEmpresas.lojas[1].endereco = emp2.end || emp2.endereco || configEmpresas.lojas[1].endereco;
+                configEmpresas.lojas[1].telefones = emp2.tel || emp2.telefones || configEmpresas.lojas[1].telefones;
+                configEmpresas.lojas[1].cnpj = emp2.cnpj || configEmpresas.lojas[1].cnpj;
+            }
+            if (d.ativo === 2) configEmpresas.lojaAtiva = 1;
+            else if (d.ativo === 1) configEmpresas.lojaAtiva = 0;
+            if (d.logo) {
+                const logo = document.getElementById('logo-empresa');
+                if (logo) logo.src = d.logo;
+            }
+            if (d.pix) {
+                configEmpresas.pix = Object.assign({}, configEmpresas.pix || {}, d.pix);
+            }
+            montarSelectLojas();
+            preencherFormularioLoja();
+            atualizarCabecalhoDocumento();
+        }
+
+        function carregarEmpresaDoFirebase() {
+            if (!dbOrc) return;
+            dbOrc.collection('config').doc('empresa').get().then((doc) => {
+                if (doc.exists) aplicarEmpresaFirebase(doc.data());
+            }).catch((err) => console.warn('Não foi possível carregar empresa do Firebase:', err));
+        }
+
+        function carregarCatalogo() {
+            if (!dbOrc) return;
+            const lista = document.getElementById('opcoesCatalogo');
+            if (!lista) return;
+            dbOrc.collection('catalogo').onSnapshot((s) => {
+                lista.innerHTML = '';
+                s.forEach((docSnap) => {
+                    const k = docSnap.data();
+                    const opt = document.createElement('option');
+                    opt.value = k.nome || '';
+                    opt.label = k.valor != null ? ('R$ ' + k.valor) : '';
+                    lista.appendChild(opt);
+                });
+            });
+        }
+
+        function sincronizarLojaNoFirebase() {
+            if (!dbOrc) return;
+            const loja = lojaAtual();
+            const emp = {
+                nome: loja.nome || '',
+                end: loja.endereco || '',
+                tel: loja.telefones || '',
+                cnpj: loja.cnpj || ''
+            };
+            const payload = {
+                pix: configEmpresas.pix || {}
+            };
+            if (configEmpresas.lojaAtiva === 1) payload.emp2 = emp;
+            else payload.emp1 = emp;
+            if (configEmpresas.usarNasImpressoes) {
+                payload.ativo = configEmpresas.lojaAtiva === 1 ? 2 : 1;
+            }
+            dbOrc.collection('config').doc('empresa').set(payload, { merge: true }).catch((err) => {
+                console.warn('Não foi possível salvar no Firebase:', err);
+            });
+        }
+
+        function iniciarAuthOrcamento() {
+            if (!authOrc) return;
+            const seguir = function() {
+                authOrc.onAuthStateChanged((user) => {
+                    if (!user) {
+                        window.location.replace('index.html');
+                        return;
+                    }
+                    carregarEmpresaDoFirebase();
+                    carregarCatalogo();
+                });
+            };
+            authOrc.setPersistence(firebase.auth.Auth.Persistence.SESSION).then(seguir).catch(seguir);
+        }
+
+        const padraoEmpresas = {
+            lojaAtiva: 0,
+            usarNasImpressoes: true,
+            pix: {
+                mostrar: true,
+                chave: '',
+                beneficiario: ''
+            },
+            lojas: [
+                {
+                    nomeLoja: 'Loja 1 (Principal)',
+                    nome: 'PARANÁ PEÇAS - COMÉRCIO DE PEÇAS AUTOMOTIVAS',
+                    endereco: 'AVENIDA GOVERNADOR PAULO CRUZ PIMENTEL, 746, CENTRO, IBAITI - PR',
+                    telefones: '(43) 99971-0504 (NETO) / (43) 99136-6802 (JOSIAS) / (43) 99168-6899 (THIAGO)',
+                    cnpj: '46.511.552/0001-65'
+                },
+                {
+                    nomeLoja: 'Loja 2',
+                    nome: '',
+                    endereco: '',
+                    telefones: '',
+                    cnpj: ''
+                }
+            ]
+        };
+
+        let configEmpresas = carregarConfig();
+        let itensOrcamento = [];
+        let editandoIndex = -1;
+
+        function salvarOrcamentoAtual() {
+            const dados = {
+                cliente: document.getElementById('nome-cliente').value || '',
+                data: document.getElementById('data-orcamento').value || '',
+                modelo: document.getElementById('modelo-carro').value || '',
+                placa: document.getElementById('placa-carro').value || '',
+                itens: itensOrcamento
+            };
+            localStorage.setItem(STORAGE_ORCAMENTO, JSON.stringify(dados));
+        }
+
+        function carregarOrcamentoSalvo() {
+            try {
+                const salva = localStorage.getItem(STORAGE_ORCAMENTO);
+                if (!salva) return false;
+                const dados = JSON.parse(salva);
+                document.getElementById('nome-cliente').value = dados.cliente || '';
+                document.getElementById('data-orcamento').value = dados.data || new Date().toLocaleDateString('pt-BR');
+                document.getElementById('modelo-carro').value = dados.modelo || '';
+                document.getElementById('placa-carro').value = dados.placa || '';
+                itensOrcamento = Array.isArray(dados.itens) ? dados.itens : [];
+                editandoIndex = -1;
+                atualizarTela();
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function limparOrcamento() {
+            const temDados = itensOrcamento.length > 0
+                || document.getElementById('nome-cliente').value
+                || document.getElementById('modelo-carro').value
+                || document.getElementById('placa-carro').value;
+
+            if (temDados && !confirm('Deseja limpar todo o orçamento? Essa ação não pode ser desfeita.')) {
+                return;
+            }
+
+            itensOrcamento = [];
+            editandoIndex = -1;
+            document.getElementById('nome-cliente').value = '';
+            document.getElementById('modelo-carro').value = '';
+            document.getElementById('placa-carro').value = '';
+            document.getElementById('data-orcamento').value = new Date().toLocaleDateString('pt-BR');
+            document.getElementById('desc-item').value = '';
+            document.getElementById('qtd-item').value = '1';
+            document.getElementById('valor-item').value = '';
+            localStorage.removeItem(STORAGE_ORCAMENTO);
+            atualizarTela();
+        }
+
+        function carregarConfig() {
+            try {
+                const salva = localStorage.getItem(STORAGE_KEY);
+                if (!salva) return JSON.parse(JSON.stringify(padraoEmpresas));
+                const dados = JSON.parse(salva);
+                if (!dados.lojas || dados.lojas.length < 2) {
+                    return JSON.parse(JSON.stringify(padraoEmpresas));
+                }
+                if (!dados.pix) {
+                    dados.pix = JSON.parse(JSON.stringify(padraoEmpresas.pix));
+                }
+                return dados;
+            } catch (e) {
+                return JSON.parse(JSON.stringify(padraoEmpresas));
+            }
+        }
+
+        function persistirConfig() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(configEmpresas));
+        }
+
+        function lojaAtual() {
+            return configEmpresas.lojas[configEmpresas.lojaAtiva] || configEmpresas.lojas[0];
+        }
+
+        function montarSelectLojas() {
+            const select = document.getElementById('select-loja');
+            select.innerHTML = '';
+            configEmpresas.lojas.forEach((loja, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = loja.nomeLoja || `Loja ${index + 1}`;
+                select.appendChild(option);
+            });
+            select.value = String(configEmpresas.lojaAtiva);
+        }
+
+        function preencherFormularioLoja() {
+            const loja = lojaAtual();
+            document.getElementById('cfg-nome').value = loja.nome || '';
+            document.getElementById('cfg-endereco').value = loja.endereco || '';
+            document.getElementById('cfg-telefones').value = loja.telefones || '';
+            document.getElementById('cfg-cnpj').value = loja.cnpj || '';
+            document.getElementById('usar-nas-impressoes').checked = !!configEmpresas.usarNasImpressoes;
+            preencherFormularioPix();
+        }
+
+        function preencherFormularioPix() {
+            const pix = configEmpresas.pix || padraoEmpresas.pix;
+            document.getElementById('cfg-mostrar-pix').checked = pix.mostrar !== false;
+            document.getElementById('cfg-pix-chave').value = pix.chave || '';
+            document.getElementById('cfg-pix-beneficiario').value = pix.beneficiario || '';
+        }
+
+        function atualizarCabecalhoDocumento() {
+            const loja = lojaAtual();
+            document.getElementById('doc-nome').textContent = loja.nome || '';
+            document.getElementById('doc-endereco').textContent = loja.endereco || '';
+            document.getElementById('doc-telefones').textContent = loja.telefones
+                ? `Tel: ${loja.telefones}`
+                : '';
+            document.getElementById('doc-cnpj').textContent = loja.cnpj
+                ? `CNPJ: ${loja.cnpj}`
+                : '';
+            atualizarPixDocumento();
+        }
+
+        function atualizarPixDocumento() {
+            const pix = configEmpresas.pix || {};
+            const bloco = document.getElementById('pix-orcamento');
+            const chave = (pix.chave || '').trim();
+            const beneficiario = (pix.beneficiario || '').trim();
+            const mostrar = pix.mostrar !== false && !!chave;
+
+            document.getElementById('doc-pix-chave').textContent = chave;
+            document.getElementById('doc-pix-beneficiario').textContent = beneficiario;
+
+            if (mostrar) {
+                bloco.classList.remove('oculto');
+            } else {
+                bloco.classList.add('oculto');
+            }
+        }
+
+        function salvarConfigPix() {
+            if (!configEmpresas.pix) {
+                configEmpresas.pix = JSON.parse(JSON.stringify(padraoEmpresas.pix));
+            }
+            configEmpresas.pix.mostrar = document.getElementById('cfg-mostrar-pix').checked;
+            configEmpresas.pix.chave = document.getElementById('cfg-pix-chave').value.trim();
+            configEmpresas.pix.beneficiario = document.getElementById('cfg-pix-beneficiario').value.trim();
+            persistirConfig();
+            atualizarPixDocumento();
+            sincronizarLojaNoFirebase();
+            mostrarStatus('Dados do PIX salvos com sucesso!');
+        }
+
+        function trocarLoja() {
+            const index = parseInt(document.getElementById('select-loja').value, 10);
+            configEmpresas.lojaAtiva = index;
+            persistirConfig();
+            preencherFormularioLoja();
+            atualizarCabecalhoDocumento();
+            mostrarStatus(`Loja alterada: ${lojaAtual().nomeLoja}`);
+        }
+
+        function salvarLojaAtual() {
+            const loja = lojaAtual();
+            loja.nome = document.getElementById('cfg-nome').value.trim();
+            loja.endereco = document.getElementById('cfg-endereco').value.trim();
+            loja.telefones = document.getElementById('cfg-telefones').value.trim();
+            loja.cnpj = document.getElementById('cfg-cnpj').value.trim();
+            configEmpresas.usarNasImpressoes = document.getElementById('usar-nas-impressoes').checked;
+            persistirConfig();
+            atualizarCabecalhoDocumento();
+            sincronizarLojaNoFirebase();
+            mostrarStatus('Dados da loja salvos com sucesso!');
+        }
+
+        function salvarConfigGeral() {
+            configEmpresas.usarNasImpressoes = document.getElementById('usar-nas-impressoes').checked;
+            persistirConfig();
+            mostrarStatus('Preferência de impressão salva.');
+        }
+
+        function mostrarStatus(texto) {
+            const el = document.getElementById('status-salvo');
+            el.textContent = texto;
+            clearTimeout(mostrarStatus._timer);
+            mostrarStatus._timer = setTimeout(() => {
+                el.textContent = '';
+            }, 2500);
+        }
+
+        // Inicialização
+        montarSelectLojas();
+        preencherFormularioLoja();
+        atualizarCabecalhoDocumento();
+        iniciarAuthOrcamento();
+
+        if (!carregarOrcamentoSalvo()) {
+            document.getElementById('data-orcamento').value = new Date().toLocaleDateString('pt-BR');
+        }
+
+        ['nome-cliente', 'data-orcamento', 'modelo-carro', 'placa-carro'].forEach((id) => {
+            document.getElementById(id).addEventListener('input', salvarOrcamentoAtual);
+        });
+
+        ['desc-item', 'qtd-item', 'valor-item'].forEach((id) => {
+            document.getElementById(id).addEventListener('keydown', (evento) => {
+                if (evento.key === 'Enter') {
+                    evento.preventDefault();
+                    adicionarItem();
+                }
+            });
+        });
+
+        function adicionarItem() {
+            const descricao = document.getElementById('desc-item').value;
+            const qtd = parseInt(document.getElementById('qtd-item').value);
+            const valorUnitario = parseFloat(document.getElementById('valor-item').value);
+
+            if (!descricao || isNaN(qtd) || isNaN(valorUnitario)) {
+                alert("Preencha todos os campos do item corretamente.");
+                return;
+            }
+
+            const novoItem = {
+                descricao: descricao,
+                qtd: qtd,
+                valorUnitario: valorUnitario,
+                total: qtd * valorUnitario
+            };
+
+            if (editandoIndex > -1) {
+                itensOrcamento[editandoIndex] = novoItem;
+                editandoIndex = -1;
+            } else {
+                itensOrcamento.push(novoItem);
+            }
+
+            document.getElementById('desc-item').value = '';
+            document.getElementById('qtd-item').value = '1';
+            document.getElementById('valor-item').value = '';
+            document.getElementById('desc-item').focus();
+
+            atualizarTela();
+            salvarOrcamentoAtual();
+        }
+
+        function editarItem(index) {
+            const item = itensOrcamento[index];
+            document.getElementById('desc-item').value = item.descricao;
+            document.getElementById('qtd-item').value = item.qtd;
+            document.getElementById('valor-item').value = item.valorUnitario;
+            editandoIndex = index;
+        }
+
+        function removerItem(index) {
+            itensOrcamento.splice(index, 1);
+            editandoIndex = -1;
+            atualizarTela();
+            salvarOrcamentoAtual();
+        }
+
+        function atualizarTela() {
+            const tbody = document.getElementById('tabela-itens');
+            tbody.innerHTML = '';
+            
+            let valorTotalGeral = 0;
+
+            itensOrcamento.forEach((item, index) => {
+                valorTotalGeral += item.total;
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${item.descricao}</td>
+                        <td>${item.qtd}</td>
+                        <td>R$ ${item.valorUnitario.toFixed(2)}</td>
+                        <td>R$ ${item.total.toFixed(2)}</td>
+                        <td class="nao-imprimir">
+                            <button class="btn-editar" onclick="editarItem(${index})">Editar</button>
+                            <button class="btn-remover" onclick="removerItem(${index})">X</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('valor-total').innerText = valorTotalGeral.toFixed(2);
+            salvarOrcamentoAtual();
+        }
+
+        function nomeArquivoSeguro(base) {
+            return String(base || 'Cliente')
+                .replace(/[\\/:*?"<>|]/g, '_')
+                .trim() || 'Cliente';
+        }
+
+        function restaurarVisualExportacao() {
+            document.querySelectorAll('#documento-orcamento input').forEach(i => {
+                i.style.removeProperty('border');
+            });
+            document.querySelectorAll('.nao-imprimir').forEach(el => {
+                el.style.removeProperty('display');
+            });
+            const logo = document.getElementById('logo-empresa');
+            if (logo) logo.style.removeProperty('visibility');
+        }
+
+        function prepararVisualExportacao() {
+            document.querySelectorAll('#documento-orcamento input').forEach(i => {
+                i.style.border = 'none';
+            });
+            document.querySelectorAll('.nao-imprimir').forEach(el => {
+                el.style.display = 'none';
+            });
+        }
+
+        async function baixarArquivo(blob, nomeArquivo, mimeType, extensao) {
+            if (window.showSaveFilePicker) {
+                try {
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: nomeArquivo,
+                        types: [{
+                            description: extensao.toUpperCase(),
+                            accept: { [mimeType]: ['.' + extensao] }
+                        }]
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+                    return true;
+                } catch (erro) {
+                    if (erro && erro.name === 'AbortError') return false;
+                    // Se o diálogo falhar, segue no fallback abaixo
+                }
+            }
+
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = nomeArquivo;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 2000);
+            return true;
+        }
+
+        async function capturarDocumentoCanvas() {
+            const elemento = document.getElementById('documento-orcamento');
+            const logo = document.getElementById('logo-empresa');
+
+            try {
+                return await html2canvas(elemento, {
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: false,
+                    backgroundColor: '#ffffff',
+                    logging: false
+                });
+            } catch (erro1) {
+                // Em arquivo local a logo pode bloquear a captura; tenta de novo sem ela
+                if (logo) logo.style.visibility = 'hidden';
+                try {
+                    return await html2canvas(elemento, {
+                        scale: 2,
+                        backgroundColor: '#ffffff',
+                        logging: false
+                    });
+                } finally {
+                    if (logo) logo.style.removeProperty('visibility');
+                }
+            }
+        }
+
+        async function gerarPDF() {
+            if (typeof html2pdf === 'undefined' && typeof html2canvas === 'undefined') {
+                alert('Não foi possível carregar a biblioteca de PDF. Verifique a internet e tente novamente.');
+                return;
+            }
+
+            atualizarCabecalhoDocumento();
+            const elemento = document.getElementById('documento-orcamento');
+            const cliente = nomeArquivoSeguro(document.getElementById('nome-cliente').value);
+            const nomeArquivo = `Orcamento_${cliente}.pdf`;
+
+            prepararVisualExportacao();
+
+            try {
+                let blob = null;
+
+                if (typeof html2pdf !== 'undefined') {
+                    const opcoes = {
+                        margin: 10,
+                        filename: nomeArquivo,
+                        image: { type: 'jpeg', quality: 0.98 },
+                        html2canvas: {
+                            scale: 2,
+                            useCORS: true,
+                            allowTaint: false,
+                            backgroundColor: '#ffffff',
+                            logging: false
+                        },
+                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                    };
+                    blob = await html2pdf().set(opcoes).from(elemento).outputPdf('blob');
+                } else {
+                    // Fallback: gera PDF a partir do canvas
+                    const canvas = await capturarDocumentoCanvas();
+                    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                    const { jsPDF } = window.jspdf || {};
+                    if (!jsPDF) throw new Error('Biblioteca PDF indisponível.');
+                    const pdf = new jsPDF('p', 'mm', 'a4');
+                    const pageWidth = pdf.internal.pageSize.getWidth();
+                    const pageHeight = pdf.internal.pageSize.getHeight();
+                    const margin = 10;
+                    const imgWidth = pageWidth - margin * 2;
+                    const imgHeight = canvas.height * imgWidth / canvas.width;
+                    let heightLeft = imgHeight;
+                    let position = margin;
+                    pdf.addImage(imgData, 'JPEG', margin, position, imgWidth, imgHeight);
+                    heightLeft -= (pageHeight - margin * 2);
+                    while (heightLeft > 0) {
+                        position = margin - (imgHeight - heightLeft);
+                        pdf.addPage();
+                        pdf.addImage(imgData, 'JPEG', margin, position, imgWidth, imgHeight);
+                        heightLeft -= (pageHeight - margin * 2);
+                    }
+                    blob = pdf.output('blob');
+                }
+
+                await baixarArquivo(blob, nomeArquivo, 'application/pdf', 'pdf');
+            } catch (erro) {
+                console.error(erro);
+                alert('Erro ao gerar o PDF. Tente novamente.\n\nDetalhe: ' + (erro && erro.message ? erro.message : erro));
+            } finally {
+                restaurarVisualExportacao();
+            }
+        }
+
+        async function gerarJPEG() {
+            if (typeof html2canvas === 'undefined') {
+                alert('Não foi possível carregar a biblioteca de imagem. Verifique a internet e tente novamente.');
+                return;
+            }
+
+            atualizarCabecalhoDocumento();
+            const cliente = nomeArquivoSeguro(document.getElementById('nome-cliente').value);
+            const nomeArquivo = `Orcamento_${cliente}.jpeg`;
+
+            prepararVisualExportacao();
+
+            try {
+                const canvas = await capturarDocumentoCanvas();
+                const blob = await new Promise((resolve, reject) => {
+                    canvas.toBlob((resultado) => {
+                        if (resultado) resolve(resultado);
+                        else reject(new Error('Não foi possível criar a imagem.'));
+                    }, 'image/jpeg', 0.92);
+                });
+                await baixarArquivo(blob, nomeArquivo, 'image/jpeg', 'jpeg');
+            } catch (erro) {
+                console.error(erro);
+                alert('Erro ao gerar o JPEG. Tente novamente.\n\nDetalhe: ' + (erro && erro.message ? erro.message : erro));
+            } finally {
+                restaurarVisualExportacao();
+            }
+        }
+    </script>
+</body>
+</html>

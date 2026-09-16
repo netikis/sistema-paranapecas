@@ -38,7 +38,7 @@
   .container { width: 98%; padding: 10px; margin: 0 auto; box-sizing: border-box; }
   
   body.role-func .admin-only { display: none !important; }
-  body.mode-client .admin-only, body.mode-client .header button, body.mode-client .card:not(#areaClienteRemoto) { display: none !important; }
+  body.mode-client .admin-only, body.mode-client .header button, body.mode-client #btnOrcamento, body.mode-client .card:not(#areaClienteRemoto) { display: none !important; }
   body.mode-client #areaClienteRemoto { display: block !important; }
   body.mode-client #loginOverlay { display: none !important; } 
   
