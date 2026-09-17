@@ -108,7 +108,8 @@
 
     let conteudo = `
     <style>
-    .print-area-container { background: #fff !important; color: #000 !important; width: 100%; height: 100%; }
+    .print-area-container { background: #fff !important; color: #000 !important; width: auto; height: auto; display: inline-block; max-width: 100%; }
+    .print-documento { box-sizing: border-box; background: #fff; }
     .main-table { width: 100%; border-collapse: collapse; margin-top: 10px; } 
     .main-table th { background-color: #ccc !important; color: #000 !important; font-weight: 900; border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 4px; font-size: 11px; -webkit-print-color-adjust: exact; print-color-adjust: exact; } 
     .main-table td { border-bottom: 1px dashed #000; padding: 6px 4px; font-weight: bold; font-size: 11px; color: #000 !important; } 
@@ -121,7 +122,7 @@
     .label { font-weight: normal; font-size: 11px; text-align: right; }
     </style>
     <div class="print-area-container">
-        <div style="width:100%; max-width:${tipo==='cupom'?'72mm':'180mm'}; margin:0 auto; font-family:Arial,sans-serif; text-align:center; color:#000;">
+        <div class="print-documento" style="width:${tipo==='cupom'?'80mm':'180mm'}; margin:0 auto; padding:12px 10px; font-family:Arial,sans-serif; text-align:center; color:#000;">
             ${headerLayout}
             <div class="title-lg" style="margin-top:10px;">${titulo}</div>
             <div class="text-left" style="margin-top:10px; border-bottom:1px solid #000; padding-bottom:5px;">
@@ -161,7 +162,9 @@
   }
 
   function _obterAreaImpressao() {
-      return document.querySelector('#printContent .print-area-container') || document.getElementById('printContent');
+      return document.querySelector('#printContent .print-documento')
+          || document.querySelector('#printContent .print-area-container')
+          || document.getElementById('printContent');
   }
 
   function _nomeArquivoImpressao(ext) {
@@ -178,13 +181,14 @@
       Swal.fire({ title: 'Gerando JPEG...', text: 'Aguarde, gerando em alta qualidade...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
       setTimeout(() => {
           html2canvas(area, opcoesHtml2CanvasAltaQualidade(area)).then(canvas => {
-              canvasParaJpegBlob(canvas, blob => {
+              const cupom = recortarFundoBrancoCanvas(canvas, 28);
+              canvasParaJpegBlob(cupom, blob => {
                   const link = document.createElement('a');
                   link.download = _nomeArquivoImpressao('jpg');
                   link.href = URL.createObjectURL(blob);
                   link.click();
                   setTimeout(() => URL.revokeObjectURL(link.href), 2000);
-                  Swal.fire('Pronto!', 'JPEG salvo em alta qualidade.', 'success');
+                  Swal.fire('Pronto!', 'JPEG salvo só com o cupom.', 'success');
               });
           }).catch(err => {
               Swal.fire('Erro', 'Não foi possível gerar o JPEG: ' + err.message, 'error');

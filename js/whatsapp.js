@@ -95,6 +95,7 @@
 
       setTimeout(() => { 
           html2canvas(area, opcoesHtml2CanvasAltaQualidade(area)).then(canvas => {
+              canvas = recortarFundoBrancoCanvas(canvas, 28);
               canvasParaJpegBlob(canvas, blob => {
                   const file = new File([blob], `comprovante_${c.nome.replace(/\s+/g, '_')}.jpg`, { type: "image/jpeg" });
                   if (navigator.share && navigator.canShare({ files: [file] })) {

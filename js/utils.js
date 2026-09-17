@@ -43,8 +43,9 @@ var EXPORT_JPEG_QUALITY = 0.98;
 var EXPORT_CANVAS_SCALE = 3;
 
 function opcoesHtml2CanvasAltaQualidade(el) {
-  var w = el.scrollWidth || el.offsetWidth;
-  var h = el.scrollHeight || el.offsetHeight;
+  var rect = el.getBoundingClientRect();
+  var w = Math.ceil(Math.max(el.scrollWidth || 0, rect.width || 0, el.offsetWidth || 0));
+  var h = Math.ceil(Math.max(el.scrollHeight || 0, rect.height || 0, el.offsetHeight || 0));
   return {
     scale: EXPORT_CANVAS_SCALE,
     useCORS: true,
@@ -53,7 +54,9 @@ function opcoesHtml2CanvasAltaQualidade(el) {
     width: w,
     height: h,
     windowWidth: w,
-    windowHeight: h
+    windowHeight: h,
+    scrollX: 0,
+    scrollY: 0
   };
 }
 
@@ -63,5 +66,47 @@ function canvasParaJpegDataUrl(canvas) {
 
 function canvasParaJpegBlob(canvas, callback) {
   canvas.toBlob(callback, 'image/jpeg', EXPORT_JPEG_QUALITY);
+}
+
+function recortarFundoBrancoCanvas(canvas, padding) {
+  padding = padding == null ? 24 : padding;
+  var ctx = canvas.getContext('2d');
+  var w = canvas.width;
+  var h = canvas.height;
+  if (!w || !h) return canvas;
+  var data = ctx.getImageData(0, 0, w, h).data;
+  var top = h;
+  var left = w;
+  var right = 0;
+  var bottom = 0;
+  var limite = 248;
+  for (var y = 0; y < h; y++) {
+    for (var x = 0; x < w; x++) {
+      var i = (y * w + x) * 4;
+      var r = data[i];
+      var g = data[i + 1];
+      var b = data[i + 2];
+      var a = data[i + 3];
+      if (a > 10 && (r < limite || g < limite || b < limite)) {
+        if (x < left) left = x;
+        if (x > right) right = x;
+        if (y < top) top = y;
+        if (y > bottom) bottom = y;
+      }
+    }
+  }
+  if (right < left || bottom < top) return canvas;
+  left = Math.max(0, left - padding);
+  top = Math.max(0, top - padding);
+  right = Math.min(w - 1, right + padding);
+  bottom = Math.min(h - 1, bottom + padding);
+  var cw = right - left + 1;
+  var ch = bottom - top + 1;
+  if (cw >= w - 4 && ch >= h - 4) return canvas;
+  var recorte = document.createElement('canvas');
+  recorte.width = cw;
+  recorte.height = ch;
+  recorte.getContext('2d').drawImage(canvas, left, top, cw, ch, 0, 0, cw, ch);
+  return recorte;
 }
 
