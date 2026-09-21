@@ -298,6 +298,192 @@
         .btn-limpar { background-color: #dc3545; }
         .btn-limpar:hover { background-color: #c82333; }
 
+        .form-imagens {
+            background-color: #eef2f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+
+        .form-imagens strong {
+            display: block;
+            font-size: 14px;
+            color: #111;
+        }
+
+        .form-imagens p {
+            margin: 6px 0 12px;
+            font-size: 13px;
+            color: #444;
+            line-height: 1.4;
+        }
+
+        .acoes-imagens {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .status-imagens {
+            font-size: 12px;
+            color: #1d4ed8;
+            min-height: 16px;
+            margin-top: 8px;
+        }
+
+        .titulo-imagens {
+            font-size: 14px;
+            margin: 18px 0 10px;
+            color: #111;
+            text-transform: uppercase;
+            border-bottom: 2px solid #0033cc;
+            padding-bottom: 4px;
+        }
+
+        .titulo-imagens.oculto,
+        .galeria-imagens:empty {
+            display: none;
+        }
+
+        .galeria-imagens {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .galeria-imagens.uma-imagem {
+            grid-template-columns: 1fr;
+        }
+
+        .card-imagem {
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            overflow: hidden;
+            background: #fff;
+            break-inside: avoid;
+        }
+
+        .card-imagem img {
+            width: 100%;
+            max-height: 360px;
+            object-fit: contain;
+            display: block;
+            background: #fff;
+        }
+
+        .card-imagem .legenda-imagem {
+            font-size: 11px;
+            color: #555;
+            padding: 6px 8px 0;
+        }
+
+        .card-imagem .acoes-card {
+            padding: 8px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .modal-recorte {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.72);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .modal-recorte.aberto {
+            display: flex;
+        }
+
+        .modal-recorte-caixa {
+            background: #fff;
+            border-radius: 8px;
+            max-width: 900px;
+            width: 100%;
+            padding: 18px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+        }
+
+        .modal-recorte-caixa h3 {
+            margin: 0 0 6px;
+            font-size: 18px;
+        }
+
+        .modal-recorte-ajuda {
+            margin: 0 0 12px;
+            font-size: 13px;
+            color: #555;
+        }
+
+        .crop-viewport {
+            background: #111;
+            border-radius: 6px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 240px;
+        }
+
+        .crop-stage {
+            position: relative;
+            line-height: 0;
+            user-select: none;
+            touch-action: none;
+        }
+
+        .crop-stage img {
+            display: block;
+            max-width: min(760px, 86vw);
+            max-height: 62vh;
+            pointer-events: none;
+        }
+
+        .crop-box {
+            position: absolute;
+            border: 2px solid #22c55e;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+            cursor: move;
+            box-sizing: border-box;
+        }
+
+        .crop-handle {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #22c55e;
+            border: 2px solid #fff;
+            border-radius: 1px;
+            z-index: 2;
+        }
+
+        .crop-handle[data-handle="nw"] { top: -6px; left: -6px; cursor: nwse-resize; }
+        .crop-handle[data-handle="n"] { top: -6px; left: 50%; margin-left: -6px; cursor: ns-resize; }
+        .crop-handle[data-handle="ne"] { top: -6px; right: -6px; cursor: nesw-resize; }
+        .crop-handle[data-handle="e"] { top: 50%; right: -6px; margin-top: -6px; cursor: ew-resize; }
+        .crop-handle[data-handle="se"] { bottom: -6px; right: -6px; cursor: nwse-resize; }
+        .crop-handle[data-handle="s"] { bottom: -6px; left: 50%; margin-left: -6px; cursor: ns-resize; }
+        .crop-handle[data-handle="sw"] { bottom: -6px; left: -6px; cursor: nesw-resize; }
+        .crop-handle[data-handle="w"] { top: 50%; left: -6px; margin-top: -6px; cursor: ew-resize; }
+
+        .acoes-recorte {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 14px;
+            justify-content: flex-end;
+        }
+
+        .acoes-recorte button {
+            font-size: 13px;
+        }
+
         .barra-sistema {
             max-width: 800px;
             margin: 0 auto 16px;
@@ -333,6 +519,8 @@
             #documento-orcamento { box-shadow: none; padding: 0; }
             .nao-imprimir { display: none !important; }
             input { border: none; background: transparent; padding: 0; margin: 0; }
+            .galeria-imagens { grid-template-columns: 1fr 1fr; }
+            .card-imagem img { max-height: none; }
         }
     </style>
 </head>
@@ -397,6 +585,17 @@
             <button onclick="adicionarItem()">Adicionar</button>
         </div>
 
+        <div class="form-imagens nao-imprimir">
+            <strong>Imagens do orçamento</strong>
+            <p>Tire um print (<b>Print Screen</b> ou <b>Win + Shift + S</b>), volte nesta tela e pressione <b>Ctrl + V</b> para colar. Depois recorte e salve no orçamento ou em arquivo.</p>
+            <div class="acoes-imagens">
+                <button type="button" class="btn-azul" onclick="colarPrint()">Colar print (Ctrl+V)</button>
+                <button type="button" onclick="document.getElementById('arquivo-imagem').click()">Escolher arquivo</button>
+                <input type="file" id="arquivo-imagem" accept="image/*" hidden>
+            </div>
+            <div class="status-imagens" id="status-imagens"></div>
+        </div>
+
         <table>
             <thead>
                 <tr>
@@ -419,6 +618,9 @@
             <div class="pix-chave">CHAVE PIX: <span id="doc-pix-chave"></span></div>
             <div class="pix-beneficiario" id="doc-pix-beneficiario"></div>
         </div>
+
+            <h3 class="titulo-imagens oculto" id="titulo-imagens">Fotos</h3>
+            <div class="galeria-imagens" id="galeria-imagens"></div>
     </div>
 
     <div class="acoes-finais nao-imprimir">
@@ -473,6 +675,34 @@
             <button class="btn-salvar-loja" type="button" onclick="salvarConfigPix()">Salvar PIX</button>
         </div>
         <div class="status-salvo" id="status-salvo"></div>
+    </div>
+
+    <div id="modal-recorte" class="modal-recorte nao-imprimir" aria-hidden="true">
+        <div class="modal-recorte-caixa" role="dialog" aria-labelledby="titulo-recorte">
+            <h3 id="titulo-recorte">Recortar imagem</h3>
+            <p class="modal-recorte-ajuda">Arraste a área verde para mover. Use as alças para recortar. Em seguida salve no orçamento ou baixe o arquivo.</p>
+            <div class="crop-viewport" id="crop-viewport">
+                <div class="crop-stage" id="crop-stage">
+                    <img id="crop-img" alt="Imagem para recorte">
+                    <div class="crop-box" id="crop-box">
+                        <span class="crop-handle" data-handle="nw"></span>
+                        <span class="crop-handle" data-handle="n"></span>
+                        <span class="crop-handle" data-handle="ne"></span>
+                        <span class="crop-handle" data-handle="e"></span>
+                        <span class="crop-handle" data-handle="se"></span>
+                        <span class="crop-handle" data-handle="s"></span>
+                        <span class="crop-handle" data-handle="sw"></span>
+                        <span class="crop-handle" data-handle="w"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="acoes-recorte">
+                <button type="button" onclick="aplicarImagemNoOrcamento()">Salvar no orçamento</button>
+                <button type="button" class="btn-azul" onclick="baixarImagemRecortada()">Salvar arquivo</button>
+                <button type="button" class="btn-roxo" onclick="usarImagemInteira()">Usar imagem inteira</button>
+                <button type="button" class="btn-limpar" onclick="fecharRecorte()">Cancelar</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -600,7 +830,12 @@
 
         let configEmpresas = carregarConfig();
         let itensOrcamento = [];
+        let imagensOrcamento = [];
         let editandoIndex = -1;
+        let recortandoIndex = -1;
+        let cropBox = { x: 0, y: 0, w: 0, h: 0 };
+        let cropDrag = null;
+        let cropUrlTemporaria = '';
 
         function salvarOrcamentoAtual() {
             const dados = {
@@ -608,9 +843,14 @@
                 data: document.getElementById('data-orcamento').value || '',
                 modelo: document.getElementById('modelo-carro').value || '',
                 placa: document.getElementById('placa-carro').value || '',
-                itens: itensOrcamento
+                itens: itensOrcamento,
+                imagens: imagensOrcamento
             };
-            localStorage.setItem(STORAGE_ORCAMENTO, JSON.stringify(dados));
+            try {
+                localStorage.setItem(STORAGE_ORCAMENTO, JSON.stringify(dados));
+            } catch (e) {
+                mostrarStatusImagens('Não foi possível guardar as imagens no rascunho (espaço do navegador cheio). Elas continuam neste orçamento até fechar a página.');
+            }
         }
 
         function carregarOrcamentoSalvo() {
@@ -623,6 +863,7 @@
                 document.getElementById('modelo-carro').value = dados.modelo || '';
                 document.getElementById('placa-carro').value = dados.placa || '';
                 itensOrcamento = Array.isArray(dados.itens) ? dados.itens : [];
+                imagensOrcamento = Array.isArray(dados.imagens) ? dados.imagens : [];
                 editandoIndex = -1;
                 atualizarTela();
                 return true;
@@ -633,6 +874,7 @@
 
         function limparOrcamento() {
             const temDados = itensOrcamento.length > 0
+                || imagensOrcamento.length > 0
                 || document.getElementById('nome-cliente').value
                 || document.getElementById('modelo-carro').value
                 || document.getElementById('placa-carro').value;
@@ -642,6 +884,7 @@
             }
 
             itensOrcamento = [];
+            imagensOrcamento = [];
             editandoIndex = -1;
             document.getElementById('nome-cliente').value = '';
             document.getElementById('modelo-carro').value = '';
@@ -811,7 +1054,409 @@
             });
         });
 
-        function adicionarItem() {
+        iniciarFerramentaImagens();
+
+                function iniciarFerramentaImagens() {
+            const arquivo = document.getElementById('arquivo-imagem');
+            const stage = document.getElementById('crop-stage');
+            const modal = document.getElementById('modal-recorte');
+
+            arquivo.addEventListener('change', (evento) => {
+                const file = evento.target.files && evento.target.files[0];
+                evento.target.value = '';
+                if (file) abrirRecorteDeArquivo(file);
+            });
+
+            document.addEventListener('paste', (evento) => {
+                const imagem = extrairImagemClipboard(evento.clipboardData);
+                if (!imagem) return;
+                evento.preventDefault();
+                abrirRecorteDeArquivo(imagem);
+                mostrarStatusImagens('Print colado. Recorte se quiser e clique em Salvar no orçamento.');
+            });
+
+            document.addEventListener('keydown', (evento) => {
+                if (evento.key === 'Escape' && modal.classList.contains('aberto')) {
+                    fecharRecorte();
+                }
+            });
+
+            stage.addEventListener('pointerdown', iniciarArrasteCrop);
+            window.addEventListener('pointermove', moverArrasteCrop);
+            window.addEventListener('pointerup', finalizarArrasteCrop);
+            window.addEventListener('pointercancel', finalizarArrasteCrop);
+            window.addEventListener('resize', () => {
+                if (modal.classList.contains('aberto')) {
+                    ajustarCropAoTamanhoDaImagem(true);
+                }
+            });
+
+            atualizarGaleriaImagens();
+        }
+
+        function mostrarStatusImagens(texto) {
+            const el = document.getElementById('status-imagens');
+            if (!el) return;
+            el.textContent = texto || '';
+            clearTimeout(mostrarStatusImagens._timer);
+            if (texto) {
+                mostrarStatusImagens._timer = setTimeout(() => {
+                    el.textContent = '';
+                }, 4000);
+            }
+        }
+
+        function extrairImagemClipboard(clipboardData) {
+            if (!clipboardData) return null;
+            const itens = clipboardData.items || [];
+            for (let i = 0; i < itens.length; i++) {
+                if (itens[i].type && itens[i].type.indexOf('image') === 0) {
+                    return itens[i].getAsFile();
+                }
+            }
+            const arquivos = clipboardData.files || [];
+            for (let i = 0; i < arquivos.length; i++) {
+                if (arquivos[i].type && arquivos[i].type.indexOf('image') === 0) {
+                    return arquivos[i];
+                }
+            }
+            return null;
+        }
+
+        async function colarPrint() {
+            if (navigator.clipboard && navigator.clipboard.read) {
+                try {
+                    const itens = await navigator.clipboard.read();
+                    for (const item of itens) {
+                        const tipo = item.types.find((t) => t.indexOf('image') === 0);
+                        if (tipo) {
+                            const blob = await item.getType(tipo);
+                            abrirRecorteDeArquivo(blob);
+                            mostrarStatusImagens('Print colado. Recorte se quiser e clique em Salvar no orçamento.');
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    // Segue para a orientação de Ctrl+V
+                }
+            }
+            alert('Não foi possível ler a área de transferência automaticamente.\n\n1) Pressione Print Screen (ou Win + Shift + S)\n2) Clique nesta tela\n3) Pressione Ctrl + V para colar o print.');
+        }
+
+        function abrirRecorteDeArquivo(arquivo, indice) {
+            recortandoIndex = typeof indice === 'number' ? indice : -1;
+            limparUrlTemporaria();
+            cropUrlTemporaria = URL.createObjectURL(arquivo);
+            carregarImagemRecorte(cropUrlTemporaria, true);
+        }
+
+        function recortarImagemExistente(index) {
+            const imagem = imagensOrcamento[index];
+            if (!imagem || !imagem.src) return;
+            recortandoIndex = index;
+            limparUrlTemporaria();
+            carregarImagemRecorte(imagem.src, false);
+        }
+
+        function carregarImagemRecorte(src, revogarUrl) {
+            const img = document.getElementById('crop-img');
+            const modal = document.getElementById('modal-recorte');
+            img.onload = () => {
+                if (revogarUrl) limparUrlTemporaria();
+                modal.classList.add('aberto');
+                modal.setAttribute('aria-hidden', 'false');
+                document.body.style.overflow = 'hidden';
+                requestAnimationFrame(() => ajustarCropAoTamanhoDaImagem(false));
+            };
+            img.onerror = () => {
+                if (revogarUrl) limparUrlTemporaria();
+                alert('Não foi possível abrir a imagem. Tente colar novamente ou escolher outro arquivo.');
+            };
+            img.src = src;
+        }
+
+        function limparUrlTemporaria() {
+            if (cropUrlTemporaria) {
+                URL.revokeObjectURL(cropUrlTemporaria);
+                cropUrlTemporaria = '';
+            }
+        }
+
+        function fecharRecorte() {
+            const modal = document.getElementById('modal-recorte');
+            modal.classList.remove('aberto');
+            modal.setAttribute('aria-hidden', 'true');
+            document.body.style.removeProperty('overflow');
+            recortandoIndex = -1;
+            cropDrag = null;
+            limparUrlTemporaria();
+        }
+
+        function aplicarBoxCrop() {
+            const box = document.getElementById('crop-box');
+            box.style.left = cropBox.x + 'px';
+            box.style.top = cropBox.y + 'px';
+            box.style.width = cropBox.w + 'px';
+            box.style.height = cropBox.h + 'px';
+        }
+
+        function tamanhoImagemCrop() {
+            const img = document.getElementById('crop-img');
+            return {
+                w: img.clientWidth || 0,
+                h: img.clientHeight || 0
+            };
+        }
+
+        function limitarCropBox(box) {
+            const tam = tamanhoImagemCrop();
+            const min = 24;
+            const limitado = {
+                x: box.x,
+                y: box.y,
+                w: box.w,
+                h: box.h
+            };
+
+            if (limitado.w < min) {
+                if (cropDrag && String(cropDrag.handle).indexOf('w') !== -1) {
+                    limitado.x = cropDrag.startBox.x + cropDrag.startBox.w - min;
+                }
+                limitado.w = min;
+            }
+            if (limitado.h < min) {
+                if (cropDrag && String(cropDrag.handle).indexOf('n') !== -1) {
+                    limitado.y = cropDrag.startBox.y + cropDrag.startBox.h - min;
+                }
+                limitado.h = min;
+            }
+
+            if (limitado.x < 0) {
+                if (cropDrag && cropDrag.handle !== 'move') limitado.w += limitado.x;
+                limitado.x = 0;
+            }
+            if (limitado.y < 0) {
+                if (cropDrag && cropDrag.handle !== 'move') limitado.h += limitado.y;
+                limitado.y = 0;
+            }
+            if (limitado.x + limitado.w > tam.w) {
+                if (cropDrag && cropDrag.handle === 'move') {
+                    limitado.x = tam.w - limitado.w;
+                } else {
+                    limitado.w = tam.w - limitado.x;
+                }
+            }
+            if (limitado.y + limitado.h > tam.h) {
+                if (cropDrag && cropDrag.handle === 'move') {
+                    limitado.y = tam.h - limitado.h;
+                } else {
+                    limitado.h = tam.h - limitado.y;
+                }
+            }
+
+            limitado.w = Math.max(min, Math.min(limitado.w, tam.w));
+            limitado.h = Math.max(min, Math.min(limitado.h, tam.h));
+            limitado.x = Math.max(0, Math.min(limitado.x, tam.w - limitado.w));
+            limitado.y = Math.max(0, Math.min(limitado.y, tam.h - limitado.h));
+            return limitado;
+        }
+
+        function ajustarCropAoTamanhoDaImagem(manterProporcao) {
+            const tam = tamanhoImagemCrop();
+            if (!tam.w || !tam.h) return;
+            if (!manterProporcao || !cropBox.w || !cropBox.h) {
+                cropBox = { x: 0, y: 0, w: tam.w, h: tam.h };
+            } else {
+                cropBox = limitarCropBox(cropBox);
+            }
+            aplicarBoxCrop();
+        }
+
+        function usarImagemInteira() {
+            const tam = tamanhoImagemCrop();
+            cropBox = { x: 0, y: 0, w: tam.w, h: tam.h };
+            aplicarBoxCrop();
+        }
+
+        function iniciarArrasteCrop(evento) {
+            const handleEl = evento.target.closest('.crop-handle');
+            const naCaixa = evento.target.closest('.crop-box');
+            if (!handleEl && !naCaixa) return;
+            evento.preventDefault();
+            cropDrag = {
+                handle: handleEl ? handleEl.getAttribute('data-handle') : 'move',
+                startX: evento.clientX,
+                startY: evento.clientY,
+                startBox: { x: cropBox.x, y: cropBox.y, w: cropBox.w, h: cropBox.h }
+            };
+        }
+
+        function moverArrasteCrop(evento) {
+            if (!cropDrag) return;
+            const dx = evento.clientX - cropDrag.startX;
+            const dy = evento.clientY - cropDrag.startY;
+            const s = cropDrag.startBox;
+            const h = cropDrag.handle;
+            const novo = { x: s.x, y: s.y, w: s.w, h: s.h };
+
+            if (h === 'move') {
+                novo.x = s.x + dx;
+                novo.y = s.y + dy;
+            } else {
+                if (h.indexOf('e') !== -1) novo.w = s.w + dx;
+                if (h.indexOf('s') !== -1) novo.h = s.h + dy;
+                if (h.indexOf('w') !== -1) {
+                    novo.x = s.x + dx;
+                    novo.w = s.w - dx;
+                }
+                if (h.indexOf('n') !== -1) {
+                    novo.y = s.y + dy;
+                    novo.h = s.h - dy;
+                }
+            }
+
+            cropBox = limitarCropBox(novo);
+            aplicarBoxCrop();
+        }
+
+        function finalizarArrasteCrop() {
+            cropDrag = null;
+        }
+
+        function gerarCanvasRecorte(maxLado) {
+            const img = document.getElementById('crop-img');
+            if (!img.naturalWidth) {
+                throw new Error('Imagem não carregada.');
+            }
+            const escalaX = img.naturalWidth / img.clientWidth;
+            const escalaY = img.naturalHeight / img.clientHeight;
+            let sx = Math.round(cropBox.x * escalaX);
+            let sy = Math.round(cropBox.y * escalaY);
+            let sw = Math.round(cropBox.w * escalaX);
+            let sh = Math.round(cropBox.h * escalaY);
+
+            sx = Math.max(0, Math.min(sx, img.naturalWidth - 1));
+            sy = Math.max(0, Math.min(sy, img.naturalHeight - 1));
+            sw = Math.max(1, Math.min(sw, img.naturalWidth - sx));
+            sh = Math.max(1, Math.min(sh, img.naturalHeight - sy));
+
+            let outW = sw;
+            let outH = sh;
+            if (maxLado && Math.max(sw, sh) > maxLado) {
+                const r = maxLado / Math.max(sw, sh);
+                outW = Math.max(1, Math.round(sw * r));
+                outH = Math.max(1, Math.round(sh * r));
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = outW;
+            canvas.height = outH;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, outW, outH);
+            ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
+            return canvas;
+        }
+
+        function canvasParaBlob(canvas, qualidade) {
+            return new Promise((resolve, reject) => {
+                canvas.toBlob((blob) => {
+                    if (blob) resolve(blob);
+                    else reject(new Error('Não foi possível gerar a imagem recortada.'));
+                }, 'image/jpeg', qualidade);
+            });
+        }
+
+        function blobParaDataUrl(blob) {
+            return new Promise((resolve, reject) => {
+                const leitor = new FileReader();
+                leitor.onload = () => resolve(leitor.result);
+                leitor.onerror = () => reject(new Error('Não foi possível ler a imagem recortada.'));
+                leitor.readAsDataURL(blob);
+            });
+        }
+
+        async function aplicarImagemNoOrcamento() {
+            try {
+                const canvas = gerarCanvasRecorte(1400);
+                const blob = await canvasParaBlob(canvas, 0.85);
+                const src = await blobParaDataUrl(blob);
+                if (recortandoIndex > -1 && imagensOrcamento[recortandoIndex]) {
+                    imagensOrcamento[recortandoIndex].src = src;
+                } else {
+                    imagensOrcamento.push({ src: src });
+                }
+                atualizarGaleriaImagens();
+                salvarOrcamentoAtual();
+                fecharRecorte();
+                mostrarStatusImagens('Imagem salva no orçamento.');
+            } catch (erro) {
+                alert('Não foi possível salvar a imagem no orçamento.\n\nDetalhe: ' + (erro && erro.message ? erro.message : erro));
+            }
+        }
+
+        async function baixarImagemRecortada() {
+            try {
+                const canvas = gerarCanvasRecorte(0);
+                const blob = await canvasParaBlob(canvas, 0.92);
+                const cliente = nomeArquivoSeguro(document.getElementById('nome-cliente').value);
+                const nomeArquivo = `Recorte_${cliente}.jpeg`;
+                await baixarArquivo(blob, nomeArquivo, 'image/jpeg', 'jpeg');
+            } catch (erro) {
+                alert('Não foi possível salvar o arquivo da imagem.\n\nDetalhe: ' + (erro && erro.message ? erro.message : erro));
+            }
+        }
+
+        function removerImagem(index) {
+            imagensOrcamento.splice(index, 1);
+            atualizarGaleriaImagens();
+            salvarOrcamentoAtual();
+        }
+
+        function atualizarGaleriaImagens() {
+            const galeria = document.getElementById('galeria-imagens');
+            const titulo = document.getElementById('titulo-imagens');
+            if (!galeria || !titulo) return;
+
+            galeria.innerHTML = '';
+            if (!imagensOrcamento.length) {
+                titulo.classList.add('oculto');
+                galeria.classList.remove('uma-imagem');
+                return;
+            }
+
+            titulo.classList.remove('oculto');
+            galeria.classList.toggle('uma-imagem', imagensOrcamento.length === 1);
+
+            imagensOrcamento.forEach((imagem, index) => {
+                const card = document.createElement('div');
+                card.className = 'card-imagem';
+                card.innerHTML = `
+                    <img src="${imagem.src}" alt="Foto ${index + 1} do orçamento">
+                    <div class="legenda-imagem">Foto ${index + 1}</div>
+                    <div class="acoes-card nao-imprimir">
+                        <button type="button" class="btn-editar" onclick="recortarImagemExistente(${index})">Recortar</button>
+                        <button type="button" class="btn-azul" onclick="baixarImagemGaleria(${index})">Salvar</button>
+                        <button type="button" class="btn-remover" onclick="removerImagem(${index})">Remover</button>
+                    </div>
+                `;
+                galeria.appendChild(card);
+            });
+        }
+
+        async function baixarImagemGaleria(index) {
+            const imagem = imagensOrcamento[index];
+            if (!imagem || !imagem.src) return;
+            try {
+                const blob = await (await fetch(imagem.src)).blob();
+                const cliente = nomeArquivoSeguro(document.getElementById('nome-cliente').value);
+                await baixarArquivo(blob, `Foto_${index + 1}_${cliente}.jpeg`, 'image/jpeg', 'jpeg');
+            } catch (erro) {
+                alert('Não foi possível salvar a imagem.\n\nDetalhe: ' + (erro && erro.message ? erro.message : erro));
+            }
+        }
+
+function adicionarItem() {
             const descricao = document.getElementById('desc-item').value;
             const qtd = parseInt(document.getElementById('qtd-item').value);
             const valorUnitario = parseFloat(document.getElementById('valor-item').value);
@@ -883,6 +1528,7 @@
             });
 
             document.getElementById('valor-total').innerText = valorTotalGeral.toFixed(2);
+            atualizarGaleriaImagens();
             salvarOrcamentoAtual();
         }
 
