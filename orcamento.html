@@ -159,6 +159,7 @@
             margin: 0 0 8px;
             text-transform: uppercase;
             color: #111;
+            line-height: 1.2;
         }
 
         .tipo-doc-opcoes {
@@ -578,7 +579,7 @@
                 <div class="tipo-doc-opcoes nao-imprimir">
                     <span>Tipo:</span>
                     <button type="button" id="btn-tipo-orcamento" class="btn-tipo ativo" onclick="definirTipoDocumento('ORÇAMENTO')">ORÇAMENTO</button>
-                    <button type="button" id="btn-tipo-venda" class="btn-tipo" onclick="definirTipoDocumento('VENDA')">VENDA</button>
+                    <button type="button" id="btn-tipo-venda" class="btn-tipo" onclick="definirTipoDocumento('VENDA')">COMPROVANTE DE VENDA</button>
                 </div>
                 <h1 id="titulo-documento">ORÇAMENTO</h1>
                 <div class="dados-empresa-doc" id="dados-empresa-doc">
@@ -879,13 +880,17 @@
         let tipoDocumento = 'ORÇAMENTO';
 
         function prefixoArquivoDocumento() {
-            return tipoDocumento === 'VENDA' ? 'Venda' : 'Orcamento';
+            return tipoDocumento === 'VENDA' ? 'Comprovante_Venda' : 'Orcamento';
+        }
+
+        function tituloVisivelDocumento() {
+            return tipoDocumento === 'VENDA' ? 'COMPROVANTE DE VENDA' : 'ORÇAMENTO';
         }
 
         function definirTipoDocumento(tipo) {
             tipoDocumento = tipo === 'VENDA' ? 'VENDA' : 'ORÇAMENTO';
             const titulo = document.getElementById('titulo-documento');
-            if (titulo) titulo.textContent = tipoDocumento;
+            if (titulo) titulo.textContent = tituloVisivelDocumento();
             const rotuloTotal = document.getElementById('rotulo-total');
             if (rotuloTotal) {
                 rotuloTotal.textContent = tipoDocumento === 'VENDA' ? 'Total da Venda:' : 'Total do Orçamento:';
@@ -896,7 +901,7 @@
             if (btnVenda) btnVenda.classList.toggle('ativo', tipoDocumento === 'VENDA');
             const barra = document.getElementById('barra-tipo-doc');
             if (barra) {
-                barra.textContent = tipoDocumento === 'VENDA' ? 'Paraná Peças — Venda' : 'Paraná Peças — Orçamento';
+                barra.textContent = tipoDocumento === 'VENDA' ? 'Paraná Peças — Comprovante de Venda' : 'Paraná Peças — Orçamento';
             }
             salvarOrcamentoAtual();
         }
