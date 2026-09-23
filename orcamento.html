@@ -161,6 +161,41 @@
             color: #111;
         }
 
+        .tipo-doc-opcoes {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 6px;
+            margin: 0 0 8px;
+        }
+
+        .tipo-doc-opcoes span {
+            font-size: 11px;
+            color: #2563eb;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .btn-tipo {
+            background: #e5e7eb;
+            color: #111;
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .btn-tipo:hover {
+            background: #cbd5e1;
+        }
+
+        .btn-tipo.ativo {
+            background: #0d47a1;
+            color: #fff;
+        }
+
+        .btn-tipo.ativo:hover {
+            background: #0b3c8a;
+        }
+
         .dados-empresa-doc {
             font-size: 12px;
             line-height: 1.45;
@@ -528,7 +563,7 @@
 
     <div class="barra-sistema nao-imprimir">
         <a href="index.html">⬅ Voltar ao sistema</a>
-        <span>Paraná Peças — Orçamento</span>
+        <span id="barra-tipo-doc">Paraná Peças — Orçamento</span>
     </div>
 
     <datalist id="opcoesCatalogo"></datalist>
@@ -540,7 +575,12 @@
                 <img id="logo-empresa" src="parana-pecas-logo-hd.png" alt="Paraná Peças">
             </div>
             <div class="area-titulo">
-                <h1>ORÇAMENTO</h1>
+                <div class="tipo-doc-opcoes nao-imprimir">
+                    <span>Tipo:</span>
+                    <button type="button" id="btn-tipo-orcamento" class="btn-tipo ativo" onclick="definirTipoDocumento('ORÇAMENTO')">ORÇAMENTO</button>
+                    <button type="button" id="btn-tipo-venda" class="btn-tipo" onclick="definirTipoDocumento('VENDA')">VENDA</button>
+                </div>
+                <h1 id="titulo-documento">ORÇAMENTO</h1>
                 <div class="dados-empresa-doc" id="dados-empresa-doc">
                     <div class="nome-empresa" id="doc-nome"></div>
                     <div id="doc-endereco"></div>
@@ -611,7 +651,7 @@
         </table>
 
         <div class="total-container">
-            Total do Orçamento: R$ <span id="valor-total">0.00</span>
+            <span id="rotulo-total">Total do Orçamento:</span> R$ <span id="valor-total">0.00</span>
         </div>
 
         <div class="pix-orcamento oculto" id="pix-orcamento">
@@ -836,6 +876,30 @@
         let cropBox = { x: 0, y: 0, w: 0, h: 0 };
         let cropDrag = null;
         let cropUrlTemporaria = '';
+        let tipoDocumento = 'ORÇAMENTO';
+
+        function prefixoArquivoDocumento() {
+            return tipoDocumento === 'VENDA' ? 'Venda' : 'Orcamento';
+        }
+
+        function definirTipoDocumento(tipo) {
+            tipoDocumento = tipo === 'VENDA' ? 'VENDA' : 'ORÇAMENTO';
+            const titulo = document.getElementById('titulo-documento');
+            if (titulo) titulo.textContent = tipoDocumento;
+            const rotuloTotal = document.getElementById('rotulo-total');
+            if (rotuloTotal) {
+                rotuloTotal.textContent = tipoDocumento === 'VENDA' ? 'Total da Venda:' : 'Total do Orçamento:';
+            }
+            const btnOrc = document.getElementById('btn-tipo-orcamento');
+            const btnVenda = document.getElementById('btn-tipo-venda');
+            if (btnOrc) btnOrc.classList.toggle('ativo', tipoDocumento === 'ORÇAMENTO');
+            if (btnVenda) btnVenda.classList.toggle('ativo', tipoDocumento === 'VENDA');
+            const barra = document.getElementById('barra-tipo-doc');
+            if (barra) {
+                barra.textContent = tipoDocumento === 'VENDA' ? 'Paraná Peças — Venda' : 'Paraná Peças — Orçamento';
+            }
+            salvarOrcamentoAtual();
+        }
 
         function salvarOrcamentoAtual() {
             const dados = {
@@ -844,7 +908,8 @@
                 modelo: document.getElementById('modelo-carro').value || '',
                 placa: document.getElementById('placa-carro').value || '',
                 itens: itensOrcamento,
-                imagens: imagensOrcamento
+                imagens: imagensOrcamento,
+                tipoDocumento: tipoDocumento
             };
             try {
                 localStorage.setItem(STORAGE_ORCAMENTO, JSON.stringify(dados));
@@ -865,6 +930,7 @@
                 itensOrcamento = Array.isArray(dados.itens) ? dados.itens : [];
                 imagensOrcamento = Array.isArray(dados.imagens) ? dados.imagens : [];
                 editandoIndex = -1;
+                definirTipoDocumento(dados.tipoDocumento === 'VENDA' ? 'VENDA' : 'ORÇAMENTO');
                 atualizarTela();
                 return true;
             } catch (e) {
@@ -886,6 +952,7 @@
             itensOrcamento = [];
             imagensOrcamento = [];
             editandoIndex = -1;
+            definirTipoDocumento('ORÇAMENTO');
             document.getElementById('nome-cliente').value = '';
             document.getElementById('modelo-carro').value = '';
             document.getElementById('placa-carro').value = '';
@@ -1625,7 +1692,7 @@ function adicionarItem() {
             atualizarCabecalhoDocumento();
             const elemento = document.getElementById('documento-orcamento');
             const cliente = nomeArquivoSeguro(document.getElementById('nome-cliente').value);
-            const nomeArquivo = `Orcamento_${cliente}.pdf`;
+            const nomeArquivo = `${prefixoArquivoDocumento()}_${cliente}.pdf`;
 
             prepararVisualExportacao();
 
@@ -1689,7 +1756,7 @@ function adicionarItem() {
 
             atualizarCabecalhoDocumento();
             const cliente = nomeArquivoSeguro(document.getElementById('nome-cliente').value);
-            const nomeArquivo = `Orcamento_${cliente}.jpeg`;
+            const nomeArquivo = `${prefixoArquivoDocumento()}_${cliente}.jpeg`;
 
             prepararVisualExportacao();
 
