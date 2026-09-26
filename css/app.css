@@ -148,7 +148,26 @@
   #undoToast span { font-size: 14px; font-weight: bold; }
   #undoToast button { margin: 0; padding: 8px 15px; font-size: 12px; }
 
+  /* ABAS LATERAIS */
+  .app-layout { display: flex; min-height: calc(100vh - 70px); }
+  .sidebar { width: 230px; flex-shrink: 0; background: #0a0a0a; border-right: 1px solid #222; padding: 15px 10px; box-sizing: border-box; }
+  .sidebar-tabs { position: sticky; top: 15px; display: flex; flex-direction: column; gap: 8px; }
+  .side-tab { width: 100%; margin: 0; text-align: left; padding: 14px 12px; font-size: 12px; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; transition: background 0.2s; }
+  .side-tab:hover { background: #262626; }
+  .side-tab.active { background: #0d47a1; border-color: #1565c0; }
+  .app-layout > .container { flex: 1; min-width: 0; width: auto; margin: 0; }
+  .aba-painel { display: none; }
+  .aba-painel.active { display: block; }
+  .aba-titulo { margin: 5px 0 15px; font-size: 18px; text-transform: uppercase; }
+  details.card > summary { cursor: pointer; font-weight: bold; font-size: 15px; }
+  details.card[open] > summary { margin-bottom: 15px; }
+  body.mode-client .sidebar { display: none !important; }
+
   @media (max-width: 768px) {
+    .app-layout { flex-direction: column; min-height: 0; }
+    .sidebar { width: 100%; padding: 8px; border-right: none; border-bottom: 1px solid #222; }
+    .sidebar-tabs { position: static; flex-direction: row; overflow-x: auto; }
+    .side-tab { flex: 1; min-width: 110px; text-align: center; padding: 10px 6px; font-size: 10px; }
     .container { padding: 10px; width: 100%; } .header { padding: 10px; } .titulo { font-size: 16px; } .dash-card { padding: 10px 2px; } 
     .top-actions { padding: 5px; }
     .action-group { border-right: none; border-bottom: 1px solid #ccc; padding-right: 0; padding-bottom: 10px; width: 100%; justify-content: center; }

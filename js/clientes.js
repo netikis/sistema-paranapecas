@@ -82,16 +82,16 @@
         <div class="action-group">
             <button class="btn-action gray" onclick="imprimirSelecionados('${c.id}', 'extrato')" title="Imprimir em folha A4">📄 A4</button>
             <button class="btn-action gray" onclick="imprimirSelecionados('${c.id}', 'cupom')" title="Imprimir em Cupom Térmico">🖨️ CUPOM</button>
-            <button class="btn-action gray" onclick="imprimirExtratoDebitos('${c.id}')" title="Imprimir Extrato de Débitos">📄 EXTRATO</button>
+            <button class="btn-action gray" onclick="imprimirExtratoDebitos('${c.id}')" title="Extrato: só os itens marcados (sem marcação = todos os débitos pendentes)">📄 EXTRATO</button>
         </div>
         <div class="action-group">
             <button class="btn-action dark" onclick="abrirAssinatura('${c.id}')" title="Assinar na Tela">✍️ ASSINAR</button>
             <button class="btn-action dark" onclick="gerarLinkRemoto('${c.id}')" title="Copiar Link para Assinar">🔗 LINK</button>
-            <button class="btn-action dark" onclick="gerarRelatorioAssinaturas('${c.id}')" title="Auditoria de Assinaturas">🕵️ AUDITORIA</button>
+            <button class="btn-action dark" onclick="gerarRelatorioAssinaturas('${c.id}')" title="Auditoria: só os itens marcados (sem marcação = todas as assinaturas)">🕵️ AUDITORIA</button>
         </div>
         <div class="action-group">
             <button class="btn-action wapp" onclick="cobrarWhatsApp('${c.id}')" title="Cobrar por WhatsApp">💬 COBRAR</button>
-            <button class="btn-action wapp" onclick="compartilharComprovanteImagem('${c.id}')" title="Enviar Comprovante no WhatsApp">📤 ZAP DOC</button>
+            <button class="btn-action wapp" onclick="compartilharComprovanteImagem('${c.id}')" title="Comprovante no WhatsApp: só os itens marcados (sem marcação = todos)">📤 ZAP DOC</button>
         </div>
         <div class="action-group admin-only">
             <button class="btn-action red" onclick="excluirSelecionados('${c.id}')" title="Excluir Itens Marcados na Tabela">🗑️ ITENS SEL.</button>
@@ -122,7 +122,7 @@
   function confirmarEdicaoCliente() { let id = document.getElementById('editCliId').value; let dados = { nome: document.getElementById('editCliNome').value, cpf_cnpj: document.getElementById('editCliCpf').value, ie: document.getElementById('editCliIe').value, telefone: document.getElementById('editCliTel').value, cep: document.getElementById('editCliCep').value, cidade: document.getElementById('editCliCidade').value, endereco: document.getElementById('editCliEnd').value }; db.collection("clientes").doc(id).update(dados).then(() => { Swal.fire('Sucesso', 'Dados atualizados!', 'success'); document.getElementById('modalEditarCliente').style.display = 'none'; }).catch(err => Swal.fire('Erro', err.message, 'error')); }
 
 
-  function atualizarSelect(){let s=document.getElementById('clienteSelect'),c=s.value;s.innerHTML='<option value="">Selecione...</option>';clientes.sort((a,b)=>a.nome.localeCompare(b.nome)).forEach((k)=>{let o=document.createElement('option');o.value=k.id;o.textContent=k.nome;s.appendChild(o)});if(c)s.value=c;}
+  function atualizarSelect(){let s=document.getElementById('clienteSelect');if(!s)return;let c=s.value;s.innerHTML='<option value="">Selecione...</option>';clientes.sort((a,b)=>a.nome.localeCompare(b.nome)).forEach((k)=>{let o=document.createElement('option');o.value=k.id;o.textContent=k.nome;s.appendChild(o)});if(c)s.value=c;}
   
   function adicionarCliente(){
       let n=document.getElementById('nome').value.trim();

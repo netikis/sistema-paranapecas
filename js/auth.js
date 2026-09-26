@@ -13,6 +13,7 @@
                   if(currentUserRole === 'admin') document.body.classList.remove('role-func'); else document.body.classList.add('role-func');
                   document.getElementById('userDisplay').innerHTML = `👤 ${nome}<br><span style="color:#aaa">${role.toUpperCase()}</span>`;
                   document.getElementById('loginOverlay').style.display = 'none';
+                  abrirAba('abaClientes');
                   document.getElementById('searchBox').value = ''; 
                   
                   setTimeout(() => document.getElementById('searchBox').focus(), 300); 

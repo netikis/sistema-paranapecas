@@ -68,124 +68,122 @@
   </div>
 </header>
 
-<div class="container">
-  <div id="areaClienteRemoto" class="card">
-      <h3 style="color:#38ef7d">✍️ ÁREA DE ASSINATURA</h3>
-      <div id="listaItensRemoto" style="text-align:left; background:#222; padding:10px; border-radius:5px; margin-bottom:20px; font-size:14px;">Carregando...</div>
-      <div style="background:#fff; padding:5px; border-radius:5px;">
-        <canvas id="canvasRemoto"></canvas>
-      </div>
-      <button class="dark" onclick="limparRemoto()">Limpar</button>
-      <button class="success" onclick="salvarAssinaturaRemota()" style="width:100%; margin-top:10px; padding:15px; font-size:16px;">✅ ENVIAR ASSINATURA</button>
-  </div>
-  
-  <div class="dashboard admin-only">
-    <div class="dash-card bg-blue"><h3>Total Vendido</h3><div id="dashTotal">R$ 0,00</div></div>
-    <div class="dash-card bg-green"><h3>Total Recebido</h3><div id="dashRecebido">R$ 0,00</div></div>
-    <div class="dash-card bg-red"><h3>Saldo a Receber</h3><div id="dashDevedor">R$ 0,00</div></div>
-  </div>
+<div class="app-layout">
 
-  <div class="card admin-only">
-    <h3>👤 Cadastro</h3>
-    <div class="row-inputs">
-      <input type="text" id="nome" placeholder="Nome / Razão Social" style="flex: 2;">
-      <input type="text" id="cpf_cnpj" placeholder="CPF/CNPJ">
-      <input type="text" id="ie" placeholder="IE">
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-tabs">
+      <button type="button" class="side-tab active" data-aba="abaClientes" onclick="abrirAba('abaClientes')">👥 Clientes Cadastrados</button>
+      <button type="button" class="side-tab admin-only" data-aba="abaCaixa" onclick="abrirAba('abaCaixa')">💰 Caixa e Relatórios</button>
+      <button type="button" class="side-tab admin-only" data-aba="abaConfig" onclick="abrirAba('abaConfig')">⚙️ Configurações</button>
     </div>
-    <div class="row-inputs">
-      <input type="text" id="telefone" placeholder="Telefone">
-      <div class="input-group-cep">
-          <input type="text" id="cep" placeholder="CEP" onblur="buscarCep()">
-          <button class="btn-search" onclick="buscarCep()" title="Buscar CEP">🔍</button>
-      </div>
-      <input type="text" id="cidade" placeholder="Cidade - UF" list="listaCidadesIBGE">
-      <datalist id="listaCidadesIBGE"></datalist>
-    </div>
-    
-    <div class="row-inputs">
-        <input type="text" id="logradouro" placeholder="Endereço (Rua/Av)" style="flex: 3;">
-        <input type="text" id="numero" placeholder="Nº" style="flex: 1;">
-    </div>
-    <div class="row-inputs">
-        <input type="text" id="bairro" placeholder="Bairro" style="flex: 2;">
-        <input type="text" id="complemento" placeholder="Complemento (Opcional)" style="flex: 2;">
-        <button class="primary" onclick="adicionarCliente()" style="flex: 1;">💾 SALVAR</button>
-    </div>
+  </nav>
 
-  </div>
-
-  <datalist id="opcoesCatalogo"></datalist>
-
-  <div class="card admin-only">
-    <h3>🛠️ Lançar Peça</h3>
-    <select id="clienteSelect" style="margin-bottom: 10px;"></select>
-    <div class="row-inputs">
-      <input type="text" id="descricao" list="opcoesCatalogo" placeholder="Descrição da Peça" style="flex: 3;" oninput="preencherValorCatPrincipal()">
-      <input type="number" id="quantidade" placeholder="Qtd" style="flex: 1;" value="1" oninput="calcularTotalPrincipal()">
-      <input type="number" id="valorUnitario" placeholder="Valor Unit. R$" style="flex: 1;" oninput="calcularTotalPrincipal()">
-      <input type="text" id="valorTotal" placeholder="Total R$" style="flex: 1; background: #333; color: #fff; font-weight: bold; border: 1px solid #555;" readonly>
-    </div>
-    <div class="row-inputs">
-      <label>Entrada:</label><input type="date" id="dataEntrada">
-      <label>Vencimento:</label><input type="date" id="dataVenc">
-      <button class="primary" onclick="adicionarItem()" style="flex: 1;">LANÇAR</button>
-    </div>
-  </div>
-
-  <div class="card admin-only">
-    <h3>⚙️ Configurações</h3>
-    <div style="display: flex; flex-wrap: wrap; gap: 20px;">
-    <div style="flex: 1; min-width: 250px;">
-        <h4>🏢 Empresa</h4>
-        
-        <!-- NOVO: Seleção de Loja e Ativação -->
-        <select id="selectEmpresaConf" onchange="carregarFormEmpresa()" style="margin-bottom: 10px; font-weight: bold; background: #0d47a1;">
-            <option value="1">Loja 1 (Principal)</option>
-            <option value="2">Loja 2 (Filial)</option>
-        </select>
-        
-        <div style="display:flex; align-items:center; margin-bottom:10px; background: #222; padding: 10px; border-radius: 5px; border: 1px solid #444;">
-            <input type="checkbox" id="empresaAtivaCheckbox" style="width: 20px; height: 20px; margin: 0 10px 0 0;"> 
-            <label for="empresaAtivaCheckbox" style="font-size:11px; font-weight:bold; color:#38ef7d; cursor:pointer;">USAR ESTA LOJA NAS IMPRESSÕES</label>
+  <div class="container">
+    <div id="areaClienteRemoto" class="card">
+        <h3 style="color:#38ef7d">✍️ ÁREA DE ASSINATURA</h3>
+        <div id="listaItensRemoto" style="text-align:left; background:#222; padding:10px; border-radius:5px; margin-bottom:20px; font-size:14px;">Carregando...</div>
+        <div style="background:#fff; padding:5px; border-radius:5px;">
+          <canvas id="canvasRemoto"></canvas>
         </div>
-
-        <input type="text" id="confEmpNome" placeholder="Nome da Empresa">
-        <input type="text" id="confEmpEnd" placeholder="Endereço">
-        <input type="text" id="confEmpTel" placeholder="Telefone">
-        <input type="text" id="confEmpCnpj" placeholder="CNPJ da Empresa">
-        <button class="primary" onclick="salvarDadosEmpresa()" style="width:100%; margin-top:5px;">💾 SALVAR (SYNC)</button>
-      </div>
-      <div style="flex: 1; min-width: 250px; border-left: 1px solid #444; padding-left: 15px;">
-         <h4>📦 Catálogo</h4>
-        <input type="text" id="catNome" placeholder="Peça">
-        <input type="number" id="catValor" placeholder="Preço Unitário">
-        <button class="success" onclick="salvarCatalogo()">+ ESTOQUE</button>
-      </div>
-      <div style="flex: 1; min-width: 250px; border-left: 1px solid #444; padding-left: 15px;">
-        <h4>📊 Ferramentas</h4>
-        <label>Logo (Salva na Nuvem):</label> <input type="file" id="logoInput" accept="image/*" style="margin-bottom:15px; font-size: 12px;"><br>
-        <button class="primary" onclick="fazerBackupLocal()" style="width: 100%; margin-bottom: 10px;">💾 BACKUP (BAIXAR)</button>
-        
-        <button class="warning" onclick="abrirRestauracao()" style="width: 100%; margin-bottom: 10px; background: #6d4c41;">📂 RESTAURAR BACKUP</button>
-        <input type="file" id="inputBackup" accept=".json" style="display:none" onchange="processarRestauracao(this)">
-        
-        <button class="dark" onclick="gerarRelatorioGeral()" style="width: 100%; margin-bottom: 10px;">📈 RELATÓRIO GERAL</button>
-        <button class="warning" onclick="abrirModalUsuario()" style="width: 100%;">👥 NOVO USUÁRIO</button>
-        <button class="warning" onclick="migrarDados()" style="width: 100%; margin-top: 5px;">🔄 SINCRONIZAR</button>
-        
-        <button class="danger" onclick="limparSistema()" style="width: 100%; margin-top: 15px; border: 2px solid #ff5252; font-weight: bold;">🧹 LIMPAR ERROS E DUPLICADOS</button>
-      </div>
+        <button class="dark" onclick="limparRemoto()">Limpar</button>
+        <button class="success" onclick="salvarAssinaturaRemota()" style="width:100%; margin-top:10px; padding:15px; font-size:16px;">✅ ENVIAR ASSINATURA</button>
     </div>
-  </div>
 
-  <div class="card clientes">
-    <input type="text" id="searchBox" class="search-box" placeholder="🔍 Buscar Cliente..." onkeyup="render()" autocomplete="off">
-    <div id="listaClientes">Carregando...</div>
-    <div class="pagination" id="paginacaoControles">
-        <button class="btn-page" id="btnAnt" onclick="mudarPagina(-1)">⬅ Anterior</button>
-        <span id="pageInfo" style="color: black; align-self: center; font-weight: bold;">Pág 1</span>
-        <button class="btn-page" id="btnProx" onclick="mudarPagina(1)">Próximo ➡</button>
-    </div>
+    <datalist id="opcoesCatalogo"></datalist>
+
+    <!-- ABA 1: CLIENTES CADASTRADOS -->
+    <section class="aba-painel active" id="abaClientes">
+      <details class="card admin-only" id="cardNovoCliente">
+        <summary>➕ Cadastrar novo cliente</summary>
+        <div class="row-inputs">
+          <input type="text" id="nome" placeholder="Nome / Razão Social" style="flex: 2;">
+          <input type="text" id="cpf_cnpj" placeholder="CPF/CNPJ">
+          <input type="text" id="ie" placeholder="IE">
+        </div>
+        <div class="row-inputs">
+          <input type="text" id="telefone" placeholder="Telefone">
+          <div class="input-group-cep">
+              <input type="text" id="cep" placeholder="CEP" onblur="buscarCep()">
+              <button class="btn-search" onclick="buscarCep()" title="Buscar CEP">🔍</button>
+          </div>
+          <input type="text" id="cidade" placeholder="Cidade - UF" list="listaCidadesIBGE">
+          <datalist id="listaCidadesIBGE"></datalist>
+        </div>
+        <div class="row-inputs">
+            <input type="text" id="logradouro" placeholder="Endereço (Rua/Av)" style="flex: 3;">
+            <input type="text" id="numero" placeholder="Nº" style="flex: 1;">
+        </div>
+        <div class="row-inputs">
+            <input type="text" id="bairro" placeholder="Bairro" style="flex: 2;">
+            <input type="text" id="complemento" placeholder="Complemento (Opcional)" style="flex: 2;">
+            <button class="primary" onclick="adicionarCliente()" style="flex: 1;">💾 SALVAR</button>
+        </div>
+      </details>
+
+      <div class="card clientes">
+        <input type="text" id="searchBox" class="search-box" placeholder="🔍 Buscar Cliente..." onkeyup="render()" autocomplete="off">
+        <div id="listaClientes">Carregando...</div>
+        <div class="pagination" id="paginacaoControles">
+            <button class="btn-page" id="btnAnt" onclick="mudarPagina(-1)">⬅ Anterior</button>
+            <span id="pageInfo" style="color: black; align-self: center; font-weight: bold;">Pág 1</span>
+            <button class="btn-page" id="btnProx" onclick="mudarPagina(1)">Próximo ➡</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ABA 2: CAIXA E RELATÓRIOS -->
+    <section class="aba-painel admin-only" id="abaCaixa">
+      <h2 class="aba-titulo">💰 Caixa e Relatórios</h2>
+      <div class="dashboard">
+        <div class="dash-card bg-blue"><h3>Total Vendido</h3><div id="dashTotal">R$ 0,00</div></div>
+        <div class="dash-card bg-green"><h3>Total Recebido</h3><div id="dashRecebido">R$ 0,00</div></div>
+        <div class="dash-card bg-red"><h3>Saldo a Receber</h3><div id="dashDevedor">R$ 0,00</div></div>
+      </div>
+      <div class="card">
+        <h3>📈 Relatórios</h3>
+        <button class="dark" onclick="gerarRelatorioGeral()" style="width: 100%; max-width: 360px;">📈 RELATÓRIO GERAL</button>
+      </div>
+    </section>
+
+    <!-- ABA 3: CONFIGURAÇÕES -->
+    <section class="aba-painel admin-only" id="abaConfig">
+      <h2 class="aba-titulo">⚙️ Configurações</h2>
+      <div class="card">
+        <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+          <div style="flex: 1; min-width: 250px;">
+            <h4>🏢 Configurações da Empresa</h4>
+            <select id="selectEmpresaConf" onchange="carregarFormEmpresa()" style="margin-bottom: 10px; font-weight: bold; background: #0d47a1;">
+                <option value="1">Loja 1 (Principal)</option>
+                <option value="2">Loja 2 (Filial)</option>
+            </select>
+
+            <div style="display:flex; align-items:center; margin-bottom:10px; background: #222; padding: 10px; border-radius: 5px; border: 1px solid #444;">
+                <input type="checkbox" id="empresaAtivaCheckbox" style="width: 20px; height: 20px; margin: 0 10px 0 0;">
+                <label for="empresaAtivaCheckbox" style="font-size:11px; font-weight:bold; color:#38ef7d; cursor:pointer;">USAR ESTA LOJA NAS IMPRESSÕES</label>
+            </div>
+
+            <input type="text" id="confEmpNome" placeholder="Nome da Empresa">
+            <input type="text" id="confEmpEnd" placeholder="Endereço">
+            <input type="text" id="confEmpTel" placeholder="Telefone">
+            <input type="text" id="confEmpCnpj" placeholder="CNPJ da Empresa">
+            <button class="primary" onclick="salvarDadosEmpresa()" style="width:100%; margin-top:5px;">💾 SALVAR (SYNC)</button>
+          </div>
+          <div style="flex: 1; min-width: 250px; border-left: 1px solid #444; padding-left: 15px;">
+            <h4>🧰 Ferramentas</h4>
+            <label>Logo (Salva na Nuvem):</label> <input type="file" id="logoInput" accept="image/*" style="margin-bottom:15px; font-size: 12px;"><br>
+            <button class="primary" onclick="fazerBackupLocal()" style="width: 100%; margin-bottom: 10px;">💾 BACKUP (BAIXAR)</button>
+
+            <button class="warning" onclick="abrirRestauracao()" style="width: 100%; margin-bottom: 10px; background: #6d4c41;">📂 RESTAURAR BACKUP</button>
+            <input type="file" id="inputBackup" accept=".json" style="display:none" onchange="processarRestauracao(this)">
+
+            <button class="warning" onclick="abrirModalUsuario()" style="width: 100%;">👥 NOVO USUÁRIO</button>
+            <button class="warning" onclick="migrarDados()" style="width: 100%; margin-top: 5px;">🔄 SINCRONIZAR</button>
+
+            <button class="danger" onclick="limparSistema()" style="width: 100%; margin-top: 15px; border: 2px solid #ff5252; font-weight: bold;">🧹 LIMPAR ERROS E DUPLICADOS</button>
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
 </div>
 
@@ -300,6 +298,7 @@
 <!-- Logica modular (igual HM/Joninha): altere so o bloco necessario -->
 <script src="js/config.js"></script>
 <script src="js/utils.js"></script>
+<script src="js/abas.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/assinatura.js"></script>
 <script src="js/clientes.js"></script>
@@ -310,4 +309,3 @@
 <script src="js/app.js"></script>
 </body>
 </html>
-

@@ -4,9 +4,20 @@
   function imprimirSelecionados(id, tipo, assinaturaImg = null) { const c = clientes.find(x => x.id === id); const checks = document.querySelectorAll(`.sel-${id}:checked`); const indices = Array.from(checks).map(cb => parseInt(cb.value)); if (indices.length === 0) return Swal.fire('Aviso', "Selecione itens", 'warning'); const selecionados = indices.map(idx => c.itens[idx]); const totalS = selecionados.reduce((a, i) => a + (Number(i.valor) || 0), 0); gerarImpressao(c, selecionados, totalS, tipo, "COMPROVANTE DE VENDA", assinaturaImg); }
   function imprimirExtratoGeral(id){ let c = clientes.find(x => x.id === id); if(!c.itens.length)return; let t = c.itens.reduce((a, i) => a + (Number(i.valor) || 0), 0); gerarImpressao(c, c.itens, t, 'extrato', "EXTRATO GERAL"); }
   
+  function _itensMarcados(c) {
+      return Array.from(document.querySelectorAll(`.sel-${c.id}:checked`))
+          .map(cb => c.itens[parseInt(cb.value)])
+          .filter(Boolean);
+  }
+
   function imprimirExtratoDebitos(id) {
       let c = clientes.find(x => x.id === id);
       if(!c) return;
+      let marcados = _itensMarcados(c);
+      if (marcados.length > 0) {
+          let totalSel = marcados.reduce((a, i) => a + (Number(i.valor) || 0), 0);
+          return gerarImpressao(c, marcados, totalSel, 'extrato', 'EXTRATO - ITENS SELECIONADOS');
+      }
       let pendentes = c.itens.filter(i => !i.pago);
       if(pendentes.length === 0) return Swal.fire('Aviso', 'Este cliente não possui débitos pendentes.', 'info');
       let totalPend = pendentes.reduce((a, i) => a + (Number(i.valor) || 0), 0);
@@ -16,8 +27,12 @@
   function gerarRelatorioAssinaturas(id) {
       let c = clientes.find(x => x.id === id);
       if (!c) return;
-      let assinados = c.itens.filter(i => i.assinatura);
-      if (assinados.length === 0) return Swal.fire('Aviso', 'Nenhuma assinatura registrada para este cliente.', 'info');
+      let marcados = _itensMarcados(c);
+      let soSelecao = marcados.length > 0;
+      let assinados = (soSelecao ? marcados : c.itens).filter(i => i.assinatura);
+      if (assinados.length === 0) {
+          return Swal.fire('Aviso', soSelecao ? 'Nenhum dos itens selecionados tem assinatura registrada.' : 'Nenhuma assinatura registrada para este cliente.', 'info');
+      }
       assinados.sort((a, b) => new Date(b.data) - new Date(a.data));
       const logoHtml = logoBase64 ? `<img src="${logoBase64}" style="max-height:60px; display:block; margin:0 auto 5px auto;">` : '';
       let html = `
@@ -37,7 +52,7 @@
           <div style="margin-top:20px; font-size:14px;">
               <b>CLIENTE:</b> ${c.nome.toUpperCase()}<br>
               <b>CPF/CNPJ:</b> ${c.cpf_cnpj || 'Não informado'}<br>
-              <b>TOTAL DE ASSINATURAS:</b> ${assinados.length}
+              <b>TOTAL DE ASSINATURAS:</b> ${assinados.length}${soSelecao ? ' (somente itens selecionados)' : ''}
           </div>
           <table class="audit-table">
               <tr style="background:#ddd; font-weight:bold;">
