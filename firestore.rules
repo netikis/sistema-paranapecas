@@ -56,6 +56,24 @@ service cloud.firestore {
       allow read, write: if isSignedIn();
     }
 
+    // --- VENDAS / SAÍDAS (vendas.html) — só admin ---
+    match /caixa_lancamentos/{docId} {
+      allow read, delete: if isAdmin() || isLegacyAdmin();
+      allow create, update: if (isAdmin() || isLegacyAdmin())
+        && request.resource.data.tipo in ['venda', 'saida']
+        && request.resource.data.data is string
+        && request.resource.data.valor is number;
+    }
+
+    // --- TABELA DE DESPESA MENSAL (vendas.html) — só admin ---
+    match /despesas_mensais/{docId} {
+      allow read, delete: if isAdmin() || isLegacyAdmin();
+      allow create, update: if (isAdmin() || isLegacyAdmin())
+        && request.resource.data.mes is string
+        && request.resource.data.desc is string
+        && request.resource.data.valor is number;
+    }
+
     // Bloqueia qualquer outra coleção
     match /{document=**} {
       allow read, write: if false;

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0d47a1">
+<title>VENDAS / SAÍDAS - PARANÁ PEÇAS</title>
+
+<!-- Mesmas chaves do sistema principal -->
+<script src="firebase-config.js"></script>
+<script src="firebase-env.js" onerror="/* opcional */"></script>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<link rel="stylesheet" href="css/vendas.css">
+</head>
+<body>
+
+<header class="vs-header">
+  <a href="index.html" class="vs-voltar">⬅ Voltar ao sistema</a>
+  <div class="vs-titulo">💰 VENDAS / SAÍDAS</div>
+  <div id="vsUsuario" class="vs-usuario"></div>
+</header>
+
+<div id="vsCarregando" class="vs-carregando">Carregando...</div>
+
+<div class="vs-layout" id="vsApp" hidden>
+  <nav class="vs-sidebar">
+    <button type="button" class="vs-tab active" data-aba="venda" onclick="vsAbrirAba('venda')">🛒 VENDAS</button>
+    <button type="button" class="vs-tab" data-aba="saida" onclick="vsAbrirAba('saida')">📤 SAÍDAS</button>
+    <button type="button" class="vs-tab" data-aba="despesa" onclick="vsAbrirAba('despesa')">🧾 TABELA DE DESPESA MENSAL</button>
+    <button type="button" class="vs-tab vs-tab-relatorio" data-aba="relatorio" onclick="vsAbrirAba('relatorio')">📊 RELATÓRIO GERAL</button>
+  </nav>
+
+  <main class="vs-main">
+    <div class="vs-print-cabecalho" id="vsPrintCab"></div>
+
+    <!-- Tabelas de Vendas e Saídas: montadas por js/vendas.js; Despesa mensal: js/despesas.js -->
+    <section class="vs-painel active" id="painel-venda"></section>
+    <section class="vs-painel" id="painel-saida"></section>
+    <section class="vs-painel" id="painel-despesa"></section>
+
+    <section class="vs-painel" id="painel-relatorio">
+      <div class="vs-topo">
+        <h2>📊 Relatório Geral de Vendas</h2>
+        <div class="vs-mes-nav">
+          <button type="button" onclick="vsMudarAno(-1)" title="Ano anterior">◀</button>
+          <span class="vs-mes-label" id="vsAnoLabel"></span>
+          <button type="button" onclick="vsMudarAno(1)" title="Próximo ano">▶</button>
+        </div>
+        <div class="vs-exportar">
+          <button type="button" class="vs-btn-pdf" onclick="vsExportarRelatorioPdf()" title="Salvar o balancete do ano em PDF">📄 PDF</button>
+          <button type="button" class="vs-btn-excel" onclick="vsExportarRelatorioExcel()" title="Salvar balancete e lançamentos do ano em Excel">📊 EXCEL</button>
+          <button type="button" class="vs-btn-imprimir" onclick="window.print()">🖨️ Imprimir</button>
+        </div>
+      </div>
+
+      <div class="vs-cards">
+        <div class="vs-card-resumo bg-verde"><h4>Vendas no ano</h4><div id="vsAnoVendas">R$ 0,00</div></div>
+        <div class="vs-card-resumo bg-vermelho"><h4>Saídas no ano</h4><div id="vsAnoSaidas">R$ 0,00</div></div>
+        <div class="vs-card-resumo bg-azul"><h4>Saldo do ano</h4><div id="vsAnoSaldo">R$ 0,00</div></div>
+      </div>
+
+      <div class="vs-card">
+        <h3>Balancete mensal</h3>
+        <table class="vs-tabela vs-balancete">
+          <thead><tr><th>MÊS</th><th>VENDAS</th><th>SAÍDAS</th><th>SALDO</th></tr></thead>
+          <tbody id="vsBalanceteLinhas"></tbody>
+          <tfoot>
+            <tr class="vs-total"><td>TOTAL DO ANO</td><td id="vsTotVendas">R$ 0,00</td><td id="vsTotSaidas">R$ 0,00</td><td id="vsTotSaldo">R$ 0,00</td></tr>
+          </tfoot>
+        </table>
+      </div>
+      <p class="vs-dica">Clique em um mês para abrir as vendas daquele mês.</p>
+    </section>
+  </main>
+</div>
+
+<script src="js/vendas.js"></script>
+<script src="js/despesas.js"></script>
+<script src="js/vendas-exportar.js"></script>
+</body>
+</html>
