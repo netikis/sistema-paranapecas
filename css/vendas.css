@@ -78,13 +78,40 @@ button { padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: 8
 .c-sel { width: 40px; text-align: center; }
 .c-sel input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: #ef6c00; }
 .vs-tabela th.c-sel input { accent-color: #fff; }
-.vs-selecionada td { background: #fff3e0; }
+.vs-tabela tr.vs-selecionada td { background: #fff3e0; }
 .vs-total td.vs-total-rotulo { text-align: right; }
 .vs-sel-barra { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: #3e2723; border: 1px solid #ef6c00; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
 .vs-sel-barra span { flex: 1; font-size: 13px; }
 .vs-btn-excluir-sel { background: #c62828; }
 .vs-btn-limpar-sel { background: #555; }
 .vs-btn-desfazer { background: #546e7a; padding: 13px 18px; font-size: 13px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* STATUS: PAGO / NÃO PAGO / ATRASADO */
+.c-status { width: 150px; text-align: center; }
+.desp-status { width: 100%; padding: 7px 6px; border: none; border-radius: 5px; font-size: 11px; font-weight: 800; color: #fff; cursor: pointer; }
+.desp-status option { background: #fff; color: #000; }
+.desp-status.st-pago { background: #2e7d32; }
+.desp-status.st-pendente { background: #c62828; }
+.desp-status.st-atrasado { background: #7f0000; }
+.vs-pago-em { font-size: 10px; color: #2e7d32; font-weight: normal; margin-top: 3px; }
+.vs-st-pago td { background: #e8f5e9; }
+.vs-st-pago .c-valor { color: #2e7d32; }
+.vs-st-pendente td { background: #ffebee; }
+.vs-st-pendente .c-valor { color: #c62828; }
+.vs-st-atrasado td { background: #ffcdd2; }
+.vs-st-atrasado .c-valor { color: #b71c1c; font-weight: 900; }
+.vs-st-atrasado td:first-child { box-shadow: inset 5px 0 0 #b71c1c; }
+.vs-tag-atrasado { display: inline-block; background: #b71c1c; color: #fff; font-size: 10px; font-weight: 900; padding: 2px 6px; border-radius: 4px; margin-right: 4px; vertical-align: middle; }
+.vs-resumo-status td { background: #fafafa; padding: 10px 8px; font-size: 13px; border: none; }
+.vs-resumo-status span { display: inline-block; margin-right: 18px; }
+.vs-res-pago { color: #2e7d32; }
+.vs-res-pendente { color: #c62828; }
+.vs-res-atrasado { color: #7f0000; }
+.vs-res-falta { color: #000; }
+.vs-atrasados { background: #b71c1c; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; box-shadow: 0 0 0 2px #ff5252; }
+.vs-atrasados-titulo { font-weight: 900; font-size: 14px; margin-bottom: 4px; }
+.vs-atrasados-lista { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 12px; }
+.vs-btn-pagar-sel { background: #2e7d32; }
 
 /* PAGAMENTO FORNECEDOR */
 .vs-desp-acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
@@ -153,5 +180,5 @@ button { padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: 8
   .vs-mes-nav { background: none; border: none; }
   .vs-print-cabecalho { display: block; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 2px solid #000; font-size: 13px; }
   .vs-card { padding: 0; }
-  .vs-total td, .vs-card-resumo, .vs-tabela th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .vs-total td, .vs-card-resumo, .vs-tabela th, .desp-status, .vs-st-pago td, .vs-st-pendente td, .vs-st-atrasado td, .vs-atrasados { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }

@@ -31,26 +31,31 @@ function vsDespMontarPainel() {
     </div>
     <div class="vs-sel-barra" id="despSelBarra" hidden>
       <span id="despSelInfo"></span>
+      <button type="button" class="vs-btn-pagar-sel" onclick="vsDespStatusSelecionadas('pago')">✅ MARCAR COMO PAGO</button>
       <button type="button" class="vs-btn-excluir-sel" onclick="vsDespExcluirSelecionadas()">🗑️ EXCLUIR SELEÇÃO</button>
       <button type="button" class="vs-btn-limpar-sel" onclick="vsDespLimparSelecao()">LIMPAR SELEÇÃO</button>
     </div>
+    <div class="vs-atrasados" id="despAtrasados" hidden></div>
     <div class="vs-card">
       <table class="vs-tabela">
-        <thead><tr><th class="c-sel"><input type="checkbox" id="despSelTodos" title="Selecionar todas as despesas do mês"></th><th class="c-desc">DESCRIÇÃO</th><th class="c-valor">VALOR</th><th class="c-acoes2"></th></tr></thead>
+        <thead><tr><th class="c-sel"><input type="checkbox" id="despSelTodos" title="Selecionar todas as despesas do mês"></th><th class="c-desc">DESCRIÇÃO</th><th class="c-valor">VALOR</th><th class="c-status">STATUS</th><th class="c-acoes2"></th></tr></thead>
         <tbody id="linhas-despesa"></tbody>
         <tfoot>
           <tr class="vs-entrada">
             <td class="c-sel"></td>
             <td class="c-desc"><input type="text" id="in-despesa-desc" placeholder="Descrição da despesa (ex: aluguel, luz, internet)" autocomplete="off"></td>
             <td class="c-valor"><input type="text" id="in-despesa-valor" inputmode="decimal" placeholder="0,00" autocomplete="off"></td>
+            <td class="c-status"></td>
             <td class="c-acoes2"><button type="button" onclick="vsDespAdicionar()" title="Adicionar">➕</button></td>
           </tr>
-          <tr class="vs-total"><td class="c-sel"></td><td class="vs-total-rotulo">TOTAL DE DESPESAS</td><td class="c-valor" id="total-despesa">R$ 0,00</td><td class="c-acoes2"></td></tr>
+          <tr class="vs-total"><td class="c-sel"></td><td class="vs-total-rotulo">TOTAL DE DESPESAS</td><td class="c-valor" id="total-despesa">R$ 0,00</td><td class="c-status"></td><td class="c-acoes2"></td></tr>
+          <tr class="vs-resumo-status"><td colspan="5" id="despResumoStatus"></td></tr>
         </tfoot>
       </table>
     </div>
     <p class="vs-dica">Digite a descrição, aperte <b>Enter</b>, digite o valor e aperte <b>Enter</b> de novo para adicionar.
-      Marque as caixinhas para excluir várias de uma vez (a do cabeçalho marca todas).</p>`;
+      Clique no STATUS para marcar como pago, não pago ou atrasado (atrasadas sobem para o topo).
+      Marque as caixinhas para excluir ou pagar várias de uma vez (a do cabeçalho marca todas).</p>`;
 
   document.getElementById('despSelTodos').addEventListener('change', e => {
     vsDespSel.clear();
@@ -58,6 +63,7 @@ function vsDespMontarPainel() {
     vsDespAtualizarSelecao();
   });
   document.getElementById('linhas-despesa').addEventListener('change', e => {
+    if (e.target.classList.contains('desp-status')) return vsDespMudarStatus([e.target.dataset.id], e.target.value);
     if (!e.target.classList.contains('desp-sel')) return;
     if (e.target.checked) vsDespSel.add(e.target.dataset.id);
     else vsDespSel.delete(e.target.dataset.id);
@@ -105,20 +111,92 @@ function vsDespRender() {
   Array.from(vsDespSel).forEach(id => { if (!ids.has(id)) vsDespSel.delete(id); });
 
   document.getElementById('linhas-despesa').innerHTML = !vsDespesas.length
-    ? '<tr class="vs-vazio"><td colspan="4">Nenhuma despesa cadastrada neste mês.</td></tr>'
-    : vsDespesas.map(d => `
-      <tr data-id="${d.id}">
+    ? '<tr class="vs-vazio"><td colspan="5">Nenhuma despesa cadastrada neste mês.</td></tr>'
+    : vsDespOrdemExibicao().map(d => {
+      const st = vsDespStatus(d);
+      return `
+      <tr data-id="${d.id}" class="vs-st-${st}">
         <td class="c-sel"><input type="checkbox" class="desp-sel" data-id="${d.id}" title="Selecionar"></td>
-        <td class="c-desc">${vsDespDescricaoHtml(d)}</td>
+        <td class="c-desc">${st === 'atrasado' ? '<span class="vs-tag-atrasado">⚠️ ATRASADO</span> ' : ''}${vsDespDescricaoHtml(d)}</td>
         <td class="c-valor">${vsMoeda(d.valor)}</td>
+        <td class="c-status">
+          <select class="desp-status st-${st}" data-id="${d.id}" title="Situação do pagamento">
+            ${Object.keys(VS_DESP_STATUS).map(k => `<option value="${k}"${k === st ? ' selected' : ''}>${VS_DESP_STATUS[k].rotulo}</option>`).join('')}
+          </select>
+          ${st === 'pago' && d.pagoEm ? `<div class="vs-pago-em">pago em ${vsDataBr(d.pagoEm)}</div>` : ''}
+        </td>
         <td class="c-acoes2">
           <button type="button" class="vs-btn-editar" onclick="vsDespEditar('${d.id}')" title="Editar">✏️</button>
           <button type="button" class="vs-btn-excluir" onclick="vsDespExcluir('${d.id}')" title="Excluir">🗑️</button>
         </td>
-      </tr>`).join('');
+      </tr>`;
+    }).join('');
   const total = vsDespesas.reduce((s, d) => s + (Number(d.valor) || 0), 0);
   document.getElementById('total-despesa').textContent = vsMoeda(total);
+  vsDespRenderStatusResumo();
   vsDespAtualizarSelecao();
+}
+
+/* ---------- status: pago / não pago / atrasado ---------- */
+const VS_DESP_STATUS = {
+  pago: { rotulo: '✅ PAGO', texto: 'PAGO' },
+  pendente: { rotulo: '⏳ NÃO PAGO', texto: 'NÃO PAGO' },
+  atrasado: { rotulo: '⚠️ ATRASADO', texto: 'ATRASADO' }
+};
+
+function vsDespStatus(d) { return VS_DESP_STATUS[d.status] ? d.status : 'pendente'; }
+
+/* Atrasadas primeiro; o resto na ordem em que foi lançado */
+function vsDespOrdemExibicao() {
+  return vsDespesas.filter(d => vsDespStatus(d) === 'atrasado')
+    .concat(vsDespesas.filter(d => vsDespStatus(d) !== 'atrasado'));
+}
+
+function vsDespTotaisStatus() {
+  const t = { pago: 0, pendente: 0, atrasado: 0 };
+  vsDespesas.forEach(d => { t[vsDespStatus(d)] += Number(d.valor) || 0; });
+  return t;
+}
+
+function vsDespRenderStatusResumo() {
+  const t = vsDespTotaisStatus();
+  document.getElementById('despResumoStatus').innerHTML = !vsDespesas.length ? '' : `
+    <span class="vs-res-pago">✅ Pago: ${vsMoeda(t.pago)}</span>
+    <span class="vs-res-pendente">⏳ Não pago: ${vsMoeda(t.pendente)}</span>
+    <span class="vs-res-atrasado">⚠️ Atrasado: ${vsMoeda(t.atrasado)}</span>
+    <span class="vs-res-falta">Falta pagar: <b>${vsMoeda(t.pendente + t.atrasado)}</b></span>`;
+
+  const atrasadas = vsDespesas.filter(d => vsDespStatus(d) === 'atrasado');
+  const aviso = document.getElementById('despAtrasados');
+  aviso.hidden = !atrasadas.length;
+  aviso.innerHTML = !atrasadas.length ? '' : `
+    <div class="vs-atrasados-titulo">⚠️ ${atrasadas.length === 1 ? '1 DESPESA ATRASADA' : atrasadas.length + ' DESPESAS ATRASADAS'} — ${vsMoeda(t.atrasado)}</div>
+    <div class="vs-atrasados-lista">${atrasadas.map(d => `<span>${vsEscapar(vsDespRotulo(d))}: <b>${vsMoeda(d.valor)}</b></span>`).join('')}</div>`;
+}
+
+function vsDespMudarStatus(ids, status) {
+  const hoje = new Date();
+  const dados = status === 'pago'
+    ? { status: 'pago', pagoEm: vsDataChave(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()) }
+    : { status: status, pagoEm: firebase.firestore.FieldValue.delete() };
+  const lote = vsDb.batch();
+  ids.forEach(id => lote.update(vsDb.collection(VS_DESP_COLECAO).doc(id), dados));
+  lote.commit().then(() => {
+    if (status === 'atrasado') {
+      Swal.fire({ toast: true, position: 'top-end', icon: 'warning', timer: 2500, showConfirmButton: false,
+        title: 'Marcada como ATRASADA e movida para o topo da tabela.' });
+    }
+  }).catch(err => {
+    vsDespRender();
+    vsErroFirestore(err);
+  });
+}
+
+function vsDespStatusSelecionadas(status) {
+  const ids = vsDespesas.filter(d => vsDespSel.has(d.id)).map(d => d.id);
+  if (!ids.length) return;
+  vsDespMudarStatus(ids, status);
+  vsDespLimparSelecao();
 }
 
 /* ---------- seleção ---------- */

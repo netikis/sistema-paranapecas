@@ -89,24 +89,36 @@ function vsExportarDespesaPdf() {
   if (!vsBibliotecaOk('PDF', window.jspdf && window.jspdf.jsPDF && window.jspdf.jsPDF.API.autoTable)) return;
   if (!vsDespesas.length) return vsAviso('Nenhuma despesa neste mês para exportar.');
 
+  const lista = vsDespOrdemExibicao();
+  const t = vsDespTotaisStatus();
   const doc = vsNovoPdf(`DESPESAS MENSAIS - ${VS_MESES[vsMes.mes].toUpperCase()} ${vsMes.ano}`,
-    `${vsDespesas.length} despesa(s)`);
+    `${lista.length} despesa(s)   |   Pago: ${vsMoedaPdf(t.pago)}   |   Não pago: ${vsMoedaPdf(t.pendente)}   |   Atrasado: ${vsMoedaPdf(t.atrasado)}`);
+  const coresStatus = { pago: [46, 125, 50], pendente: [198, 40, 40], atrasado: [127, 0, 0] };
   doc.autoTable({
     startY: 34,
     theme: 'grid',
-    head: [['DESCRIÇÃO', 'VALOR']],
-    body: vsDespesas.map(d => [
+    head: [['DESCRIÇÃO', 'STATUS', 'VALOR']],
+    body: lista.map(d => [
       vsDespRotulo(d) + (d.tipo === 'fornecedor'
         ? (d.boletos || []).map(b => `\n     - ${b.desc || 'BOLETO'}: ${vsMoedaPdf(b.valor)}`).join('')
         : ''),
+      VS_DESP_STATUS[vsDespStatus(d)].texto + (vsDespStatus(d) === 'pago' && d.pagoEm ? '\n' + vsDataBr(d.pagoEm) : ''),
       vsMoedaPdf(d.valor)
     ]),
-    foot: [[{ content: 'TOTAL DE DESPESAS', styles: { halign: 'right' } }, vsMoedaPdf(vsTotal(vsDespesas))]],
+    foot: [
+      [{ content: 'TOTAL DE DESPESAS', colSpan: 2, styles: { halign: 'right' } }, vsMoedaPdf(vsTotal(lista))],
+      [{ content: 'FALTA PAGAR (NÃO PAGO + ATRASADO)', colSpan: 2, styles: { halign: 'right', fillColor: [198, 40, 40] } },
+        { content: vsMoedaPdf(t.pendente + t.atrasado), styles: { fillColor: [198, 40, 40] } }]
+    ],
     showFoot: 'lastPage',
     styles: { fontSize: 10, cellPadding: 2.5 },
     headStyles: { fillColor: [68, 68, 68], halign: 'center' },
     footStyles: { fillColor: [239, 108, 0], textColor: 255, fontSize: 11 },
-    columnStyles: { 1: { halign: 'right', cellWidth: 40 } },
+    columnStyles: { 1: { halign: 'center', cellWidth: 28, fontStyle: 'bold' }, 2: { halign: 'right', cellWidth: 38 } },
+    didParseCell: data => {
+      if (data.section !== 'body' || data.column.index !== 1) return;
+      data.cell.styles.textColor = coresStatus[vsDespStatus(lista[data.row.index])];
+    },
     margin: { bottom: 15 }
   });
 
@@ -197,10 +209,26 @@ function vsExportarDespesaExcel() {
   if (!vsBibliotecaOk('Excel', window.XLSX)) return;
   if (!vsDespesas.length) return vsAviso('Nenhuma despesa neste mês para exportar.');
 
-  const linhas = [['DESCRIÇÃO', 'VALOR']].concat(vsDespesas.map(d => [vsDespRotulo(d), Number(d.valor) || 0]));
-  linhas.push(['TOTAL DE DESPESAS', vsTotal(vsDespesas)]);
-  const ws = vsPlanilha(linhas, [1], [50, 16]);
-  vsFormulaSoma(ws, linhas.length - 1, 1, 1, linhas.length - 2);
+  const lista = vsDespOrdemExibicao();
+  const t = vsDespTotaisStatus();
+  const linhas = [['DESCRIÇÃO', 'STATUS', 'PAGO EM', 'VALOR']].concat(lista.map(d => [
+    vsDespRotulo(d),
+    VS_DESP_STATUS[vsDespStatus(d)].texto,
+    vsDespStatus(d) === 'pago' && d.pagoEm ? vsDataBr(d.pagoEm) : '',
+    Number(d.valor) || 0
+  ]));
+  const linhaTotal = linhas.length;
+  linhas.push(['TOTAL DE DESPESAS', '', '', vsTotal(lista)]);
+  linhas.push(['PAGO', '', '', t.pago]);
+  linhas.push(['FALTA PAGAR (NÃO PAGO + ATRASADO)', '', '', t.pendente + t.atrasado]);
+  const ws = vsPlanilha(linhas, [3], [50, 12, 12, 16]);
+  vsFormulaSoma(ws, linhaTotal, 3, 1, linhaTotal - 1);
+  if (lista.length) {
+    const faixa = `D2:D${linhaTotal}`;
+    const status = `B2:B${linhaTotal}`;
+    ws[XLSX.utils.encode_cell({ r: linhaTotal + 1, c: 3 })].f = `SUMIF(${status},"PAGO",${faixa})`;
+    ws[XLSX.utils.encode_cell({ r: linhaTotal + 2, c: 3 })].f = `SUM(${faixa})-SUMIF(${status},"PAGO",${faixa})`;
+  }
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Despesas ' + String(vsMes.mes + 1).padStart(2, '0') + '-' + vsMes.ano);
