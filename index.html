@@ -47,8 +47,8 @@
         <h3 id="tituloLogin" style="color: #fff; margin-top: 0;">SENHA</h3>
         <br>
         <form onsubmit="event.preventDefault(); fazerLogin();">
-            <input type="email" id="emailInput" placeholder="Seu E-mail" required>
-            <input type="password" id="senhaInput" placeholder="Sua Senha" required>
+            <input type="email" id="emailInput" name="username" autocomplete="username" placeholder="Seu E-mail" required>
+            <input type="password" id="senhaInput" name="password" autocomplete="current-password" placeholder="Sua Senha" required>
             <button type="submit" class="primary" id="btnLogin" style="width: 100%; padding: 12px; font-size: 14px;">ENTRAR</button>
         </form>
         <div id="msgLogin" style="color: #ff5252; margin-top: 15px; font-size: 13px;"></div>
@@ -62,7 +62,7 @@
   <div class="titulo">PARANÁ PEÇAS - GESTÃO PRO</div>
   <div style="display:flex; align-items:center;">
     <div id="userDisplay" style="font-size:10px; margin-right:10px; text-align:right; line-height:1.2;"></div>
-    <a href="orcamento.html" id="btnOrcamento" class="success" style="padding: 5px 10px; font-size: 10px; text-decoration:none; margin-right:8px;">📄 ORÇAMENTO</a>
+    <a href="orcamento.html" id="btnOrcamento" style="padding: 5px 10px; font-size: 10px; text-decoration:none; margin-right:8px; background:#fff; color:#0d47a1; font-weight:800; border-radius:5px;">📄 ORÇAMENTO</a>
     <a href="vendas.html" id="btnVendas" class="primary admin-only" style="padding: 5px 10px; font-size: 10px; text-decoration:none; margin-right:8px; color:#fff; font-weight:800; border-radius:5px;">💰 VENDAS/SAÍDAS</a>
     <button class="danger" onclick="logout()" style="padding: 5px 10px; font-size: 10px;">SAIR</button>
     <img id="logoRight" src="" alt="">
@@ -122,7 +122,7 @@
       </details>
 
       <div class="card clientes">
-        <input type="text" id="searchBox" class="search-box" placeholder="🔍 Buscar Cliente..." onkeyup="render()" autocomplete="off">
+        <input type="search" id="searchBox" name="buscaCliente" class="search-box" placeholder="🔍 Buscar Cliente..." onkeydown="buscaDigitada = true" oninput="render()" autocomplete="off" data-lpignore="true" data-form-type="other">
         <div id="listaClientes">Carregando...</div>
         <div class="pagination" id="paginacaoControles">
             <button class="btn-page" id="btnAnt" onclick="mudarPagina(-1)">⬅ Anterior</button>
@@ -280,12 +280,14 @@
 <div class="modal" id="modalUsuario">
   <div class="modal-content">
     <h3>👥 Cadastrar Funcionário</h3>
-    <label>Nome:</label><input type="text" id="novoUserNome">
-    <label>E-mail:</label><input type="email" id="novoUserEmail">
-    <label>Senha:</label><input type="password" id="novoUserSenha">
+    <form autocomplete="off" onsubmit="event.preventDefault(); criarUsuario();">
+    <label>Nome:</label><input type="text" id="novoUserNome" name="novoUserNome" autocomplete="off">
+    <label>E-mail:</label><input type="email" id="novoUserEmail" name="novoUserEmail" autocomplete="off">
+    <label>Senha:</label><input type="password" id="novoUserSenha" name="novoUserSenha" autocomplete="new-password">
     <label>Perfil:</label>
     <select id="novoUserPerfil"><option value="func">👤 Balcão</option><option value="admin">🛡️ Admin</option></select>
-    <br><br><button class="success" onclick="criarUsuario()">CRIAR</button><button class="danger" onclick="document.getElementById('modalUsuario').style.display='none'">CANCELAR</button>
+    <br><br><button type="submit" class="success">CRIAR</button><button type="button" class="danger" onclick="document.getElementById('modalUsuario').style.display='none'">CANCELAR</button>
+    </form>
   </div>
 </div>
 

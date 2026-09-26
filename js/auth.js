@@ -14,8 +14,7 @@
                   document.getElementById('userDisplay').innerHTML = `👤 ${nome}<br><span style="color:#aaa">${role.toUpperCase()}</span>`;
                   document.getElementById('loginOverlay').style.display = 'none';
                   abrirAba('abaClientes');
-                  document.getElementById('searchBox').value = ''; 
-                  
+                  limparBuscaAutoPreenchida();
                   setTimeout(() => document.getElementById('searchBox').focus(), 300); 
 
                   iniciarSincronizacao();
@@ -30,6 +29,18 @@
       console.error("Erro na persistencia:", error);
   });
 
+
+  /* O preenchimento automatico do navegador pode jogar o e-mail salvo na busca alguns instantes depois do login */
+  let buscaDigitada = false;
+  function limparBuscaAutoPreenchida() {
+    buscaDigitada = false;
+    [0, 500, 1200, 2500].forEach(ms => setTimeout(() => {
+      const box = document.getElementById('searchBox');
+      if (!box || buscaDigitada) return;
+      box.value = '';
+      if (typeof render === 'function') render();
+    }, ms));
+  }
 
   function selecionarPerfil(role) { roleSelected = role; document.getElementById('step-1').style.display = 'none'; document.getElementById('step-2').style.display = 'block'; let titulo = role === 'admin' ? 'ÁREA ADMINISTRATIVA' : 'ÁREA DE BALCÃO'; document.getElementById('tituloLogin').innerText = titulo; document.getElementById('emailInput').focus(); }
   function voltarLogin() { roleSelected = ''; document.getElementById('step-1').style.display = 'block'; document.getElementById('step-2').style.display = 'none'; document.getElementById('senhaInput').value = ''; }
