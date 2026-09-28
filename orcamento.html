@@ -563,7 +563,7 @@
 <body>
 
     <div class="barra-sistema nao-imprimir">
-        <a href="index.html">⬅ Voltar ao sistema</a>
+        <a href="index.html" onclick="try{sessionStorage.setItem('pp_sessao','1')}catch(e){}">⬅ Voltar ao sistema</a>
         <span id="barra-tipo-doc">Paraná Peças — Orçamento</span>
     </div>
 
@@ -830,17 +830,15 @@
 
         function iniciarAuthOrcamento() {
             if (!authOrc) return;
-            const seguir = function() {
-                authOrc.onAuthStateChanged((user) => {
-                    if (!user) {
-                        window.location.replace('index.html');
-                        return;
-                    }
-                    carregarEmpresaDoFirebase();
-                    carregarCatalogo();
-                });
-            };
-            authOrc.setPersistence(firebase.auth.Auth.Persistence.SESSION).then(seguir).catch(seguir);
+            authOrc.onAuthStateChanged((user) => {
+                if (!user) {
+                    window.location.replace('index.html');
+                    return;
+                }
+                try { sessionStorage.setItem('pp_sessao', '1'); } catch (e) {}
+                carregarEmpresaDoFirebase();
+                carregarCatalogo();
+            });
         }
 
         const padraoEmpresas = {

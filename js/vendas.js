@@ -401,11 +401,12 @@ function vsIniciar() {
   vsDb = firebase.firestore();
   vsAuth = firebase.auth();
 
-  const seguir = () => vsAuth.onAuthStateChanged(user => {
+  vsAuth.onAuthStateChanged(user => {
     if (!user) {
       window.location.replace('index.html');
       return;
     }
+    try { sessionStorage.setItem('pp_sessao', '1'); } catch (e) {}
     vsUsuario = user;
     vsDb.collection('usuarios').doc(user.uid).get().then(doc => {
       const perfil = doc.exists ? doc.data().perfil : 'admin';
@@ -419,7 +420,6 @@ function vsIniciar() {
       vsAbrirApp();
     }).catch(vsErroFirestore);
   });
-  vsAuth.setPersistence(firebase.auth.Auth.Persistence.SESSION).then(seguir).catch(seguir);
 }
 
 vsIniciar();

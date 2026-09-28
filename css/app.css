@@ -2,6 +2,7 @@
   
   /* LOGIN */
   #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #000000 0%, #0d47a1 150%); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  html.pp-sessao #loginOverlay { display: none !important; }
   .login-box { background: rgba(20, 20, 20, 0.95); padding: 40px; border-radius: 15px; border: 1px solid #333; text-align: center; width: 320px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
   .login-box input { background: #222; border: 1px solid #444; color: #fff; margin-bottom: 15px; font-size: 16px; padding: 15px; width: 100%; border-radius: 8px; box-sizing: border-box; text-align: center; }
   
