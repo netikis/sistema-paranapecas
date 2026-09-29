@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0d47a1">
+<title>PEDIDO DE PEÇAS - PARANÁ PEÇAS</title>
+
+<script src="firebase-config.js"></script>
+<script src="firebase-env.js" onerror="/* opcional */"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<link rel="stylesheet" href="css/pedidos.css">
+</head>
+<body>
+
+<header class="pd-header">
+  <a href="index.html" class="pd-voltar" onclick="try{sessionStorage.setItem('pp_sessao','1')}catch(e){}">⬅ Voltar ao sistema</a>
+  <div class="pd-titulo">📦 PEDIDO DE PEÇAS</div>
+  <div id="pdUsuario" class="pd-usuario"></div>
+</header>
+
+<div id="pdCarregando" class="pd-carregando">Carregando...</div>
+
+<div class="pd-main" id="pdApp" hidden>
+  <div class="pd-topo">
+    <h2>Encomendas dos clientes</h2>
+  </div>
+
+  <form class="pd-form" id="pdForm" autocomplete="off">
+    <h3 id="pdFormTitulo">Novo pedido</h3>
+    <div class="pd-grid">
+      <div class="pd-campo">
+        <label for="pdTelefone">Telefone</label>
+        <input type="tel" id="pdTelefone" inputmode="tel" placeholder="(00) 00000-0000" maxlength="16">
+      </div>
+      <div class="pd-campo">
+        <label for="pdCliente">Nome do cliente</label>
+        <input type="text" id="pdCliente" placeholder="Nome do cliente">
+      </div>
+      <div class="pd-campo">
+        <label for="pdPeca">Nome da peça</label>
+        <input type="text" id="pdPeca" placeholder="Nome da peça">
+      </div>
+      <div class="pd-campo">
+        <label for="pdValor">Valor</label>
+        <input type="text" id="pdValor" inputmode="decimal" placeholder="0,00">
+      </div>
+      <div class="pd-campo">
+        <label for="pdData">Dia da encomenda</label>
+        <input type="date" id="pdData">
+      </div>
+      <div class="pd-acoes-form">
+        <button type="submit" class="pd-btn-salvar" id="pdBtnSalvar">➕ Salvar</button>
+        <button type="button" class="pd-btn-cancelar" id="pdBtnCancelar" hidden>Cancelar</button>
+      </div>
+    </div>
+  </form>
+
+  <div class="pd-busca">
+    <input type="search" id="pdBusca" placeholder="🔍 Buscar por telefone, cliente ou peça" autocomplete="off">
+    <select id="pdFiltro" title="Período">
+      <option value="todos">Todos os pedidos</option>
+      <option value="mes">Neste mês</option>
+    </select>
+  </div>
+
+  <div class="pd-card">
+    <table class="pd-tabela">
+      <thead>
+        <tr>
+          <th class="c-data">Dia da encomenda</th>
+          <th class="c-cliente">Nome do cliente</th>
+          <th class="c-tel">Telefone</th>
+          <th class="c-peca">Nome da peça</th>
+          <th class="c-valor">Valor</th>
+          <th class="c-acoes"></th>
+        </tr>
+      </thead>
+      <tbody id="pdLinhas"></tbody>
+      <tfoot>
+        <tr class="pd-total">
+          <td colspan="4" id="pdTotalRotulo">TOTAL</td>
+          <td class="c-valor" id="pdTotal">R$ 0,00</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  <p class="pd-dica">Preencha telefone, cliente, peça, valor e o dia da encomenda. Clique no telefone para ligar ou no WhatsApp para avisar o cliente.</p>
+</div>
+
+<script src="js/pedidos.js"></script>
+</body>
+</html>

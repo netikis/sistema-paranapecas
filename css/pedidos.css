@@ -1,0 +1,64 @@
+/* Parana Pecas — Pedido de Pecas (pedidos.html) */
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #000; margin: 0; color: #fff; }
+button { padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: 800; border: none; color: #fff; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; background: #333; }
+
+.pd-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #0d47a1; padding: 15px 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+.pd-titulo { flex: 1; text-align: center; font-size: 20px; font-weight: bold; }
+.pd-voltar { color: #fff; text-decoration: none; font-weight: bold; font-size: 12px; background: rgba(255,255,255,0.15); padding: 8px 12px; border-radius: 5px; }
+.pd-usuario { font-size: 11px; color: #cfe0ff; min-width: 120px; text-align: right; }
+.pd-carregando { padding: 40px; text-align: center; color: #aaa; }
+
+.pd-main { max-width: 1200px; margin: 0 auto; padding: 18px 20px 40px; }
+.pd-topo { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
+.pd-topo h2 { margin: 0; font-size: 20px; text-transform: uppercase; }
+
+.pd-form { background: #111; border: 1px solid #333; border-radius: 10px; padding: 16px; margin-bottom: 18px; }
+.pd-form h3 { margin: 0 0 12px; font-size: 14px; color: #9ec1ff; }
+.pd-grid { display: grid; grid-template-columns: 1.1fr 1.1fr 1.4fr 0.8fr 0.9fr auto; gap: 10px; align-items: end; }
+.pd-campo label { display: block; font-size: 11px; font-weight: 800; letter-spacing: 0.4px; color: #bbb; margin-bottom: 6px; text-transform: uppercase; }
+.pd-campo input { width: 100%; padding: 11px; border-radius: 5px; border: 1px solid #555; background: #222; color: #fff; font-size: 14px; font-weight: 600; }
+.pd-campo input:focus { outline: 2px solid #1565c0; }
+.pd-acoes-form { display: flex; gap: 8px; }
+.pd-btn-salvar { background: #2e7d32; padding: 12px 16px; }
+.pd-btn-cancelar { background: #555; padding: 12px 16px; }
+
+.pd-busca { display: flex; gap: 8px; margin-bottom: 12px; }
+.pd-busca input { flex: 1; min-width: 0; padding: 11px 12px; border-radius: 8px; border: 1px solid #333; background: #111; color: #fff; font-size: 14px; }
+.pd-busca input:focus { outline: 2px solid #1565c0; }
+.pd-busca select { padding: 0 10px; border-radius: 8px; border: 1px solid #333; background: #111; color: #fff; font-size: 13px; }
+
+.pd-card { background: #fff; color: #000; border-radius: 10px; padding: 15px; overflow-x: auto; }
+.pd-tabela { width: 100%; border-collapse: collapse; }
+.pd-tabela th { background: #444; color: #fff; padding: 10px; font-size: 11px; text-transform: uppercase; }
+.pd-tabela td { border-bottom: 1px solid #eee; padding: 8px; font-size: 14px; font-weight: 600; }
+.pd-tabela .c-data { width: 110px; text-align: center; }
+.pd-tabela .c-tel { width: 150px; white-space: nowrap; }
+.pd-tabela .c-valor { width: 120px; text-align: right; }
+.pd-tabela .c-acoes { width: 150px; text-align: center; white-space: nowrap; }
+.pd-tabela .c-cliente, .pd-tabela .c-peca { text-align: left; }
+.pd-vazio td { text-align: center; color: #888; font-weight: normal; padding: 22px; }
+.pd-total td { background: #0d47a1; color: #fff; font-weight: 900; font-size: 16px; padding: 12px 8px; border: none; }
+.pd-total td:first-child { text-align: right; }
+
+.pd-btn-wapp { background: #25D366; padding: 6px 8px; }
+.pd-btn-editar { background: #f9a825; padding: 6px 8px; }
+.pd-btn-excluir { background: #c62828; padding: 6px 8px; }
+.pd-dica { color: #aaa; font-size: 12px; margin-top: 10px; }
+.pd-tel-link { color: #0d47a1; text-decoration: none; }
+.pd-tel-link:hover { text-decoration: underline; }
+.pd-editando { outline: 2px solid #f9a825; }
+
+@media (max-width: 900px) {
+  .pd-header { padding: 10px; }
+  .pd-titulo { font-size: 15px; }
+  .pd-main { padding: 12px; }
+  .pd-grid { grid-template-columns: 1fr 1fr; }
+  .pd-acoes-form { grid-column: 1 / -1; }
+}
+
+@media (max-width: 560px) {
+  .pd-grid { grid-template-columns: 1fr; }
+}

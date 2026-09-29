@@ -51,8 +51,13 @@ service cloud.firestore {
       allow read, write: if isSignedIn();
     }
 
-    // --- CONFIG EMPRESA / LOGO ---
+    // --- CONFIG EMPRESA / LOGO / PEDIDOS DE PEÇAS ---
     match /config/{docId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // --- PEDIDO DE PEÇAS (pedidos.html) ---
+    match /pedidos_pecas/{docId} {
       allow read, write: if isSignedIn();
     }
 
