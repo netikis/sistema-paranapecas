@@ -40,10 +40,17 @@ function pdDigitos(t) { return String(t || '').replace(/\D/g, ''); }
 function pdFmtTel(t) {
   const d = pdDigitos(t).slice(0, 11);
   if (!d) return '';
-  if (d.length <= 2) return '(' + d;
-  if (d.length <= 6) return '(' + d.slice(0, 2) + ') ' + d.slice(2);
-  if (d.length <= 10) return '(' + d.slice(0, 2) + ') ' + d.slice(2, 6) + '-' + d.slice(6);
+  if (d.length <= 4) return d;
+  if (d.length <= 8) return d.slice(0, d.length - 4) + '-' + d.slice(-4);
+  if (d.length === 9) return d.slice(0, 5) + '-' + d.slice(5);
+  if (d.length === 10) return '(' + d.slice(0, 2) + ') ' + d.slice(2, 6) + '-' + d.slice(6);
   return '(' + d.slice(0, 2) + ') ' + d.slice(2, 7) + '-' + d.slice(7);
+}
+
+function pdTelHref(tel) {
+  const d = pdDigitos(tel);
+  if (!d) return '';
+  return d.length >= 10 ? 'tel:+55' + d : 'tel:' + d;
 }
 
 function pdDataBr(iso) {
@@ -153,9 +160,9 @@ function pdLerFormulario() {
   const valor = pdParseValor(pdCampo('pdValor').value);
   const data = pdCampo('pdData').value;
 
-  if (telefone.length < 10) {
+  if (telefone.length < 8) {
     pdCampo('pdTelefone').focus();
-    pdAviso('Informe o telefone com DDD.');
+    pdAviso('Informe o telefone.');
     return null;
   }
   if (!cliente) {
@@ -196,8 +203,8 @@ function pdListaVisivel() {
 
 function pdWaLink(p) {
   const tel = pdDigitos(p.telefone);
-  if (tel.length < 10) return '';
-  const num = tel.length === 11 || tel.length === 10 ? '55' + tel : tel;
+  if (tel.length < 8) return '';
+  const num = (tel.length === 10 || tel.length === 11) ? '55' + tel : tel;
   const texto = encodeURIComponent('Olá ' + p.cliente + ', sobre o pedido da peça ' + p.peca + '.');
   return 'https://wa.me/' + num + '?text=' + texto;
 }
@@ -225,7 +232,7 @@ function pdRender() {
       return `<tr>
         <td class="c-data">${pdEscapar(pdDataBr(p.data))}</td>
         <td class="c-cliente">${pdEscapar(p.cliente)}</td>
-        <td class="c-tel"><a class="pd-tel-link" href="tel:+55${pdEscapar(p.telefone)}">${pdEscapar(pdFmtTel(p.telefone))}</a></td>
+        <td class="c-tel"><a class="pd-tel-link" href="${pdTelHref(p.telefone)}">${pdEscapar(pdFmtTel(p.telefone))}</a></td>
         <td class="c-peca">${pdEscapar(p.peca)}</td>
         <td class="c-foto">${pdCelulaFoto(p)}</td>
         <td class="c-valor">${pdMoeda(p.valor)}</td>
