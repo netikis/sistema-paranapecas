@@ -57,6 +57,18 @@
         <button type="button" class="pd-btn-cancelar" id="pdBtnCancelar" hidden>Cancelar</button>
       </div>
     </div>
+
+    <div class="pd-imagens">
+      <strong>Imagens do pedido</strong>
+      <p>Tire um print (<b>Print Screen</b> ou <b>Win + Shift + S</b>), volte nesta tela e pressione <b>Ctrl + V</b> para colar. Depois recorte e salve no pedido.</p>
+      <div class="pd-imagens-acoes">
+        <button type="button" class="pd-btn-azul" id="pdBtnColar">Colar print (Ctrl+V)</button>
+        <button type="button" class="pd-btn-arquivo" id="pdBtnArquivo">Escolher arquivo</button>
+        <input type="file" id="pdArquivoImagem" accept="image/*" hidden>
+      </div>
+      <div class="pd-status-imagens" id="pdStatusImagens"></div>
+      <div class="pd-galeria" id="pdGaleria"></div>
+    </div>
   </form>
 
   <div class="pd-busca">
@@ -75,6 +87,7 @@
           <th class="c-cliente">Nome do cliente</th>
           <th class="c-tel">Telefone</th>
           <th class="c-peca">Nome da peça</th>
+          <th class="c-foto">Foto</th>
           <th class="c-valor">Valor</th>
           <th class="c-acoes"></th>
         </tr>
@@ -82,14 +95,51 @@
       <tbody id="pdLinhas"></tbody>
       <tfoot>
         <tr class="pd-total">
-          <td colspan="4" id="pdTotalRotulo">TOTAL</td>
+          <td colspan="5" id="pdTotalRotulo">TOTAL</td>
           <td class="c-valor" id="pdTotal">R$ 0,00</td>
           <td></td>
         </tr>
       </tfoot>
     </table>
   </div>
-  <p class="pd-dica">Preencha telefone, cliente, peça, valor e o dia da encomenda. Clique no telefone para ligar ou no WhatsApp para avisar o cliente.</p>
+  <p class="pd-dica">Preencha telefone, cliente, peça, valor e o dia da encomenda. Cole o print da peça (Ctrl+V), recorte e salve no pedido. Clique no telefone para ligar ou no WhatsApp para avisar o cliente.</p>
+</div>
+
+<div id="pdModalRecorte" class="pd-modal-recorte" aria-hidden="true">
+  <div class="pd-modal-recorte-caixa" role="dialog" aria-labelledby="pdTituloRecorte">
+    <h3 id="pdTituloRecorte">Recortar imagem</h3>
+    <p class="pd-modal-recorte-ajuda">Arraste a área verde para mover. Use as alças para recortar. Depois salve no pedido.</p>
+    <div class="pd-crop-viewport" id="pdCropViewport">
+      <div class="pd-crop-stage" id="pdCropStage">
+        <img id="pdCropImg" alt="Imagem para recorte">
+        <div class="pd-crop-box" id="pdCropBox">
+          <span class="pd-crop-handle" data-handle="nw"></span>
+          <span class="pd-crop-handle" data-handle="n"></span>
+          <span class="pd-crop-handle" data-handle="ne"></span>
+          <span class="pd-crop-handle" data-handle="e"></span>
+          <span class="pd-crop-handle" data-handle="se"></span>
+          <span class="pd-crop-handle" data-handle="s"></span>
+          <span class="pd-crop-handle" data-handle="sw"></span>
+          <span class="pd-crop-handle" data-handle="w"></span>
+        </div>
+      </div>
+    </div>
+    <div class="pd-acoes-recorte">
+      <button type="button" class="pd-btn-salvar" id="pdBtnSalvarRecorte">Salvar no pedido</button>
+      <button type="button" class="pd-btn-azul" id="pdBtnImagemInteira">Usar imagem inteira</button>
+      <button type="button" class="pd-btn-cancelar" id="pdBtnCancelarRecorte">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div id="pdModalFotos" class="pd-modal-fotos" aria-hidden="true">
+  <div class="pd-modal-fotos-caixa" role="dialog">
+    <div class="pd-modal-fotos-topo">
+      <h3 id="pdFotosTitulo">Fotos do pedido</h3>
+      <button type="button" class="pd-btn-cancelar" id="pdBtnFecharFotos">Fechar</button>
+    </div>
+    <div class="pd-galeria pd-galeria-modal" id="pdGaleriaModal"></div>
+  </div>
 </div>
 
 <script src="js/pedidos.js"></script>
