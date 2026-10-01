@@ -1,4 +1,4 @@
-﻿# Dependências / temporários
+# Dependências / temporários
 node_modules/
 .DS_Store
 Thumbs.db
@@ -8,6 +8,11 @@ Thumbs.db
 # Segredos
 .env
 .env.*
+firebase-env.js
+
+# Backups / arquivos locais
+index.monolith.bak.html
+SISTEMA PARANA PÉÇAS
 
 # Arquivos de exemplo / exportações geradas
 *.pdf

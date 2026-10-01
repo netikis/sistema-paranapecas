@@ -1,0 +1,1784 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paraná Peças - Orçamento</title>
+
+    <!-- Mesmas chaves do sistema principal — não substitui o index.html -->
+    <script src="firebase-config.js"></script>
+    <script src="firebase-env.js" onerror="/* opcional */"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f4f4f9;
+            padding: 20px;
+            color: #333;
+        }
+
+        .painel-config {
+            max-width: 800px;
+            margin: 20px auto 0;
+            background: #1e2430;
+            color: #fff;
+            border-radius: 8px;
+            padding: 18px 20px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+        }
+
+        .painel-config h2 {
+            margin: 0 0 6px;
+            font-size: 18px;
+        }
+
+        .painel-config h3 {
+            margin: 14px 0 10px;
+            font-size: 15px;
+            color: #9ec1ff;
+            font-weight: bold;
+        }
+
+        .painel-config label {
+            display: block;
+            font-size: 12px;
+            color: #c5cdd8;
+            margin-top: 10px;
+            margin-bottom: 4px;
+        }
+
+        .painel-config select,
+        .painel-config input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #4a5568;
+            border-radius: 4px;
+            background: #2a3344;
+            color: #fff;
+            margin-top: 0;
+        }
+
+        .painel-config select {
+            background: #2563eb;
+            border-color: #2563eb;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .check-impressao {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 12px 0 4px;
+            color: #22c55e;
+            font-weight: bold;
+            font-size: 13px;
+            text-transform: uppercase;
+        }
+
+        .check-impressao input {
+            width: 16px;
+            height: 16px;
+            accent-color: #22c55e;
+        }
+
+        .acoes-config {
+            display: flex;
+            gap: 10px;
+            margin-top: 14px;
+            flex-wrap: wrap;
+        }
+
+        .btn-salvar-loja {
+            background: #2563eb;
+        }
+
+        .btn-salvar-loja:hover {
+            background: #1d4ed8;
+        }
+
+        .status-salvo {
+            font-size: 12px;
+            color: #86efac;
+            margin-top: 8px;
+            min-height: 16px;
+        }
+
+        /* Container principal que será impresso/salvo */
+        #documento-orcamento {
+            background-color: #fff;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 30px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        /* Cabeçalho */
+        .cabecalho-orcamento {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            border-bottom: 3px solid #0033cc;
+            padding-bottom: 16px;
+            margin-bottom: 20px;
+            gap: 20px;
+        }
+
+        .area-logo {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            flex-shrink: 0;
+        }
+
+        .area-logo img {
+            width: 168px;
+            height: auto;
+            max-height: 168px;
+            object-fit: contain;
+            background-color: #000;
+            border-radius: 6px;
+        }
+
+        .area-titulo {
+            text-align: right;
+            flex: 1;
+        }
+
+        .area-titulo h1 {
+            font-size: 20px;
+            margin: 0 0 8px;
+            text-transform: uppercase;
+            color: #111;
+            line-height: 1.2;
+        }
+
+        .tipo-doc-opcoes {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 6px;
+            margin: 0 0 8px;
+        }
+
+        .tipo-doc-opcoes span {
+            font-size: 11px;
+            color: #2563eb;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .btn-tipo {
+            background: #e5e7eb;
+            color: #111;
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .btn-tipo:hover {
+            background: #cbd5e1;
+        }
+
+        .btn-tipo.ativo {
+            background: #0d47a1;
+            color: #fff;
+        }
+
+        .btn-tipo.ativo:hover {
+            background: #0b3c8a;
+        }
+
+        .dados-empresa-doc {
+            font-size: 12px;
+            line-height: 1.45;
+            color: #333;
+        }
+
+        .dados-empresa-doc .nome-empresa {
+            font-weight: bold;
+            font-size: 13px;
+            margin-bottom: 2px;
+        }
+
+        /* Seção de Dados do Cliente e Veículo */
+        .dados-cliente {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .dados-cliente div {
+            display: flex;
+            flex-direction: column;
+        }
+
+        input[type="text"], input[type="number"] {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-top: 5px;
+        }
+
+        /* Formulário de Adição de Itens (Não sai na impressão) */
+        .form-add-item {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr auto;
+            gap: 10px;
+            background-color: #eef2f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            align-items: end;
+        }
+
+        button {
+            padding: 10px 15px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover { background-color: #218838; }
+        
+        .btn-remover { background-color: #dc3545; padding: 5px 10px; font-size: 12px;}
+        .btn-remover:hover { background-color: #c82333; }
+        
+        .btn-editar { background-color: #ffc107; color: #000; padding: 5px 10px; font-size: 12px; margin-right: 5px;}
+        .btn-editar:hover { background-color: #e0a800; }
+
+        /* Tabela de Itens */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th { background-color: #f8f9fa; }
+
+        .total-container {
+            text-align: right;
+            font-size: 20px;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+
+        .pix-orcamento {
+            margin-top: 18px;
+            padding-top: 14px;
+            border-top: 1px solid #ddd;
+            text-align: right;
+            font-size: 13px;
+            line-height: 1.5;
+            color: #222;
+        }
+
+        .pix-orcamento.oculto {
+            display: none;
+        }
+
+        .pix-orcamento .pix-chave {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .pix-orcamento .pix-beneficiario {
+            white-space: pre-line;
+            color: #444;
+        }
+
+        .painel-config textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #4a5568;
+            border-radius: 4px;
+            background: #2a3344;
+            color: #fff;
+            min-height: 70px;
+            resize: vertical;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Botões de Ação Final */
+        .acoes-finais {
+            max-width: 800px;
+            margin: 20px auto;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .btn-azul { background-color: #007bff; }
+        .btn-azul:hover { background-color: #0056b3; }
+        .btn-roxo { background-color: #6f42c1; }
+        .btn-roxo:hover { background-color: #5a32a3; }
+        .btn-limpar { background-color: #dc3545; }
+        .btn-limpar:hover { background-color: #c82333; }
+
+        .form-imagens {
+            background-color: #eef2f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+
+        .form-imagens strong {
+            display: block;
+            font-size: 14px;
+            color: #111;
+        }
+
+        .form-imagens p {
+            margin: 6px 0 12px;
+            font-size: 13px;
+            color: #444;
+            line-height: 1.4;
+        }
+
+        .acoes-imagens {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .status-imagens {
+            font-size: 12px;
+            color: #1d4ed8;
+            min-height: 16px;
+            margin-top: 8px;
+        }
+
+        .titulo-imagens {
+            font-size: 14px;
+            margin: 18px 0 10px;
+            color: #111;
+            text-transform: uppercase;
+            border-bottom: 2px solid #0033cc;
+            padding-bottom: 4px;
+        }
+
+        .titulo-imagens.oculto,
+        .galeria-imagens:empty {
+            display: none;
+        }
+
+        .galeria-imagens {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .galeria-imagens.uma-imagem {
+            grid-template-columns: 1fr;
+        }
+
+        .card-imagem {
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            overflow: hidden;
+            background: #fff;
+            break-inside: avoid;
+        }
+
+        .card-imagem img {
+            width: 100%;
+            max-height: 360px;
+            object-fit: contain;
+            display: block;
+            background: #fff;
+        }
+
+        .card-imagem .legenda-imagem {
+            font-size: 11px;
+            color: #555;
+            padding: 6px 8px 0;
+        }
+
+        .card-imagem .acoes-card {
+            padding: 8px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .modal-recorte {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.72);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .modal-recorte.aberto {
+            display: flex;
+        }
+
+        .modal-recorte-caixa {
+            background: #fff;
+            border-radius: 8px;
+            max-width: 900px;
+            width: 100%;
+            padding: 18px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+        }
+
+        .modal-recorte-caixa h3 {
+            margin: 0 0 6px;
+            font-size: 18px;
+        }
+
+        .modal-recorte-ajuda {
+            margin: 0 0 12px;
+            font-size: 13px;
+            color: #555;
+        }
+
+        .crop-viewport {
+            background: #111;
+            border-radius: 6px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 240px;
+        }
+
+        .crop-stage {
+            position: relative;
+            line-height: 0;
+            user-select: none;
+            touch-action: none;
+        }
+
+        .crop-stage img {
+            display: block;
+            max-width: min(760px, 86vw);
+            max-height: 62vh;
+            pointer-events: none;
+        }
+
+        .crop-box {
+            position: absolute;
+            border: 2px solid #22c55e;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+            cursor: move;
+            box-sizing: border-box;
+        }
+
+        .crop-handle {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #22c55e;
+            border: 2px solid #fff;
+            border-radius: 1px;
+            z-index: 2;
+        }
+
+        .crop-handle[data-handle="nw"] { top: -6px; left: -6px; cursor: nwse-resize; }
+        .crop-handle[data-handle="n"] { top: -6px; left: 50%; margin-left: -6px; cursor: ns-resize; }
+        .crop-handle[data-handle="ne"] { top: -6px; right: -6px; cursor: nesw-resize; }
+        .crop-handle[data-handle="e"] { top: 50%; right: -6px; margin-top: -6px; cursor: ew-resize; }
+        .crop-handle[data-handle="se"] { bottom: -6px; right: -6px; cursor: nwse-resize; }
+        .crop-handle[data-handle="s"] { bottom: -6px; left: 50%; margin-left: -6px; cursor: ns-resize; }
+        .crop-handle[data-handle="sw"] { bottom: -6px; left: -6px; cursor: nesw-resize; }
+        .crop-handle[data-handle="w"] { top: 50%; left: -6px; margin-top: -6px; cursor: ew-resize; }
+
+        .acoes-recorte {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 14px;
+            justify-content: flex-end;
+        }
+
+        .acoes-recorte button {
+            font-size: 13px;
+        }
+
+        .barra-sistema {
+            max-width: 800px;
+            margin: 0 auto 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            background: #0d47a1;
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 8px;
+        }
+
+        .barra-sistema a {
+            color: #fff;
+            text-decoration: none;
+            background: #1565c0;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .barra-sistema span {
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        /* REGRAS DE IMPRESSÃO */
+        @media print {
+            body { background-color: white; padding: 0; }
+            #documento-orcamento { box-shadow: none; padding: 0; }
+            .nao-imprimir { display: none !important; }
+            input { border: none; background: transparent; padding: 0; margin: 0; }
+            .galeria-imagens { grid-template-columns: 1fr 1fr; }
+            .card-imagem img { max-height: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="barra-sistema nao-imprimir">
+        <a href="index.html" onclick="try{sessionStorage.setItem('pp_sessao','1')}catch(e){}">⬅ Voltar ao sistema</a>
+        <span id="barra-tipo-doc">Paraná Peças — Orçamento</span>
+    </div>
+
+    <datalist id="opcoesCatalogo"></datalist>
+
+    <div id="documento-orcamento">
+        
+        <header class="cabecalho-orcamento">
+            <div class="area-logo">
+                <img id="logo-empresa" src="parana-pecas-logo-hd.png" alt="Paraná Peças">
+            </div>
+            <div class="area-titulo">
+                <div class="tipo-doc-opcoes nao-imprimir">
+                    <span>Tipo:</span>
+                    <button type="button" id="btn-tipo-orcamento" class="btn-tipo ativo" onclick="definirTipoDocumento('ORÇAMENTO')">ORÇAMENTO</button>
+                    <button type="button" id="btn-tipo-venda" class="btn-tipo" onclick="definirTipoDocumento('VENDA')">COMPROVANTE DE VENDA</button>
+                </div>
+                <h1 id="titulo-documento">ORÇAMENTO</h1>
+                <div class="dados-empresa-doc" id="dados-empresa-doc">
+                    <div class="nome-empresa" id="doc-nome"></div>
+                    <div id="doc-endereco"></div>
+                    <div id="doc-telefones"></div>
+                    <div id="doc-cnpj"></div>
+                </div>
+            </div>
+        </header>
+
+        <div class="dados-cliente">
+            <div>
+                <label>Cliente:</label>
+                <input type="text" id="nome-cliente" placeholder="Nome do cliente">
+            </div>
+            <div>
+                <label>Data:</label>
+                <input type="text" id="data-orcamento" placeholder="DD/MM/AAAA">
+            </div>
+            <div>
+                <label>Veículo (Modelo):</label>
+                <input type="text" id="modelo-carro" placeholder="Ex: Gol 1.0">
+            </div>
+            <div>
+                <label>Placa:</label>
+                <input type="text" id="placa-carro" placeholder="ABC-1234">
+            </div>
+        </div>
+
+        <div class="form-add-item nao-imprimir">
+            <div>
+                <label>Descrição (Peça ou Mão de Obra)</label>
+                <input type="text" id="desc-item" list="opcoesCatalogo" placeholder="Ex: Pastilha de freio">
+            </div>
+            <div>
+                <label>Qtd</label>
+                <input type="number" id="qtd-item" value="1" min="1">
+            </div>
+            <div>
+                <label>Valor Unit. (R$)</label>
+                <input type="number" id="valor-item" placeholder="0.00" step="0.01">
+            </div>
+            <button onclick="adicionarItem()">Adicionar</button>
+        </div>
+
+        <div class="form-imagens nao-imprimir">
+            <strong>Imagens do orçamento</strong>
+            <p>Tire um print (<b>Print Screen</b> ou <b>Win + Shift + S</b>), volte nesta tela e pressione <b>Ctrl + V</b> para colar. Depois recorte e salve no orçamento ou em arquivo.</p>
+            <div class="acoes-imagens">
+                <button type="button" class="btn-azul" onclick="colarPrint()">Colar print (Ctrl+V)</button>
+                <button type="button" onclick="document.getElementById('arquivo-imagem').click()">Escolher arquivo</button>
+                <input type="file" id="arquivo-imagem" accept="image/*" hidden>
+            </div>
+            <div class="status-imagens" id="status-imagens"></div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Descrição</th>
+                    <th>Qtd</th>
+                    <th>V. Unit.</th>
+                    <th>Total</th>
+                    <th class="nao-imprimir">Ação</th>
+                </tr>
+            </thead>
+            <tbody id="tabela-itens">
+                </tbody>
+        </table>
+
+        <div class="total-container">
+            <span id="rotulo-total">Total do Orçamento:</span> R$ <span id="valor-total">0.00</span>
+        </div>
+
+        <div class="pix-orcamento oculto" id="pix-orcamento">
+            <div class="pix-chave">CHAVE PIX: <span id="doc-pix-chave"></span></div>
+            <div class="pix-beneficiario" id="doc-pix-beneficiario"></div>
+        </div>
+
+            <h3 class="titulo-imagens oculto" id="titulo-imagens">Fotos</h3>
+            <div class="galeria-imagens" id="galeria-imagens"></div>
+    </div>
+
+    <div class="acoes-finais nao-imprimir">
+        <button class="btn-azul" onclick="window.print()">Imprimir</button>
+        <button class="btn-roxo" onclick="gerarPDF()">Salvar PDF</button>
+        <button onclick="gerarJPEG()">Salvar JPEG</button>
+        <button class="btn-limpar" onclick="limparOrcamento()">Limpar orçamento</button>
+    </div>
+
+    <div class="painel-config nao-imprimir">
+        <h2>⚙ Configurações</h2>
+        <h3>🏢 Empresa / Filiais</h3>
+
+        <label for="select-loja">Loja para o orçamento</label>
+        <select id="select-loja" onchange="trocarLoja()"></select>
+
+        <label class="check-impressao">
+            <input type="checkbox" id="usar-nas-impressoes" checked onchange="salvarConfigGeral()">
+            Usar esta loja nas impressões
+        </label>
+
+        <label for="cfg-nome">Nome da empresa</label>
+        <input type="text" id="cfg-nome" placeholder="Nome da empresa">
+
+        <label for="cfg-endereco">Endereço</label>
+        <input type="text" id="cfg-endereco" placeholder="Rua, número, bairro, cidade - UF">
+
+        <label for="cfg-telefones">Telefones</label>
+        <input type="text" id="cfg-telefones" placeholder="(00) 00000-0000">
+
+        <label for="cfg-cnpj">CNPJ</label>
+        <input type="text" id="cfg-cnpj" placeholder="00.000.000/0000-00">
+
+        <div class="acoes-config">
+            <button class="btn-salvar-loja" type="button" onclick="salvarLojaAtual()">Salvar dados da loja</button>
+        </div>
+
+        <h3>💳 PIX</h3>
+
+        <label class="check-impressao">
+            <input type="checkbox" id="cfg-mostrar-pix" checked onchange="salvarConfigPix()">
+            Mostrar PIX no orçamento
+        </label>
+
+        <label for="cfg-pix-chave">Chave PIX</label>
+        <input type="text" id="cfg-pix-chave" placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória">
+
+        <label for="cfg-pix-beneficiario">Dados do beneficiário</label>
+        <textarea id="cfg-pix-beneficiario" placeholder="Nome completo&#10;CPF/CNPJ&#10;Banco (opcional)"></textarea>
+
+        <div class="acoes-config">
+            <button class="btn-salvar-loja" type="button" onclick="salvarConfigPix()">Salvar PIX</button>
+        </div>
+        <div class="status-salvo" id="status-salvo"></div>
+    </div>
+
+    <div id="modal-recorte" class="modal-recorte nao-imprimir" aria-hidden="true">
+        <div class="modal-recorte-caixa" role="dialog" aria-labelledby="titulo-recorte">
+            <h3 id="titulo-recorte">Recortar imagem</h3>
+            <p class="modal-recorte-ajuda">Arraste a área verde para mover. Use as alças para recortar. Em seguida salve no orçamento ou baixe o arquivo.</p>
+            <div class="crop-viewport" id="crop-viewport">
+                <div class="crop-stage" id="crop-stage">
+                    <img id="crop-img" alt="Imagem para recorte">
+                    <div class="crop-box" id="crop-box">
+                        <span class="crop-handle" data-handle="nw"></span>
+                        <span class="crop-handle" data-handle="n"></span>
+                        <span class="crop-handle" data-handle="ne"></span>
+                        <span class="crop-handle" data-handle="e"></span>
+                        <span class="crop-handle" data-handle="se"></span>
+                        <span class="crop-handle" data-handle="s"></span>
+                        <span class="crop-handle" data-handle="sw"></span>
+                        <span class="crop-handle" data-handle="w"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="acoes-recorte">
+                <button type="button" onclick="aplicarImagemNoOrcamento()">Salvar no orçamento</button>
+                <button type="button" class="btn-azul" onclick="baixarImagemRecortada()">Salvar arquivo</button>
+                <button type="button" class="btn-roxo" onclick="usarImagemInteira()">Usar imagem inteira</button>
+                <button type="button" class="btn-limpar" onclick="fecharRecorte()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'parana_pecas_orcamento_empresas_v1';
+        const STORAGE_ORCAMENTO = 'parana_pecas_orcamento_rascunho_v1';
+
+        const firebaseConfigPage = window.PARANA_FIREBASE_CONFIG || window.FIREBASE_CONFIG;
+        if (firebaseConfigPage && firebaseConfigPage.apiKey && typeof firebase !== 'undefined' && !firebase.apps.length) {
+            firebase.initializeApp(firebaseConfigPage);
+        }
+        const dbOrc = (typeof firebase !== 'undefined' && firebase.apps.length) ? firebase.firestore() : null;
+        const authOrc = (typeof firebase !== 'undefined' && firebase.apps.length) ? firebase.auth() : null;
+
+        function aplicarEmpresaFirebase(d) {
+            if (!d) return;
+            const emp1 = d.emp1 || (d.nome ? { nome: d.nome, end: d.end || '', tel: d.tel || '', cnpj: d.cnpj || '' } : null);
+            const emp2 = d.emp2 || null;
+            if (emp1) {
+                configEmpresas.lojas[0].nome = emp1.nome || configEmpresas.lojas[0].nome;
+                configEmpresas.lojas[0].endereco = emp1.end || emp1.endereco || configEmpresas.lojas[0].endereco;
+                configEmpresas.lojas[0].telefones = emp1.tel || emp1.telefones || configEmpresas.lojas[0].telefones;
+                configEmpresas.lojas[0].cnpj = emp1.cnpj || configEmpresas.lojas[0].cnpj;
+            }
+            if (emp2) {
+                configEmpresas.lojas[1].nome = emp2.nome || configEmpresas.lojas[1].nome;
+                configEmpresas.lojas[1].endereco = emp2.end || emp2.endereco || configEmpresas.lojas[1].endereco;
+                configEmpresas.lojas[1].telefones = emp2.tel || emp2.telefones || configEmpresas.lojas[1].telefones;
+                configEmpresas.lojas[1].cnpj = emp2.cnpj || configEmpresas.lojas[1].cnpj;
+            }
+            if (d.ativo === 2) configEmpresas.lojaAtiva = 1;
+            else if (d.ativo === 1) configEmpresas.lojaAtiva = 0;
+            if (d.pix) {
+                configEmpresas.pix = Object.assign({}, configEmpresas.pix || {}, d.pix);
+            }
+            montarSelectLojas();
+            preencherFormularioLoja();
+            atualizarCabecalhoDocumento();
+        }
+
+        function carregarEmpresaDoFirebase() {
+            if (!dbOrc) return;
+            dbOrc.collection('config').doc('empresa').get().then((doc) => {
+                if (doc.exists) aplicarEmpresaFirebase(doc.data());
+            }).catch((err) => console.warn('Não foi possível carregar empresa do Firebase:', err));
+        }
+
+        function carregarCatalogo() {
+            if (!dbOrc) return;
+            const lista = document.getElementById('opcoesCatalogo');
+            if (!lista) return;
+            dbOrc.collection('catalogo').onSnapshot((s) => {
+                lista.innerHTML = '';
+                s.forEach((docSnap) => {
+                    const k = docSnap.data();
+                    const opt = document.createElement('option');
+                    opt.value = k.nome || '';
+                    opt.label = k.valor != null ? ('R$ ' + k.valor) : '';
+                    lista.appendChild(opt);
+                });
+            });
+        }
+
+        function sincronizarLojaNoFirebase() {
+            if (!dbOrc) return;
+            const loja = lojaAtual();
+            const emp = {
+                nome: loja.nome || '',
+                end: loja.endereco || '',
+                tel: loja.telefones || '',
+                cnpj: loja.cnpj || ''
+            };
+            const payload = {
+                pix: configEmpresas.pix || {}
+            };
+            if (configEmpresas.lojaAtiva === 1) payload.emp2 = emp;
+            else payload.emp1 = emp;
+            if (configEmpresas.usarNasImpressoes) {
+                payload.ativo = configEmpresas.lojaAtiva === 1 ? 2 : 1;
+            }
+            dbOrc.collection('config').doc('empresa').set(payload, { merge: true }).catch((err) => {
+                console.warn('Não foi possível salvar no Firebase:', err);
+            });
+        }
+
+        function iniciarAuthOrcamento() {
+            if (!authOrc) return;
+            authOrc.onAuthStateChanged((user) => {
+                if (!user) {
+                    window.location.replace('index.html');
+                    return;
+                }
+                try { sessionStorage.setItem('pp_sessao', '1'); } catch (e) {}
+                carregarEmpresaDoFirebase();
+                carregarCatalogo();
+            });
+        }
+
+        const padraoEmpresas = {
+            lojaAtiva: 0,
+            usarNasImpressoes: true,
+            pix: {
+                mostrar: true,
+                chave: '',
+                beneficiario: ''
+            },
+            lojas: [
+                {
+                    nomeLoja: 'Loja 1 (Principal)',
+                    nome: 'PARANÁ PEÇAS - COMÉRCIO DE PEÇAS AUTOMOTIVAS',
+                    endereco: 'AVENIDA GOVERNADOR PAULO CRUZ PIMENTEL, 746, CENTRO, IBAITI - PR',
+                    telefones: '(43) 99971-0504 (NETO) / (43) 99136-6802 (JOSIAS) / (43) 99168-6899 (THIAGO)',
+                    cnpj: '46.511.552/0001-65'
+                },
+                {
+                    nomeLoja: 'Loja 2',
+                    nome: '',
+                    endereco: '',
+                    telefones: '',
+                    cnpj: ''
+                }
+            ]
+        };
+
+        let configEmpresas = carregarConfig();
+        let itensOrcamento = [];
+        let imagensOrcamento = [];
+        let editandoIndex = -1;
+        let recortandoIndex = -1;
+        let cropBox = { x: 0, y: 0, w: 0, h: 0 };
+        let cropDrag = null;
+        let cropUrlTemporaria = '';
+        let tipoDocumento = 'ORÇAMENTO';
+
+        function prefixoArquivoDocumento() {
+            return tipoDocumento === 'VENDA' ? 'Comprovante_Venda' : 'Orcamento';
+        }
+
+        function tituloVisivelDocumento() {
+            return tipoDocumento === 'VENDA' ? 'COMPROVANTE DE VENDA' : 'ORÇAMENTO';
+        }
+
+        function definirTipoDocumento(tipo) {
+            tipoDocumento = tipo === 'VENDA' ? 'VENDA' : 'ORÇAMENTO';
+            const titulo = document.getElementById('titulo-documento');
+            if (titulo) titulo.textContent = tituloVisivelDocumento();
+            const rotuloTotal = document.getElementById('rotulo-total');
+            if (rotuloTotal) {
+                rotuloTotal.textContent = tipoDocumento === 'VENDA' ? 'Total da Venda:' : 'Total do Orçamento:';
+            }
+            const btnOrc = document.getElementById('btn-tipo-orcamento');
+            const btnVenda = document.getElementById('btn-tipo-venda');
+            if (btnOrc) btnOrc.classList.toggle('ativo', tipoDocumento === 'ORÇAMENTO');
+            if (btnVenda) btnVenda.classList.toggle('ativo', tipoDocumento === 'VENDA');
+            const barra = document.getElementById('barra-tipo-doc');
+            if (barra) {
+                barra.textContent = tipoDocumento === 'VENDA' ? 'Paraná Peças — Comprovante de Venda' : 'Paraná Peças — Orçamento';
+            }
+            salvarOrcamentoAtual();
+        }
+
+        function salvarOrcamentoAtual() {
+            const dados = {
+                cliente: document.getElementById('nome-cliente').value || '',
+                data: document.getElementById('data-orcamento').value || '',
+                modelo: document.getElementById('modelo-carro').value || '',
+                placa: document.getElementById('placa-carro').value || '',
+                itens: itensOrcamento,
+                imagens: imagensOrcamento,
+                tipoDocumento: tipoDocumento
+            };
+            try {
+                localStorage.setItem(STORAGE_ORCAMENTO, JSON.stringify(dados));
+            } catch (e) {
+                mostrarStatusImagens('Não foi possível guardar as imagens no rascunho (espaço do navegador cheio). Elas continuam neste orçamento até fechar a página.');
+            }
+        }
+
+        function carregarOrcamentoSalvo() {
+            try {
+                const salva = localStorage.getItem(STORAGE_ORCAMENTO);
+                if (!salva) return false;
+                const dados = JSON.parse(salva);
+                document.getElementById('nome-cliente').value = dados.cliente || '';
+                document.getElementById('data-orcamento').value = dados.data || new Date().toLocaleDateString('pt-BR');
+                document.getElementById('modelo-carro').value = dados.modelo || '';
+                document.getElementById('placa-carro').value = dados.placa || '';
+                itensOrcamento = Array.isArray(dados.itens) ? dados.itens : [];
+                imagensOrcamento = Array.isArray(dados.imagens) ? dados.imagens : [];
+                editandoIndex = -1;
+                definirTipoDocumento(dados.tipoDocumento === 'VENDA' ? 'VENDA' : 'ORÇAMENTO');
+                atualizarTela();
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function limparOrcamento() {
+            const temDados = itensOrcamento.length > 0
+                || imagensOrcamento.length > 0
+                || document.getElementById('nome-cliente').value
+                || document.getElementById('modelo-carro').value
+                || document.getElementById('placa-carro').value;
+
+            if (temDados && !confirm('Deseja limpar todo o orçamento? Essa ação não pode ser desfeita.')) {
+                return;
+            }
+
+            itensOrcamento = [];
+            imagensOrcamento = [];
+            editandoIndex = -1;
+            definirTipoDocumento('ORÇAMENTO');
+            document.getElementById('nome-cliente').value = '';
+            document.getElementById('modelo-carro').value = '';
+            document.getElementById('placa-carro').value = '';
+            document.getElementById('data-orcamento').value = new Date().toLocaleDateString('pt-BR');
+            document.getElementById('desc-item').value = '';
+            document.getElementById('qtd-item').value = '1';
+            document.getElementById('valor-item').value = '';
+            localStorage.removeItem(STORAGE_ORCAMENTO);
+            atualizarTela();
+        }
+
+        function carregarConfig() {
+            try {
+                const salva = localStorage.getItem(STORAGE_KEY);
+                if (!salva) return JSON.parse(JSON.stringify(padraoEmpresas));
+                const dados = JSON.parse(salva);
+                if (!dados.lojas || dados.lojas.length < 2) {
+                    return JSON.parse(JSON.stringify(padraoEmpresas));
+                }
+                if (!dados.pix) {
+                    dados.pix = JSON.parse(JSON.stringify(padraoEmpresas.pix));
+                }
+                return dados;
+            } catch (e) {
+                return JSON.parse(JSON.stringify(padraoEmpresas));
+            }
+        }
+
+        function persistirConfig() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(configEmpresas));
+        }
+
+        function lojaAtual() {
+            return configEmpresas.lojas[configEmpresas.lojaAtiva] || configEmpresas.lojas[0];
+        }
+
+        function montarSelectLojas() {
+            const select = document.getElementById('select-loja');
+            select.innerHTML = '';
+            configEmpresas.lojas.forEach((loja, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = loja.nomeLoja || `Loja ${index + 1}`;
+                select.appendChild(option);
+            });
+            select.value = String(configEmpresas.lojaAtiva);
+        }
+
+        function preencherFormularioLoja() {
+            const loja = lojaAtual();
+            document.getElementById('cfg-nome').value = loja.nome || '';
+            document.getElementById('cfg-endereco').value = loja.endereco || '';
+            document.getElementById('cfg-telefones').value = loja.telefones || '';
+            document.getElementById('cfg-cnpj').value = loja.cnpj || '';
+            document.getElementById('usar-nas-impressoes').checked = !!configEmpresas.usarNasImpressoes;
+            preencherFormularioPix();
+        }
+
+        function preencherFormularioPix() {
+            const pix = configEmpresas.pix || padraoEmpresas.pix;
+            document.getElementById('cfg-mostrar-pix').checked = pix.mostrar !== false;
+            document.getElementById('cfg-pix-chave').value = pix.chave || '';
+            document.getElementById('cfg-pix-beneficiario').value = pix.beneficiario || '';
+        }
+
+        function atualizarCabecalhoDocumento() {
+            const loja = lojaAtual();
+            document.getElementById('doc-nome').textContent = loja.nome || '';
+            document.getElementById('doc-endereco').textContent = loja.endereco || '';
+            document.getElementById('doc-telefones').textContent = loja.telefones
+                ? `Tel: ${loja.telefones}`
+                : '';
+            document.getElementById('doc-cnpj').textContent = loja.cnpj
+                ? `CNPJ: ${loja.cnpj}`
+                : '';
+            atualizarPixDocumento();
+        }
+
+        function atualizarPixDocumento() {
+            const pix = configEmpresas.pix || {};
+            const bloco = document.getElementById('pix-orcamento');
+            const chave = (pix.chave || '').trim();
+            const beneficiario = (pix.beneficiario || '').trim();
+            const mostrar = pix.mostrar !== false && !!chave;
+
+            document.getElementById('doc-pix-chave').textContent = chave;
+            document.getElementById('doc-pix-beneficiario').textContent = beneficiario;
+
+            if (mostrar) {
+                bloco.classList.remove('oculto');
+            } else {
+                bloco.classList.add('oculto');
+            }
+        }
+
+        function salvarConfigPix() {
+            if (!configEmpresas.pix) {
+                configEmpresas.pix = JSON.parse(JSON.stringify(padraoEmpresas.pix));
+            }
+            configEmpresas.pix.mostrar = document.getElementById('cfg-mostrar-pix').checked;
+            configEmpresas.pix.chave = document.getElementById('cfg-pix-chave').value.trim();
+            configEmpresas.pix.beneficiario = document.getElementById('cfg-pix-beneficiario').value.trim();
+            persistirConfig();
+            atualizarPixDocumento();
+            sincronizarLojaNoFirebase();
+            mostrarStatus('Dados do PIX salvos com sucesso!');
+        }
+
+        function trocarLoja() {
+            const index = parseInt(document.getElementById('select-loja').value, 10);
+            configEmpresas.lojaAtiva = index;
+            persistirConfig();
+            preencherFormularioLoja();
+            atualizarCabecalhoDocumento();
+            mostrarStatus(`Loja alterada: ${lojaAtual().nomeLoja}`);
+        }
+
+        function salvarLojaAtual() {
+            const loja = lojaAtual();
+            loja.nome = document.getElementById('cfg-nome').value.trim();
+            loja.endereco = document.getElementById('cfg-endereco').value.trim();
+            loja.telefones = document.getElementById('cfg-telefones').value.trim();
+            loja.cnpj = document.getElementById('cfg-cnpj').value.trim();
+            configEmpresas.usarNasImpressoes = document.getElementById('usar-nas-impressoes').checked;
+            persistirConfig();
+            atualizarCabecalhoDocumento();
+            sincronizarLojaNoFirebase();
+            mostrarStatus('Dados da loja salvos com sucesso!');
+        }
+
+        function salvarConfigGeral() {
+            configEmpresas.usarNasImpressoes = document.getElementById('usar-nas-impressoes').checked;
+            persistirConfig();
+            mostrarStatus('Preferência de impressão salva.');
+        }
+
+        function mostrarStatus(texto) {
+            const el = document.getElementById('status-salvo');
+            el.textContent = texto;
+            clearTimeout(mostrarStatus._timer);
+            mostrarStatus._timer = setTimeout(() => {
+                el.textContent = '';
+            }, 2500);
+        }
+
+        // Inicialização
+        montarSelectLojas();
+        preencherFormularioLoja();
+        atualizarCabecalhoDocumento();
+        iniciarAuthOrcamento();
+
+        if (!carregarOrcamentoSalvo()) {
+            document.getElementById('data-orcamento').value = new Date().toLocaleDateString('pt-BR');
+        }
+
+        ['nome-cliente', 'data-orcamento', 'modelo-carro', 'placa-carro'].forEach((id) => {
+            document.getElementById(id).addEventListener('input', salvarOrcamentoAtual);
+        });
+
+        ['desc-item', 'qtd-item', 'valor-item'].forEach((id) => {
+            document.getElementById(id).addEventListener('keydown', (evento) => {
+                if (evento.key === 'Enter') {
+                    evento.preventDefault();
+                    adicionarItem();
+                }
+            });
+        });
+
+        iniciarFerramentaImagens();
+
+                function iniciarFerramentaImagens() {
+            const arquivo = document.getElementById('arquivo-imagem');
+            const stage = document.getElementById('crop-stage');
+            const modal = document.getElementById('modal-recorte');
+
+            arquivo.addEventListener('change', (evento) => {
+                const file = evento.target.files && evento.target.files[0];
+                evento.target.value = '';
+                if (file) abrirRecorteDeArquivo(file);
+            });
+
+            document.addEventListener('paste', (evento) => {
+                const imagem = extrairImagemClipboard(evento.clipboardData);
+                if (!imagem) return;
+                evento.preventDefault();
+                abrirRecorteDeArquivo(imagem);
+                mostrarStatusImagens('Print colado. Recorte se quiser e clique em Salvar no orçamento.');
+            });
+
+            document.addEventListener('keydown', (evento) => {
+                if (evento.key === 'Escape' && modal.classList.contains('aberto')) {
+                    fecharRecorte();
+                }
+            });
+
+            stage.addEventListener('pointerdown', iniciarArrasteCrop);
+            window.addEventListener('pointermove', moverArrasteCrop);
+            window.addEventListener('pointerup', finalizarArrasteCrop);
+            window.addEventListener('pointercancel', finalizarArrasteCrop);
+            window.addEventListener('resize', () => {
+                if (modal.classList.contains('aberto')) {
+                    ajustarCropAoTamanhoDaImagem(true);
+                }
+            });
+
+            atualizarGaleriaImagens();
+        }
+
+        function mostrarStatusImagens(texto) {
+            const el = document.getElementById('status-imagens');
+            if (!el) return;
+            el.textContent = texto || '';
+            clearTimeout(mostrarStatusImagens._timer);
+            if (texto) {
+                mostrarStatusImagens._timer = setTimeout(() => {
+                    el.textContent = '';
+                }, 4000);
+            }
+        }
+
+        function extrairImagemClipboard(clipboardData) {
+            if (!clipboardData) return null;
+            const itens = clipboardData.items || [];
+            for (let i = 0; i < itens.length; i++) {
+                if (itens[i].type && itens[i].type.indexOf('image') === 0) {
+                    return itens[i].getAsFile();
+                }
+            }
+            const arquivos = clipboardData.files || [];
+            for (let i = 0; i < arquivos.length; i++) {
+                if (arquivos[i].type && arquivos[i].type.indexOf('image') === 0) {
+                    return arquivos[i];
+                }
+            }
+            return null;
+        }
+
+        async function colarPrint() {
+            if (navigator.clipboard && navigator.clipboard.read) {
+                try {
+                    const itens = await navigator.clipboard.read();
+                    for (const item of itens) {
+                        const tipo = item.types.find((t) => t.indexOf('image') === 0);
+                        if (tipo) {
+                            const blob = await item.getType(tipo);
+                            abrirRecorteDeArquivo(blob);
+                            mostrarStatusImagens('Print colado. Recorte se quiser e clique em Salvar no orçamento.');
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    // Segue para a orientação de Ctrl+V
+                }
+            }
+            alert('Não foi possível ler a área de transferência automaticamente.\n\n1) Pressione Print Screen (ou Win + Shift + S)\n2) Clique nesta tela\n3) Pressione Ctrl + V para colar o print.');
+        }
+
+        function abrirRecorteDeArquivo(arquivo, indice) {
+            recortandoIndex = typeof indice === 'number' ? indice : -1;
+            limparUrlTemporaria();
+            cropUrlTemporaria = URL.createObjectURL(arquivo);
+            carregarImagemRecorte(cropUrlTemporaria, true);
+        }
+
+        function recortarImagemExistente(index) {
+            const imagem = imagensOrcamento[index];
+            if (!imagem || !imagem.src) return;
+            recortandoIndex = index;
+            limparUrlTemporaria();
+            carregarImagemRecorte(imagem.src, false);
+        }
+
+        function carregarImagemRecorte(src, revogarUrl) {
+            const img = document.getElementById('crop-img');
+            const modal = document.getElementById('modal-recorte');
+            img.onload = () => {
+                if (revogarUrl) limparUrlTemporaria();
+                modal.classList.add('aberto');
+                modal.setAttribute('aria-hidden', 'false');
+                document.body.style.overflow = 'hidden';
+                requestAnimationFrame(() => ajustarCropAoTamanhoDaImagem(false));
+            };
+            img.onerror = () => {
+                if (revogarUrl) limparUrlTemporaria();
+                alert('Não foi possível abrir a imagem. Tente colar novamente ou escolher outro arquivo.');
+            };
+            img.src = src;
+        }
+
+        function limparUrlTemporaria() {
+            if (cropUrlTemporaria) {
+                URL.revokeObjectURL(cropUrlTemporaria);
+                cropUrlTemporaria = '';
+            }
+        }
+
+        function fecharRecorte() {
+            const modal = document.getElementById('modal-recorte');
+            modal.classList.remove('aberto');
+            modal.setAttribute('aria-hidden', 'true');
+            document.body.style.removeProperty('overflow');
+            recortandoIndex = -1;
+            cropDrag = null;
+            limparUrlTemporaria();
+        }
+
+        function aplicarBoxCrop() {
+            const box = document.getElementById('crop-box');
+            box.style.left = cropBox.x + 'px';
+            box.style.top = cropBox.y + 'px';
+            box.style.width = cropBox.w + 'px';
+            box.style.height = cropBox.h + 'px';
+        }
+
+        function tamanhoImagemCrop() {
+            const img = document.getElementById('crop-img');
+            return {
+                w: img.clientWidth || 0,
+                h: img.clientHeight || 0
+            };
+        }
+
+        function limitarCropBox(box) {
+            const tam = tamanhoImagemCrop();
+            const min = 24;
+            const limitado = {
+                x: box.x,
+                y: box.y,
+                w: box.w,
+                h: box.h
+            };
+
+            if (limitado.w < min) {
+                if (cropDrag && String(cropDrag.handle).indexOf('w') !== -1) {
+                    limitado.x = cropDrag.startBox.x + cropDrag.startBox.w - min;
+                }
+                limitado.w = min;
+            }
+            if (limitado.h < min) {
+                if (cropDrag && String(cropDrag.handle).indexOf('n') !== -1) {
+                    limitado.y = cropDrag.startBox.y + cropDrag.startBox.h - min;
+                }
+                limitado.h = min;
+            }
+
+            if (limitado.x < 0) {
+                if (cropDrag && cropDrag.handle !== 'move') limitado.w += limitado.x;
+                limitado.x = 0;
+            }
+            if (limitado.y < 0) {
+                if (cropDrag && cropDrag.handle !== 'move') limitado.h += limitado.y;
+                limitado.y = 0;
+            }
+            if (limitado.x + limitado.w > tam.w) {
+                if (cropDrag && cropDrag.handle === 'move') {
+                    limitado.x = tam.w - limitado.w;
+                } else {
+                    limitado.w = tam.w - limitado.x;
+                }
+            }
+            if (limitado.y + limitado.h > tam.h) {
+                if (cropDrag && cropDrag.handle === 'move') {
+                    limitado.y = tam.h - limitado.h;
+                } else {
+                    limitado.h = tam.h - limitado.y;
+                }
+            }
+
+            limitado.w = Math.max(min, Math.min(limitado.w, tam.w));
+            limitado.h = Math.max(min, Math.min(limitado.h, tam.h));
+            limitado.x = Math.max(0, Math.min(limitado.x, tam.w - limitado.w));
+            limitado.y = Math.max(0, Math.min(limitado.y, tam.h - limitado.h));
+            return limitado;
+        }
+
+        function ajustarCropAoTamanhoDaImagem(manterProporcao) {
+            const tam = tamanhoImagemCrop();
+            if (!tam.w || !tam.h) return;
+            if (!manterProporcao || !cropBox.w || !cropBox.h) {
+                cropBox = { x: 0, y: 0, w: tam.w, h: tam.h };
+            } else {
+                cropBox = limitarCropBox(cropBox);
+            }
+            aplicarBoxCrop();
+        }
+
+        function usarImagemInteira() {
+            const tam = tamanhoImagemCrop();
+            cropBox = { x: 0, y: 0, w: tam.w, h: tam.h };
+            aplicarBoxCrop();
+        }
+
+        function iniciarArrasteCrop(evento) {
+            const handleEl = evento.target.closest('.crop-handle');
+            const naCaixa = evento.target.closest('.crop-box');
+            if (!handleEl && !naCaixa) return;
+            evento.preventDefault();
+            cropDrag = {
+                handle: handleEl ? handleEl.getAttribute('data-handle') : 'move',
+                startX: evento.clientX,
+                startY: evento.clientY,
+                startBox: { x: cropBox.x, y: cropBox.y, w: cropBox.w, h: cropBox.h }
+            };
+        }
+
+        function moverArrasteCrop(evento) {
+            if (!cropDrag) return;
+            const dx = evento.clientX - cropDrag.startX;
+            const dy = evento.clientY - cropDrag.startY;
+            const s = cropDrag.startBox;
+            const h = cropDrag.handle;
+            const novo = { x: s.x, y: s.y, w: s.w, h: s.h };
+
+            if (h === 'move') {
+                novo.x = s.x + dx;
+                novo.y = s.y + dy;
+            } else {
+                if (h.indexOf('e') !== -1) novo.w = s.w + dx;
+                if (h.indexOf('s') !== -1) novo.h = s.h + dy;
+                if (h.indexOf('w') !== -1) {
+                    novo.x = s.x + dx;
+                    novo.w = s.w - dx;
+                }
+                if (h.indexOf('n') !== -1) {
+                    novo.y = s.y + dy;
+                    novo.h = s.h - dy;
+                }
+            }
+
+            cropBox = limitarCropBox(novo);
+            aplicarBoxCrop();
+        }
+
+        function finalizarArrasteCrop() {
+            cropDrag = null;
+        }
+
+        function gerarCanvasRecorte(maxLado) {
+            const img = document.getElementById('crop-img');
+            if (!img.naturalWidth) {
+                throw new Error('Imagem não carregada.');
+            }
+            const escalaX = img.naturalWidth / img.clientWidth;
+            const escalaY = img.naturalHeight / img.clientHeight;
+            let sx = Math.round(cropBox.x * escalaX);
+            let sy = Math.round(cropBox.y * escalaY);
+            let sw = Math.round(cropBox.w * escalaX);
+            let sh = Math.round(cropBox.h * escalaY);
+
+            sx = Math.max(0, Math.min(sx, img.naturalWidth - 1));
+            sy = Math.max(0, Math.min(sy, img.naturalHeight - 1));
+            sw = Math.max(1, Math.min(sw, img.naturalWidth - sx));
+            sh = Math.max(1, Math.min(sh, img.naturalHeight - sy));
+
+            let outW = sw;
+            let outH = sh;
+            if (maxLado && Math.max(sw, sh) > maxLado) {
+                const r = maxLado / Math.max(sw, sh);
+                outW = Math.max(1, Math.round(sw * r));
+                outH = Math.max(1, Math.round(sh * r));
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = outW;
+            canvas.height = outH;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, outW, outH);
+            ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
+            return canvas;
+        }
+
+        function canvasParaBlob(canvas, qualidade) {
+            return new Promise((resolve, reject) => {
+                canvas.toBlob((blob) => {
+                    if (blob) resolve(blob);
+                    else reject(new Error('Não foi possível gerar a imagem recortada.'));
+                }, 'image/jpeg', qualidade);
+            });
+        }
+
+        function blobParaDataUrl(blob) {
+            return new Promise((resolve, reject) => {
+                const leitor = new FileReader();
+                leitor.onload = () => resolve(leitor.result);
+                leitor.onerror = () => reject(new Error('Não foi possível ler a imagem recortada.'));
+                leitor.readAsDataURL(blob);
+            });
+        }
+
+        async function aplicarImagemNoOrcamento() {
+            try {
+                const canvas = gerarCanvasRecorte(1400);
+                const blob = await canvasParaBlob(canvas, 0.85);
+                const src = await blobParaDataUrl(blob);
+                if (recortandoIndex > -1 && imagensOrcamento[recortandoIndex]) {
+                    imagensOrcamento[recortandoIndex].src = src;
+                } else {
+                    imagensOrcamento.push({ src: src });
+                }
+                atualizarGaleriaImagens();
+                salvarOrcamentoAtual();
+                fecharRecorte();
+                mostrarStatusImagens('Imagem salva no orçamento.');
+            } catch (erro) {
+                alert('Não foi possível salvar a imagem no orçamento.\n\nDetalhe: ' + (erro && erro.message ? erro.message : erro));
+            }
+        }
+
+        async function baixarImagemRecortada() {
+            try {
+                const canvas = gerarCanvasRecorte(0);
+                const blob = await canvasParaBlob(canvas, 0.92);
+                const cliente = nomeArquivoSeguro(document.getElementById('nome-cliente').value);
+                const nomeArquivo = `Recorte_${cliente}.jpeg`;
+                await baixarArquivo(blob, nomeArquivo, 'image/jpeg', 'jpeg');
+            } catch (erro) {
+                alert('Não foi possível salvar o arquivo da imagem.\n\nDetalhe: ' + (erro && erro.message ? erro.message : erro));
+            }
+        }
+
+        function removerImagem(index) {
+            imagensOrcamento.splice(index, 1);
+            atualizarGaleriaImagens();
+            salvarOrcamentoAtual();
+        }
+
+        function atualizarGaleriaImagens() {
+            const galeria = document.getElementById('galeria-imagens');
+            const titulo = document.getElementById('titulo-imagens');
+            if (!galeria || !titulo) return;
+
+            galeria.innerHTML = '';
+            if (!imagensOrcamento.length) {
+                titulo.classList.add('oculto');
+                galeria.classList.remove('uma-imagem');
+                return;
+            }
+
+            titulo.classList.remove('oculto');
+            galeria.classList.toggle('uma-imagem', imagensOrcamento.length === 1);
+
+            imagensOrcamento.forEach((imagem, index) => {
+                const card = document.createElement('div');
+                card.className = 'card-imagem';
+                card.innerHTML = `
+                    <img src="${imagem.src}" alt="Foto ${index + 1} do orçamento">
+                    <div class="legenda-imagem">Foto ${index + 1}</div>
+                    <div class="acoes-card nao-imprimir">
+                        <button type="button" class="btn-editar" onclick="recortarImagemExistente(${index})">Recortar</button>
+                        <button type="button" class="btn-azul" onclick="baixarImagemGaleria(${index})">Salvar</button>
+                        <button type="button" class="btn-remover" onclick="removerImagem(${index})">Remover</button>
+                    </div>
+                `;
+                galeria.appendChild(card);
+            });
+        }
+
+        async function baixarImagemGaleria(index) {
+            const imagem = imagensOrcamento[index];
+            if (!imagem || !imagem.src) return;
+            try {
+                const blob = await (await fetch(imagem.src)).blob();
+                const cliente = nomeArquivoSeguro(document.getElementById('nome-cliente').value);
+                await baixarArquivo(blob, `Foto_${index + 1}_${cliente}.jpeg`, 'image/jpeg', 'jpeg');
+            } catch (erro) {
+                alert('Não foi possível salvar a imagem.\n\nDetalhe: ' + (erro && erro.message ? erro.message : erro));
+            }
+        }
+
+function adicionarItem() {
+            const descricao = document.getElementById('desc-item').value;
+            const qtd = parseInt(document.getElementById('qtd-item').value);
+            const valorUnitario = parseFloat(document.getElementById('valor-item').value);
+
+            if (!descricao || isNaN(qtd) || isNaN(valorUnitario)) {
+                alert("Preencha todos os campos do item corretamente.");
+                return;
+            }
+
+            const novoItem = {
+                descricao: descricao,
+                qtd: qtd,
+                valorUnitario: valorUnitario,
+                total: qtd * valorUnitario
+            };
+
+            if (editandoIndex > -1) {
+                itensOrcamento[editandoIndex] = novoItem;
+                editandoIndex = -1;
+            } else {
+                itensOrcamento.push(novoItem);
+            }
+
+            document.getElementById('desc-item').value = '';
+            document.getElementById('qtd-item').value = '1';
+            document.getElementById('valor-item').value = '';
+            document.getElementById('desc-item').focus();
+
+            atualizarTela();
+            salvarOrcamentoAtual();
+        }
+
+        function editarItem(index) {
+            const item = itensOrcamento[index];
+            document.getElementById('desc-item').value = item.descricao;
+            document.getElementById('qtd-item').value = item.qtd;
+            document.getElementById('valor-item').value = item.valorUnitario;
+            editandoIndex = index;
+        }
+
+        function removerItem(index) {
+            itensOrcamento.splice(index, 1);
+            editandoIndex = -1;
+            atualizarTela();
+            salvarOrcamentoAtual();
+        }
+
+        function atualizarTela() {
+            const tbody = document.getElementById('tabela-itens');
+            tbody.innerHTML = '';
+            
+            let valorTotalGeral = 0;
+
+            itensOrcamento.forEach((item, index) => {
+                valorTotalGeral += item.total;
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${item.descricao}</td>
+                        <td>${item.qtd}</td>
+                        <td>R$ ${item.valorUnitario.toFixed(2)}</td>
+                        <td>R$ ${item.total.toFixed(2)}</td>
+                        <td class="nao-imprimir">
+                            <button class="btn-editar" onclick="editarItem(${index})">Editar</button>
+                            <button class="btn-remover" onclick="removerItem(${index})">X</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('valor-total').innerText = valorTotalGeral.toFixed(2);
+            atualizarGaleriaImagens();
+            salvarOrcamentoAtual();
+        }
+
+        function nomeArquivoSeguro(base) {
+            return String(base || 'Cliente')
+                .replace(/[\\/:*?"<>|]/g, '_')
+                .trim() || 'Cliente';
+        }
+
+        function restaurarVisualExportacao() {
+            document.querySelectorAll('#documento-orcamento input').forEach(i => {
+                i.style.removeProperty('border');
+            });
+            document.querySelectorAll('.nao-imprimir').forEach(el => {
+                el.style.removeProperty('display');
+            });
+            const logo = document.getElementById('logo-empresa');
+            if (logo) logo.style.removeProperty('visibility');
+        }
+
+        function prepararVisualExportacao() {
+            document.querySelectorAll('#documento-orcamento input').forEach(i => {
+                i.style.border = 'none';
+            });
+            document.querySelectorAll('.nao-imprimir').forEach(el => {
+                el.style.display = 'none';
+            });
+        }
+
+        async function baixarArquivo(blob, nomeArquivo, mimeType, extensao) {
+            if (window.showSaveFilePicker) {
+                try {
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: nomeArquivo,
+                        types: [{
+                            description: extensao.toUpperCase(),
+                            accept: { [mimeType]: ['.' + extensao] }
+                        }]
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+                    return true;
+                } catch (erro) {
+                    if (erro && erro.name === 'AbortError') return false;
+                    // Se o diálogo falhar, segue no fallback abaixo
+                }
+            }
+
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = nomeArquivo;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 2000);
+            return true;
+        }
+
+        async function capturarDocumentoCanvas() {
+            const elemento = document.getElementById('documento-orcamento');
+            const logo = document.getElementById('logo-empresa');
+
+            try {
+                return await html2canvas(elemento, {
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: false,
+                    backgroundColor: '#ffffff',
+                    logging: false
+                });
+            } catch (erro1) {
+                // Em arquivo local a logo pode bloquear a captura; tenta de novo sem ela
+                if (logo) logo.style.visibility = 'hidden';
+                try {
+                    return await html2canvas(elemento, {
+                        scale: 2,
+                        backgroundColor: '#ffffff',
+                        logging: false
+                    });
+                } finally {
+                    if (logo) logo.style.removeProperty('visibility');
+                }
+            }
+        }
+
+        async function gerarPDF() {
+            if (typeof html2pdf === 'undefined' && typeof html2canvas === 'undefined') {
+                alert('Não foi possível carregar a biblioteca de PDF. Verifique a internet e tente novamente.');
+                return;
+            }
+
+            atualizarCabecalhoDocumento();
+            const elemento = document.getElementById('documento-orcamento');
+            const cliente = nomeArquivoSeguro(document.getElementById('nome-cliente').value);
+            const nomeArquivo = `${prefixoArquivoDocumento()}_${cliente}.pdf`;
+
+            prepararVisualExportacao();
+
+            try {
+                let blob = null;
+
+                if (typeof html2pdf !== 'undefined') {
+                    const opcoes = {
+                        margin: 10,
+                        filename: nomeArquivo,
+                        image: { type: 'jpeg', quality: 0.98 },
+                        html2canvas: {
+                            scale: 2,
+                            useCORS: true,
+                            allowTaint: false,
+                            backgroundColor: '#ffffff',
+                            logging: false
+                        },
+                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                    };
+                    blob = await html2pdf().set(opcoes).from(elemento).outputPdf('blob');
+                } else {
+                    // Fallback: gera PDF a partir do canvas
+                    const canvas = await capturarDocumentoCanvas();
+                    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                    const { jsPDF } = window.jspdf || {};
+                    if (!jsPDF) throw new Error('Biblioteca PDF indisponível.');
+                    const pdf = new jsPDF('p', 'mm', 'a4');
+                    const pageWidth = pdf.internal.pageSize.getWidth();
+                    const pageHeight = pdf.internal.pageSize.getHeight();
+                    const margin = 10;
+                    const imgWidth = pageWidth - margin * 2;
+                    const imgHeight = canvas.height * imgWidth / canvas.width;
+                    let heightLeft = imgHeight;
+                    let position = margin;
+                    pdf.addImage(imgData, 'JPEG', margin, position, imgWidth, imgHeight);
+                    heightLeft -= (pageHeight - margin * 2);
+                    while (heightLeft > 0) {
+                        position = margin - (imgHeight - heightLeft);
+                        pdf.addPage();
+                        pdf.addImage(imgData, 'JPEG', margin, position, imgWidth, imgHeight);
+                        heightLeft -= (pageHeight - margin * 2);
+                    }
+                    blob = pdf.output('blob');
+                }
+
+                await baixarArquivo(blob, nomeArquivo, 'application/pdf', 'pdf');
+            } catch (erro) {
+                console.error(erro);
+                alert('Erro ao gerar o PDF. Tente novamente.\n\nDetalhe: ' + (erro && erro.message ? erro.message : erro));
+            } finally {
+                restaurarVisualExportacao();
+            }
+        }
+
+        async function gerarJPEG() {
+            if (typeof html2canvas === 'undefined') {
+                alert('Não foi possível carregar a biblioteca de imagem. Verifique a internet e tente novamente.');
+                return;
+            }
+
+            atualizarCabecalhoDocumento();
+            const cliente = nomeArquivoSeguro(document.getElementById('nome-cliente').value);
+            const nomeArquivo = `${prefixoArquivoDocumento()}_${cliente}.jpeg`;
+
+            prepararVisualExportacao();
+
+            try {
+                const canvas = await capturarDocumentoCanvas();
+                const blob = await new Promise((resolve, reject) => {
+                    canvas.toBlob((resultado) => {
+                        if (resultado) resolve(resultado);
+                        else reject(new Error('Não foi possível criar a imagem.'));
+                    }, 'image/jpeg', 0.92);
+                });
+                await baixarArquivo(blob, nomeArquivo, 'image/jpeg', 'jpeg');
+            } catch (erro) {
+                console.error(erro);
+                alert('Erro ao gerar o JPEG. Tente novamente.\n\nDetalhe: ' + (erro && erro.message ? erro.message : erro));
+            } finally {
+                restaurarVisualExportacao();
+            }
+        }
+    </script>
+</body>
+</html>
