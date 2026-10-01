@@ -4,10 +4,23 @@
 const VS_COLECAO = 'caixa_lancamentos';
 const VS_MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 const VS_CAMPOS = ['dia', 'qtd', 'desc', 'valor'];
+/* "venda" e "usada" gravam tipo 'venda' no Firestore; a peça usada leva categoria 'usada' */
 const VS_TIPOS = {
-  venda: { titulo: '🛒 Vendas', nomeBusca: 'venda', colDesc: 'DESCRIÇÃO DO PRODUTO', placeholder: 'Descrição do produto' },
-  saida: { titulo: '📤 Saídas', nomeBusca: 'saída', colDesc: 'DESCRIÇÃO DA SAÍDA', placeholder: 'Descrição da saída (ex: compra de peças, conta de luz)' }
+  venda: { titulo: '🛒 Peças novas', nomeBusca: 'peça nova', colDesc: 'DESCRIÇÃO DA PEÇA', placeholder: 'Descrição da peça nova', tipoDb: 'venda' },
+  usada: { titulo: '♻️ Peças usadas', nomeBusca: 'peça usada', colDesc: 'DESCRIÇÃO DA PEÇA', placeholder: 'Descrição da peça usada', tipoDb: 'venda', categoria: 'usada' },
+  saida: { titulo: '📤 Saídas', nomeBusca: 'saída', colDesc: 'DESCRIÇÃO DA SAÍDA', placeholder: 'Descrição da saída (ex: compra de peças, conta de luz)', tipoDb: 'saida' }
 };
+
+function vsPainelDoLancamento(d) {
+  if (d.tipo === 'venda') return d.categoria === 'usada' ? 'usada' : 'venda';
+  return d.tipo === 'saida' ? 'saida' : null;
+}
+
+function vsMapaVazio(valor) {
+  const m = {};
+  Object.keys(VS_TIPOS).forEach(tipo => { m[tipo] = typeof valor === 'function' ? valor() : valor; });
+  return m;
+}
 
 const vsHoje = new Date();
 let vsDb = null;
@@ -17,11 +30,11 @@ let vsAppAberto = false;
 let vsEmpresaNome = 'PARANÁ PEÇAS';
 let vsMes = { ano: vsHoje.getFullYear(), mes: vsHoje.getMonth() };
 let vsAnoRelatorio = vsHoje.getFullYear();
-let vsLancamentos = { venda: [], saida: [] };
+let vsLancamentos = vsMapaVazio(() => []);
 let vsUnsubMes = null;
 let vsRelatorioDados = null;
-let vsBusca = { venda: { termo: '', escopo: 'mes' }, saida: { termo: '', escopo: 'mes' } };
-let vsTodos = { venda: null, saida: null };
+let vsBusca = vsMapaVazio(() => ({ termo: '', escopo: 'mes' }));
+let vsTodos = vsMapaVazio(null);
 
 /* ---------- utilitários ---------- */
 function vsMoeda(v) { return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
@@ -153,7 +166,7 @@ function vsOrdenar(a, b) {
 function vsCarregarMes() {
   if (vsUnsubMes) vsUnsubMes();
   vsAtualizarCabecalhoMes();
-  vsLancamentos = { venda: [], saida: [] };
+  vsLancamentos = vsMapaVazio(() => []);
   Object.keys(VS_TIPOS).forEach(tipo => vsRenderTabela(tipo));
 
   const inicio = vsDataChave(vsMes.ano, vsMes.mes, 1);
@@ -162,10 +175,11 @@ function vsCarregarMes() {
     .where('data', '>=', inicio)
     .where('data', '<=', fim)
     .onSnapshot(snap => {
-      const novo = { venda: [], saida: [] };
+      const novo = vsMapaVazio(() => []);
       snap.forEach(doc => {
         const d = doc.data();
-        if (novo[d.tipo]) novo[d.tipo].push(Object.assign({ id: doc.id }, d));
+        const painel = vsPainelDoLancamento(d);
+        if (painel) novo[painel].push(Object.assign({ id: doc.id }, d));
       });
       Object.keys(novo).forEach(tipo => novo[tipo].sort(vsOrdenar));
       vsLancamentos = novo;
@@ -176,13 +190,16 @@ function vsCarregarMes() {
 }
 
 /* Busca "todos os meses": carrega uma vez todos os lançamentos do tipo e filtra na tela */
-const vsTodosPendente = { venda: false, saida: false };
+const vsTodosPendente = vsMapaVazio(false);
 function vsCarregarTodos(tipo) {
   if (vsTodos[tipo] || vsTodosPendente[tipo]) return;
   vsTodosPendente[tipo] = true;
-  vsDb.collection(VS_COLECAO).where('tipo', '==', tipo).get().then(snap => {
+  vsDb.collection(VS_COLECAO).where('tipo', '==', VS_TIPOS[tipo].tipoDb).get().then(snap => {
     const lista = [];
-    snap.forEach(doc => lista.push(Object.assign({ id: doc.id }, doc.data())));
+    snap.forEach(doc => {
+      const d = doc.data();
+      if (vsPainelDoLancamento(d) === tipo) lista.push(Object.assign({ id: doc.id }, d));
+    });
     vsTodos[tipo] = lista.sort(vsOrdenar);
     vsTodosPendente[tipo] = false;
     vsRenderTabela(tipo);
@@ -258,15 +275,18 @@ function vsAdicionar(tipo) {
     return vsAviso('Informe o valor.');
   }
 
-  vsDb.collection(VS_COLECAO).add({
-    tipo: tipo,
+  const cfg = VS_TIPOS[tipo];
+  const lancamento = {
+    tipo: cfg.tipoDb,
     data: vsDataChave(vsMes.ano, vsMes.mes, dia),
     qtd: qtd,
     desc: desc.toUpperCase(),
     valor: valor,
     criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
     criadoPor: vsUsuario ? vsUsuario.email : ''
-  }).catch(vsErroFirestore);
+  };
+  if (cfg.categoria) lancamento.categoria = cfg.categoria;
+  vsDb.collection(VS_COLECAO).add(lancamento).catch(vsErroFirestore);
   vsTodos[tipo] = null;
 
   vsCampo(tipo, 'qtd').value = 1;

@@ -32,7 +32,8 @@
 
 <div class="vs-layout" id="vsApp" hidden>
   <nav class="vs-sidebar">
-    <button type="button" class="vs-tab active" data-aba="venda" onclick="vsAbrirAba('venda')">🛒 VENDAS</button>
+    <button type="button" class="vs-tab active" data-aba="venda" onclick="vsAbrirAba('venda')">🛒 PEÇAS NOVAS</button>
+    <button type="button" class="vs-tab" data-aba="usada" onclick="vsAbrirAba('usada')">♻️ PEÇAS USADAS</button>
     <button type="button" class="vs-tab" data-aba="saida" onclick="vsAbrirAba('saida')">📤 SAÍDAS</button>
     <button type="button" class="vs-tab" data-aba="despesa" onclick="vsAbrirAba('despesa')">🧾 TABELA DE DESPESA MENSAL</button>
     <button type="button" class="vs-tab vs-tab-relatorio" data-aba="relatorio" onclick="vsAbrirAba('relatorio')">📊 RELATÓRIO GERAL</button>
@@ -43,6 +44,7 @@
 
     <!-- Tabelas de Vendas e Saídas: montadas por js/vendas.js; Despesa mensal: js/despesas.js -->
     <section class="vs-painel active" id="painel-venda"></section>
+    <section class="vs-painel" id="painel-usada"></section>
     <section class="vs-painel" id="painel-saida"></section>
     <section class="vs-painel" id="painel-despesa"></section>
 

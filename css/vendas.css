@@ -52,6 +52,8 @@ button { padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: 8
 
 .vs-total td { background: #0d47a1; color: #fff; font-weight: 900; font-size: 16px; padding: 12px 8px; border: none; }
 .vs-total td:first-child { text-align: right; }
+#painel-usada .vs-total td { background: #00796b; }
+#painel-usada .vs-entrada td { background: #e0f2f1; border-top-color: #00796b; }
 #painel-saida .vs-total td { background: #c62828; }
 #painel-saida .vs-entrada td { background: #fff5f5; border-top-color: #c62828; }
 

@@ -2,7 +2,12 @@
 /* Parana Pecas — exportacao PDF / Excel do modulo Vendas / Saidas (depende de js/vendas.js) */
 
 const VS_FMT_MOEDA = '"R$" #,##0.00;[Red]-"R$" #,##0.00';
-const VS_COR_TIPO = { venda: [13, 71, 161], saida: [198, 40, 40] };
+const VS_COR_TIPO = { venda: [13, 71, 161], usada: [0, 121, 107], saida: [198, 40, 40] };
+const VS_NOMES_EXPORT = {
+  venda: { prefixo: 'pecas-novas', titulo: 'PEÇAS NOVAS', aba: 'Novas', busca: 'peças novas' },
+  usada: { prefixo: 'pecas-usadas', titulo: 'PEÇAS USADAS', aba: 'Usadas', busca: 'peças usadas' },
+  saida: { prefixo: 'saidas', titulo: 'SAÍDAS', aba: 'Saídas', busca: 'saídas' }
+};
 
 /* jsPDF nao lida bem com o espaco nao separavel que o toLocaleString coloca depois do "R$" */
 function vsMoedaPdf(v) { return vsMoeda(v).replace(/\s/g, ' '); }
@@ -46,18 +51,19 @@ function vsRodapePdf(doc) {
 /* O que esta na tela de Vendas/Saidas: o mes inteiro ou o resultado da busca */
 function vsDadosExportacao(tipo) {
   const vis = vsListaVisivel(tipo);
-  const prefixo = tipo === 'venda' ? 'vendas' : 'saidas';
-  const nomeTipo = tipo === 'venda' ? 'VENDAS' : 'SAÍDAS';
+  const nomes = VS_NOMES_EXPORT[tipo];
+  const prefixo = nomes.prefixo;
+  const nomeTipo = nomes.titulo;
   const mesTxt = `${VS_MESES[vsMes.mes].toUpperCase()} ${vsMes.ano}`;
   if (!vis.buscando) {
     return { lista: vis.lista, comData: false, titulo: `${nomeTipo} - ${mesTxt}`,
       rotuloTotal: 'TOTAL DO MÊS', arquivo: `${prefixo}-${vsNomeMesArquivo()}`,
-      aba: (tipo === 'venda' ? 'Vendas ' : 'Saídas ') + String(vsMes.mes + 1).padStart(2, '0') + '-' + vsMes.ano };
+      aba: nomes.aba + ' ' + String(vsMes.mes + 1).padStart(2, '0') + '-' + vsMes.ano };
   }
   return { lista: vis.lista, comData: vis.todos,
     titulo: `${nomeTipo} - BUSCA "${vis.termo.toUpperCase()}" (${vis.todos ? 'TODOS OS MESES' : mesTxt})`,
     rotuloTotal: 'TOTAL ENCONTRADO', arquivo: `${prefixo}-busca${vis.todos ? '' : '-' + vsNomeMesArquivo()}`,
-    aba: 'Busca ' + (tipo === 'venda' ? 'vendas' : 'saídas') };
+    aba: 'Busca ' + nomes.busca };
 }
 
 function vsExportarMesPdf(tipo) {
