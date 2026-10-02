@@ -40,7 +40,8 @@ button { padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: 8
 .c-qtd { width: 110px; text-align: center; }
 .c-desc { text-align: left; }
 .c-valor { width: 150px; text-align: right; }
-.c-acoes { width: 60px; text-align: center; }
+.c-acoes { width: 100px; text-align: center; white-space: nowrap; }
+.c-acoes button + button { margin-left: 4px; }
 .vs-vazio td { text-align: center; color: #888; font-weight: normal; padding: 20px; }
 
 .vs-entrada td { background: #f0f8ff; border-top: 2px solid #0d47a1; }

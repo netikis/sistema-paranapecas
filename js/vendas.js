@@ -241,7 +241,10 @@ function vsRenderTabela(tipo) {
         <td class="c-qtd">${vsEscapar(l.qtd || 1)}</td>
         <td class="c-desc">${vsEscapar(l.desc)}</td>
         <td class="c-valor">${vsMoeda(l.valor)}</td>
-        <td class="c-acoes"><button type="button" class="vs-btn-excluir" onclick="vsExcluir('${l.id}')" title="Excluir">🗑️</button></td>
+        <td class="c-acoes">
+          <button type="button" class="vs-btn-editar" onclick="vsEditar('${tipo}', '${l.id}')" title="Editar">✏️</button>
+          <button type="button" class="vs-btn-excluir" onclick="vsExcluir('${l.id}')" title="Excluir">🗑️</button>
+        </td>
       </tr>`).join('');
 
   const total = carregandoTodos ? 0 : lista.reduce((s, l) => s + (Number(l.valor) || 0), 0);
@@ -263,6 +266,40 @@ function vsAdicionar(tipo) {
   const qtd = parseInt(vsCampo(tipo, 'qtd').value, 10) || 1;
   const desc = vsCampo(tipo, 'desc').value.trim();
   const valor = vsParseValor(vsCampo(tipo, 'valor').value);
+
+  function vsEditar(tipo, id) {
+    const l = vsLancamentos[tipo].find(x => x.id === id) || (vsTodos[tipo] || []).find(x => x.id === id);
+    if (!l) return;
+    Swal.fire({
+      title: 'Editar lançamento',
+      html: `<input id="swVsDesc" class="swal2-input" placeholder="Descrição" value="${vsEscapar(l.desc)}">
+             <input id="swVsQtd" class="swal2-input" type="number" min="1" placeholder="Quantidade" value="${vsEscapar(l.qtd || 1)}">
+             <input id="swVsValor" class="swal2-input" placeholder="Valor" inputmode="decimal" value="${vsEscapar(Number(l.valor).toFixed(2).replace('.', ','))}">`,
+      showCancelButton: true,
+      confirmButtonText: 'Salvar',
+      cancelButtonText: 'Cancelar',
+      focusConfirm: false,
+      didOpen: () => document.getElementById('swVsDesc').select(),
+      preConfirm: () => {
+        const desc = document.getElementById('swVsDesc').value.trim();
+        const qtd = parseInt(document.getElementById('swVsQtd').value, 10) || 1;
+        const valor = vsParseValor(document.getElementById('swVsValor').value);
+        if (!desc || valor <= 0) {
+          Swal.showValidationMessage('Preencha a descrição e um valor maior que zero.');
+          return false;
+        }
+        return { desc: desc.toUpperCase(), qtd: qtd, valor: valor };
+      }
+    }).then(r => {
+      if (!r.isConfirmed) return;
+      vsDb.collection(VS_COLECAO).doc(id).update(r.value).then(() => {
+        if (!vsTodos[tipo]) return;
+        const item = vsTodos[tipo].find(x => x.id === id);
+        if (item) Object.assign(item, r.value);
+        vsRenderTabela(tipo);
+      }).catch(vsErroFirestore);
+    });
+  }
 
   if (!dia || dia < 1 || dia > maxDia) {
     vsCampo(tipo, 'dia').focus();
@@ -294,6 +331,40 @@ function vsAdicionar(tipo) {
   vsCampo(tipo, 'valor').value = '';
   vsCampo(tipo, 'qtd').focus();
   vsCampo(tipo, 'qtd').select();
+}
+
+function vsEditar(tipo, id) {
+  const l = vsLancamentos[tipo].find(x => x.id === id) || (vsTodos[tipo] || []).find(x => x.id === id);
+  if (!l) return;
+  Swal.fire({
+    title: 'Editar lançamento',
+    html: `<input id="swVsDesc" class="swal2-input" placeholder="Descrição" value="${vsEscapar(l.desc)}">
+           <input id="swVsQtd" class="swal2-input" type="number" min="1" placeholder="Quantidade" value="${vsEscapar(l.qtd || 1)}">
+           <input id="swVsValor" class="swal2-input" placeholder="Valor" inputmode="decimal" value="${vsEscapar(Number(l.valor).toFixed(2).replace('.', ','))}">`,
+    showCancelButton: true,
+    confirmButtonText: 'Salvar',
+    cancelButtonText: 'Cancelar',
+    focusConfirm: false,
+    didOpen: () => document.getElementById('swVsDesc').select(),
+    preConfirm: () => {
+      const desc = document.getElementById('swVsDesc').value.trim();
+      const qtd = parseInt(document.getElementById('swVsQtd').value, 10) || 1;
+      const valor = vsParseValor(document.getElementById('swVsValor').value);
+      if (!desc || valor <= 0) {
+        Swal.showValidationMessage('Preencha a descrição e um valor maior que zero.');
+        return false;
+      }
+      return { desc: desc.toUpperCase(), qtd: qtd, valor: valor };
+    }
+  }).then(r => {
+    if (!r.isConfirmed) return;
+    vsDb.collection(VS_COLECAO).doc(id).update(r.value).then(() => {
+      if (!vsTodos[tipo]) return;
+      const item = vsTodos[tipo].find(x => x.id === id);
+      if (item) Object.assign(item, r.value);
+      vsRenderTabela(tipo);
+    }).catch(vsErroFirestore);
+  });
 }
 
 function vsExcluir(id) {
