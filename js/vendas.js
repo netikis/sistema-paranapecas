@@ -8,11 +8,16 @@ const VS_CAMPOS = ['dia', 'qtd', 'desc', 'valor'];
 const VS_TIPOS = {
   venda: { titulo: '🛒 Peças novas', nomeBusca: 'peça nova', colDesc: 'DESCRIÇÃO DA PEÇA', placeholder: 'Descrição da peça nova', tipoDb: 'venda' },
   usada: { titulo: '♻️ Peças usadas', nomeBusca: 'peça usada', colDesc: 'DESCRIÇÃO DA PEÇA', placeholder: 'Descrição da peça usada', tipoDb: 'venda', categoria: 'usada' },
+  maodeobra: { titulo: '🔧 Mão de Obra', nomeBusca: 'mão de obra', colDesc: 'DESCRIÇÃO DO SERVIÇO', placeholder: 'Descrição do serviço executado', tipoDb: 'venda', categoria: 'maodeobra' },
   saida: { titulo: '📤 Saídas', nomeBusca: 'saída', colDesc: 'DESCRIÇÃO DA SAÍDA', placeholder: 'Descrição da saída (ex: compra de peças, conta de luz)', tipoDb: 'saida' }
 };
 
 function vsPainelDoLancamento(d) {
-  if (d.tipo === 'venda') return d.categoria === 'usada' ? 'usada' : 'venda';
+  if (d.tipo === 'venda') {
+    if (d.categoria === 'usada') return 'usada';
+    if (d.categoria === 'maodeobra') return 'maodeobra';
+    return 'venda';
+  }
   return d.tipo === 'saida' ? 'saida' : null;
 }
 

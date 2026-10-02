@@ -2,10 +2,11 @@
 /* Parana Pecas — exportacao PDF / Excel do modulo Vendas / Saidas (depende de js/vendas.js) */
 
 const VS_FMT_MOEDA = '"R$" #,##0.00;[Red]-"R$" #,##0.00';
-const VS_COR_TIPO = { venda: [13, 71, 161], usada: [0, 121, 107], saida: [198, 40, 40] };
+const VS_COR_TIPO = { venda: [13, 71, 161], usada: [0, 121, 107], maodeobra: [230, 81, 0], saida: [198, 40, 40] };
 const VS_NOMES_EXPORT = {
   venda: { prefixo: 'pecas-novas', titulo: 'PEÇAS NOVAS', aba: 'Novas', busca: 'peças novas' },
   usada: { prefixo: 'pecas-usadas', titulo: 'PEÇAS USADAS', aba: 'Usadas', busca: 'peças usadas' },
+  maodeobra: { prefixo: 'mao-de-obra', titulo: 'MÃO DE OBRA', aba: 'Serviços', busca: 'mão de obra' },
   saida: { prefixo: 'saidas', titulo: 'SAÍDAS', aba: 'Saídas', busca: 'saídas' }
 };
 
