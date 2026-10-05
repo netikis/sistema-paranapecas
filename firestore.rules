@@ -61,6 +61,11 @@ service cloud.firestore {
       allow read, write: if isSignedIn();
     }
 
+    // --- PEDIDOS A FORNECEDORES (vendas.html) ---
+    match /pedidos_fornecedores/{docId} {
+      allow read, write: if isSignedIn();
+    }
+
     // --- VENDAS / SAÍDAS (vendas.html) — só admin ---
     match /caixa_lancamentos/{docId} {
       allow read, delete: if isAdmin() || isLegacyAdmin();

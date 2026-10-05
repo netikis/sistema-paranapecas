@@ -80,7 +80,14 @@ function vsAbrirAba(aba) {
   document.querySelectorAll('.vs-painel').forEach(p => p.classList.toggle('active', p.id === 'painel-' + aba));
   document.querySelectorAll('.vs-tab').forEach(b => b.classList.toggle('active', b.dataset.aba === aba));
   if (aba === 'relatorio') vsCarregarRelatorio();
-  else vsCampo(aba, 'desc').focus();
+  else if (aba === 'pedidos') {
+    const el = document.getElementById('in-pedidos-codigo') || document.getElementById('in-pedidos-desc');
+    if (el) el.focus();
+  }
+  else {
+    const campo = typeof vsCampo === 'function' ? vsCampo(aba, 'desc') : null;
+    if (campo) campo.focus();
+  }
 }
 
 /* ---------- vendas / saídas ---------- */

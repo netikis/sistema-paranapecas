@@ -17,6 +17,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <link rel="stylesheet" href="css/vendas.css">
 </head>
@@ -37,6 +38,7 @@
     <button type="button" class="vs-tab" data-aba="maodeobra" onclick="vsAbrirAba('maodeobra')">🔧 MÃO DE OBRA</button>
     <button type="button" class="vs-tab" data-aba="saida" onclick="vsAbrirAba('saida')">📤 SAÍDAS</button>
     <button type="button" class="vs-tab" data-aba="despesa" onclick="vsAbrirAba('despesa')">🧾 TABELA DE DESPESA MENSAL</button>
+    <button type="button" class="vs-tab" data-aba="pedidos" onclick="vsAbrirAba('pedidos')">📦 PEDIDOS</button>
     <button type="button" class="vs-tab vs-tab-relatorio" data-aba="relatorio" onclick="vsAbrirAba('relatorio')">📊 RELATÓRIO GERAL</button>
   </nav>
 
@@ -49,6 +51,58 @@
     <section class="vs-painel" id="painel-maodeobra"></section>
     <section class="vs-painel" id="painel-saida"></section>
     <section class="vs-painel" id="painel-despesa"></section>
+
+    <!-- Painel de Pedidos a Fornecedores -->
+    <section class="vs-painel" id="painel-pedidos">
+      <div class="vs-topo">
+        <h2>📦 Pedidos a Fornecedores</h2>
+        <div class="vs-exportar">
+          <button type="button" class="vs-btn-pdf" onclick="pfExportarPdf()" title="Salvar em PDF">📄 PDF</button>
+          <button type="button" class="vs-btn-excel" onclick="pfExportarExcel()" title="Salvar em Excel">📊 EXCEL</button>
+          <button type="button" style="background: #5e35b1;" onclick="pfSalvarPrint()" title="Salvar imagem PNG da tabela">📸 Salvar Print</button>
+        </div>
+      </div>
+
+      <div class="vs-busca">
+        <input type="search" id="busca-pedidos" placeholder="🔍 Buscar por código, peça ou fornecedor..." autocomplete="off">
+      </div>
+
+      <div class="vs-card" id="card-pedidos">
+        <table class="vs-tabela" id="tabela-pedidos">
+          <thead>
+            <tr>
+              <th style="width: 120px; text-align: center;">CÓDIGO</th>
+              <th style="text-align: left;">NOME DA PEÇA</th>
+              <th style="text-align: left;">FORNECEDOR</th>
+              <th style="width: 140px; text-align: right;">PREÇO DE CUSTO</th>
+              <th style="width: 90px; text-align: center;">QUANTIDADE</th>
+              <th style="width: 140px; text-align: right;">VALOR TOTAL</th>
+              <th style="width: 110px; text-align: center;" class="c-acoes">AÇÕES</th>
+            </tr>
+          </thead>
+          <tbody id="linhas-pedidos">
+            <tr class="vs-vazio"><td colspan="7">Carregando pedidos...</td></tr>
+          </tbody>
+          <tfoot>
+            <tr class="vs-entrada">
+              <td><input type="text" id="in-pedidos-codigo" placeholder="Cód." autocomplete="off"></td>
+              <td><input type="text" id="in-pedidos-desc" placeholder="Nome da peça" autocomplete="off"></td>
+              <td><input type="text" id="in-pedidos-fornecedor" placeholder="Fornecedor" autocomplete="off"></td>
+              <td class="c-valor"><input type="text" id="in-pedidos-custo" inputmode="decimal" placeholder="0,00" autocomplete="off"></td>
+              <td class="c-qtd"><input type="number" id="in-pedidos-qtd" min="1" value="1"></td>
+              <td class="c-valor"><input type="text" id="in-pedidos-total" placeholder="0,00" readonly style="background:#eef2f7; cursor:not-allowed;"></td>
+              <td class="c-acoes"><button type="button" onclick="pfAdicionar()" title="Adicionar Pedido">➕</button></td>
+            </tr>
+            <tr class="vs-total">
+              <td colspan="5" id="total-rotulo-pedidos" style="text-align: right;">TOTAL DOS PEDIDOS</td>
+              <td class="c-valor" id="total-pedidos">R$ 0,00</td>
+              <td class="c-acoes"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <p class="vs-dica">Preencha os campos e clique em ➕ (ou aperte <b>Enter</b>). O Valor Total calcula automaticamente.</p>
+    </section>
 
     <section class="vs-painel" id="painel-relatorio">
       <div class="vs-topo">
@@ -89,5 +143,6 @@
 <script src="js/vendas.js"></script>
 <script src="js/despesas.js"></script>
 <script src="js/vendas-exportar.js"></script>
+<script src="js/pedidos-fornecedores.js"></script>
 </body>
 </html>

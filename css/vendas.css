@@ -57,6 +57,8 @@ button { padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: 8
 #painel-usada .vs-entrada td { background: #e0f2f1; border-top-color: #00796b; }
 #painel-maodeobra .vs-total td { background: #e65100; }
 #painel-maodeobra .vs-entrada td { background: #fff3e0; border-top-color: #e65100; }
+#painel-pedidos .vs-total td { background: #5e35b1; }
+#painel-pedidos .vs-entrada td { background: #ede7f6; border-top-color: #5e35b1; }
 #painel-saida .vs-total td { background: #c62828; }
 #painel-saida .vs-entrada td { background: #fff5f5; border-top-color: #c62828; }
 
