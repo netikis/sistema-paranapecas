@@ -235,13 +235,30 @@
 
 <div class="modal" id="editModal">
   <div class="modal-content">
-    <h3>Editar Item</h3>
-    <label>Descrição:</label><input type="text" id="editDesc">
-    <label>Qtd:</label><input type="number" id="editQtd">
-    <label>Valor Total:</label><input type="number" id="editValor">
-    <label>Data Entrada:</label><input type="date" id="editData">
-    <label>Data Vencimento:</label><input type="date" id="editVenc">
-    <br><br><button class="success" onclick="salvarEdicao()">Salvar</button><button class="danger" onclick="fecharModal()">Sair</button>
+    <h3 style="color:#2196f3">✏️ Editar Item</h3>
+    <label>Peça / Serviço:</label>
+    <input type="text" id="editDesc" list="opcoesCatalogo" oninput="preencherValorCatEditar()" onchange="preencherValorCatEditar()" onkeydown="tratarEnterEditar(event, 'desc')" placeholder="Descrição da peça...">
+    <div class="row-inputs">
+        <div style="flex:1">
+            <label style="font-size:12px;">Qtd:</label>
+            <input type="number" id="editQtd" min="1" value="1" oninput="calcularTotalEditar()" onkeydown="tratarEnterEditar(event, 'qtd')" placeholder="Qtd">
+        </div>
+        <div style="flex:2">
+            <label style="font-size:12px;">Valor Unit. R$:</label>
+            <input type="number" step="0.01" id="editValorUnit" placeholder="0,00" oninput="calcularTotalEditar()" onkeydown="tratarEnterEditar(event, 'unit')">
+        </div>
+    </div>
+    <div class="row-inputs">
+        <label style="flex:1; align-self:center; text-align:right; margin-right:10px;">TOTAL R$:</label>
+        <input type="text" id="editValor" placeholder="0,00" style="flex:2; background:#333; color:#fff; font-weight:bold; font-size:18px;" readonly>
+    </div>
+    <div class="row-inputs">
+       <div style="flex:1"><label>Data Entrada:</label><input type="date" id="editData" onkeydown="tratarEnterEditar(event, 'data')"></div>
+       <div style="flex:1"><label>Data Vencimento:</label><input type="date" id="editVenc" onkeydown="tratarEnterEditar(event, 'venc')"></div>
+    </div>
+    <br><br>
+    <button type="button" id="btnSalvarEdicao" class="success" onclick="salvarEdicao()" style="width:100%; padding:15px; font-size:16px;">💾 SALVAR ALTERAÇÃO</button>
+    <button type="button" class="danger" onclick="fecharModal()" style="width:100%; margin-top:10px;">CANCELAR</button>
   </div>
 </div>
 
@@ -268,22 +285,28 @@
     <p id="nomeCliRapido" style="color:#aaa; font-size:12px;"></p>
     <input type="hidden" id="idCliRapido">
     <label>Peça / Serviço:</label>
-    <input type="text" id="descRapido" list="opcoesCatalogo" oninput="preencherValorCatRapido()" placeholder="Digite o nome da peça...">
+    <input type="text" id="descRapido" list="opcoesCatalogo" oninput="preencherValorCatRapido()" onchange="preencherValorCatRapido()" onkeydown="tratarEnterRapido(event, 'desc')" placeholder="Digite o nome da peça...">
     <div class="row-inputs">
-        <input type="number" id="qtdRapido" placeholder="Qtd" value="1" oninput="calcularTotalRapido()">
-        <input type="number" id="valorUnitRapido" placeholder="Valor Unit. R$" oninput="calcularTotalRapido()">
+        <div style="flex:1">
+            <label style="font-size:12px;">Qtd:</label>
+            <input type="number" id="qtdRapido" min="1" value="1" oninput="calcularTotalRapido()" onkeydown="tratarEnterRapido(event, 'qtd')" placeholder="Qtd">
+        </div>
+        <div style="flex:2">
+            <label style="font-size:12px;">Valor Unit. R$:</label>
+            <input type="number" step="0.01" id="valorUnitRapido" placeholder="0,00" oninput="calcularTotalRapido()" onkeydown="tratarEnterRapido(event, 'unit')">
+        </div>
     </div>
     <div class="row-inputs">
         <label style="flex:1; align-self:center; text-align:right; margin-right:10px;">TOTAL R$:</label>
         <input type="text" id="valorTotalRapido" placeholder="0,00" style="flex:2; background:#333; color:#fff; font-weight:bold; font-size:18px;" readonly>
     </div>
     <div class="row-inputs">
-       <div style="flex:1"><label>Data:</label><input type="date" id="dataRapido"></div>
-       <div style="flex:1"><label>Vencimento:</label><input type="date" id="vencRapido"></div>
+       <div style="flex:1"><label>Data:</label><input type="date" id="dataRapido" onkeydown="tratarEnterRapido(event, 'data')"></div>
+       <div style="flex:1"><label>Vencimento:</label><input type="date" id="vencRapido" onkeydown="tratarEnterRapido(event, 'venc')"></div>
     </div>
     <br><br>
-    <button class="primary" onclick="confirmarLancamentoRapido()" style="width:100%; padding:15px; font-size:16px;">CONFIRMAR LANÇAMENTO</button>
-    <button class="danger" onclick="fecharModalRapido()" style="width:100%; margin-top:10px;">CANCELAR</button>
+    <button type="button" id="btnConfirmarLancamentoRapido" class="primary" onclick="confirmarLancamentoRapido()" style="width:100%; padding:15px; font-size:16px;">CONFIRMAR LANÇAMENTO</button>
+    <button type="button" class="danger" onclick="fecharModalRapido()" style="width:100%; margin-top:10px;">CANCELAR</button>
   </div>
 </div>
 

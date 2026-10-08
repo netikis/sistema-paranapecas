@@ -11,47 +11,102 @@
       document.getElementById('dataRapido').value = new Date().toISOString().split('T')[0];
       document.getElementById('vencRapido').value = '';
       document.getElementById('modalLancarRapido').style.display = 'flex';
-      setTimeout(() => document.getElementById('descRapido').focus(), 100);
+      setTimeout(() => {
+          let el = document.getElementById('descRapido');
+          if (el) { el.focus(); if (el.select) el.select(); }
+      }, 100);
   }
   
   function fecharModalRapido() {
       document.getElementById('modalLancarRapido').style.display = 'none';
+      document.getElementById('descRapido').value = '';
+      document.getElementById('qtdRapido').value = 1;
+      document.getElementById('valorUnitRapido').value = '';
+      document.getElementById('valorTotalRapido').value = '';
+      document.getElementById('vencRapido').value = '';
   }
   
   function preencherValorCatRapido() {
-      let t = document.getElementById('descRapido').value.toUpperCase();
-      let a = catalogo.find(c => c.nome === t);
+      let t = (document.getElementById('descRapido').value || '').trim().toUpperCase();
+      let a = catalogo.find(c => c.nome.toUpperCase() === t);
       if(a) { 
-          document.getElementById('valorUnitRapido').value = a.valor;
+          document.getElementById('valorUnitRapido').value = Number(a.valor).toFixed(2);
           calcularTotalRapido();
       }
   }
 
   function calcularTotalRapido() {
       let qtd = Number(document.getElementById('qtdRapido').value) || 0;
-      let unit = Number(document.getElementById('valorUnitRapido').value) || 0;
-      document.getElementById('valorTotalRapido').value = (qtd * unit).toFixed(2);
+      let unit = parseFloat(String(document.getElementById('valorUnitRapido').value).replace(',', '.')) || 0;
+      let total = Math.round(qtd * unit * 100) / 100;
+      document.getElementById('valorTotalRapido').value = total > 0 ? total.toFixed(2) : (unit > 0 ? unit.toFixed(2) : '');
+  }
+
+  function tratarEnterRapido(e, campo) {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      if (campo === 'desc') {
+          preencherValorCatRapido();
+          let inQtd = document.getElementById('qtdRapido');
+          if (inQtd) { inQtd.focus(); if (inQtd.select) inQtd.select(); }
+      } else if (campo === 'qtd') {
+          calcularTotalRapido();
+          let inUnit = document.getElementById('valorUnitRapido');
+          if (inUnit) { inUnit.focus(); if (inUnit.select) inUnit.select(); }
+      } else if (campo === 'unit') {
+          calcularTotalRapido();
+          confirmarLancamentoRapido();
+      } else if (campo === 'data') {
+          let inVenc = document.getElementById('vencRapido');
+          if (inVenc) inVenc.focus();
+      } else if (campo === 'venc') {
+          confirmarLancamentoRapido();
+      }
   }
 
   function confirmarLancamentoRapido() {
       let id = document.getElementById('idCliRapido').value;
       if (!id) return;
-      let valFinal = Number(document.getElementById('valorTotalRapido').value);
-      
+
+      calcularTotalRapido();
+
+      let desc = (document.getElementById('descRapido').value || '').trim().toUpperCase();
+      let qtd = Number(document.getElementById('qtdRapido').value) || 1;
+      let unit = parseFloat(String(document.getElementById('valorUnitRapido').value).replace(',', '.')) || 0;
+      let valFinal = parseFloat(String(document.getElementById('valorTotalRapido').value).replace(',', '.')) || (qtd * unit);
+      valFinal = Math.round(valFinal * 100) / 100;
+
+      if(!desc) {
+          document.getElementById('descRapido').focus();
+          return Swal.fire({toast: true, position: 'top-end', icon: 'warning', title: 'Preencha a descrição da peça.', timer: 2500, showConfirmButton: false});
+      }
+      if(valFinal <= 0) {
+          document.getElementById('valorUnitRapido').focus();
+          return Swal.fire({toast: true, position: 'top-end', icon: 'warning', title: 'Informe o valor da peça.', timer: 2500, showConfirmButton: false});
+      }
+
       let item = { 
-          desc: document.getElementById('descRapido').value.toUpperCase(), 
-          qtd: Number(document.getElementById('qtdRapido').value)||1, 
+          desc: desc, 
+          qtd: qtd, 
           valor: valFinal, 
           data: document.getElementById('dataRapido').value || new Date().toISOString().split('T')[0], 
-          venc: document.getElementById('vencRapido').value, 
+          venc: document.getElementById('vencRapido').value || "", 
           pago: false, pagoValor: 0, img: null 
       };
-      
-      if(!item.desc || !item.valor) return Swal.fire('Erro', 'Preencha descrição e valor', 'error');
-      
-      db.collection("clientes").doc(id).update({itens: firebase.firestore.FieldValue.arrayUnion(item)}).then(() => {
-          Swal.fire({icon: 'success', title: 'Lançado!', toast: true, position: 'top-end', timer: 1500, showConfirmButton: false});
+
+      let btn = document.getElementById('btnConfirmarLancamentoRapido');
+      if (btn) btn.disabled = true;
+
+      db.collection("clientes").doc(id).update({
+          itens: firebase.firestore.FieldValue.arrayUnion(item)
+      }).then(() => {
+          Swal.fire({icon: 'success', title: 'Lançado com sucesso!', toast: true, position: 'top-end', timer: 1500, showConfirmButton: false});
           fecharModalRapido();
+      }).catch(err => {
+          console.error("Erro ao lançar item:", err);
+          Swal.fire('Erro', 'Não foi possível salvar o lançamento: ' + err.message, 'error');
+      }).finally(() => {
+          if (btn) btn.disabled = false;
       });
   }
 
@@ -134,9 +189,126 @@
     }
   }
 
-  function abrirEditar(id,ii){let c=clientes.find(x=>x.id===id),i=c.itens[ii];editRef={id,ii};document.getElementById('editDesc').value=i.desc;document.getElementById('editQtd').value=i.qtd||1;document.getElementById('editValor').value=i.valor;document.getElementById('editData').value=i.data||"";document.getElementById('editVenc').value=i.venc||"";document.getElementById('editModal').style.display='flex';}
-  function salvarEdicao(){let {id,ii}=editRef,c=clientes.find(x=>x.id===id),itens=[...c.itens];itens[ii].desc=document.getElementById('editDesc').value;itens[ii].qtd=Number(document.getElementById('editQtd').value);itens[ii].valor=Number(document.getElementById('editValor').value);itens[ii].data=document.getElementById('editData').value;itens[ii].venc=document.getElementById('editVenc').value;db.collection("clientes").doc(id).update({itens}).then(()=>fecharModal());}
-  function fecharModal(){document.getElementById('editModal').style.display='none';}
+  function preencherValorCatEditar() {
+      let t = (document.getElementById('editDesc').value || '').trim().toUpperCase();
+      let a = catalogo.find(c => c.nome.toUpperCase() === t);
+      if(a) { 
+          document.getElementById('editValorUnit').value = Number(a.valor).toFixed(2);
+          calcularTotalEditar();
+      }
+  }
+
+  function calcularTotalEditar() {
+      let qtd = Number(document.getElementById('editQtd').value) || 0;
+      let unit = parseFloat(String(document.getElementById('editValorUnit').value).replace(',', '.')) || 0;
+      let total = Math.round(qtd * unit * 100) / 100;
+      document.getElementById('editValor').value = total > 0 ? total.toFixed(2) : (unit > 0 ? unit.toFixed(2) : '');
+  }
+
+  function tratarEnterEditar(e, campo) {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      if (campo === 'desc') {
+          preencherValorCatEditar();
+          let inQtd = document.getElementById('editQtd');
+          if (inQtd) { inQtd.focus(); if (inQtd.select) inQtd.select(); }
+      } else if (campo === 'qtd') {
+          calcularTotalEditar();
+          let inUnit = document.getElementById('editValorUnit');
+          if (inUnit) { inUnit.focus(); if (inUnit.select) inUnit.select(); }
+      } else if (campo === 'unit') {
+          calcularTotalEditar();
+          salvarEdicao();
+      } else if (campo === 'data') {
+          let inVenc = document.getElementById('editVenc');
+          if (inVenc) inVenc.focus();
+      } else if (campo === 'venc') {
+          salvarEdicao();
+      }
+  }
+
+  function abrirEditar(id, ii) {
+      let c = clientes.find(x => x.id === id);
+      if (!c || !c.itens || !c.itens[ii]) return;
+      let i = c.itens[ii];
+      editRef = { id, ii };
+
+      let qtd = Number(i.qtd) || 1;
+      let total = Number(i.valor) || 0;
+      let unit = qtd > 0 ? (total / qtd) : total;
+
+      document.getElementById('editDesc').value = i.desc || "";
+      document.getElementById('editQtd').value = qtd;
+      document.getElementById('editValorUnit').value = unit > 0 ? unit.toFixed(2) : '';
+      document.getElementById('editValor').value = total > 0 ? total.toFixed(2) : '';
+      document.getElementById('editData').value = i.data || "";
+      document.getElementById('editVenc').value = i.venc || "";
+
+      document.getElementById('editModal').style.display = 'flex';
+      setTimeout(() => {
+          let el = document.getElementById('editValorUnit') || document.getElementById('editDesc');
+          if (el) {
+              el.focus();
+              if (el.select) el.select();
+          }
+      }, 100);
+  }
+
+  function salvarEdicao() {
+      if (!editRef) return;
+      let { id, ii } = editRef;
+      let c = clientes.find(x => x.id === id);
+      if (!c || !c.itens || !c.itens[ii]) return;
+      let itens = [...c.itens];
+
+      calcularTotalEditar();
+
+      let desc = (document.getElementById('editDesc').value || '').trim().toUpperCase();
+      let qtd = Number(document.getElementById('editQtd').value) || 1;
+      let unit = parseFloat(String(document.getElementById('editValorUnit').value).replace(',', '.')) || 0;
+      let total = parseFloat(String(document.getElementById('editValor').value).replace(',', '.')) || (qtd * unit);
+      total = Math.round(total * 100) / 100;
+
+      if (!desc) {
+          document.getElementById('editDesc').focus();
+          return Swal.fire({toast: true, position: 'top-end', icon: 'warning', title: 'Preencha a descrição da peça.', timer: 2500, showConfirmButton: false});
+      }
+      if (total <= 0) {
+          document.getElementById('editValorUnit').focus();
+          return Swal.fire({toast: true, position: 'top-end', icon: 'warning', title: 'Informe o valor da peça.', timer: 2500, showConfirmButton: false});
+      }
+
+      itens[ii].desc = desc;
+      itens[ii].qtd = qtd;
+      itens[ii].valor = total;
+      itens[ii].data = document.getElementById('editData').value || itens[ii].data || "";
+      itens[ii].venc = document.getElementById('editVenc').value || "";
+
+      let pagoValor = Number(itens[ii].pagoValor) || 0;
+      if (pagoValor >= total && total > 0) {
+          itens[ii].pagoValor = total;
+          itens[ii].pago = true;
+      } else {
+          itens[ii].pago = false;
+      }
+
+      let btn = document.getElementById('btnSalvarEdicao');
+      if (btn) btn.disabled = true;
+
+      db.collection("clientes").doc(id).update({ itens }).then(() => {
+          Swal.fire({icon: 'success', title: 'Item atualizado com sucesso!', toast: true, position: 'top-end', timer: 1500, showConfirmButton: false});
+          fecharModal();
+      }).catch(err => {
+          console.error("Erro ao atualizar item:", err);
+          Swal.fire('Erro', 'Não foi possível salvar a alteração: ' + err.message, 'error');
+      }).finally(() => {
+          if (btn) btn.disabled = false;
+      });
+  }
+
+  function fecharModal() {
+      document.getElementById('editModal').style.display = 'none';
+  }
 
   function excluirLançamento(id, ii) {
       Swal.fire({
