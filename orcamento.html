@@ -549,6 +549,108 @@
             font-weight: bold;
         }
 
+        /* SERVIÇOS EM ABERTO */
+        .modo-tela {
+            max-width: 800px;
+            margin: 0 auto 12px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .modo-tela button {
+            flex: 1;
+            background: #e2e6ee;
+            color: #1e2430;
+            font-size: 13px;
+            font-weight: bold;
+            padding: 12px;
+        }
+
+        .modo-tela button.ativo {
+            background: #0d47a1;
+            color: #fff;
+        }
+
+        .modo-tela button.ativo.btn-modo-servicos {
+            background: #e65100;
+        }
+
+        .servicos-abas {
+            max-width: 800px;
+            margin: 0 auto 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: stretch;
+        }
+
+        .aba-servico {
+            display: flex;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .aba-servico.ativa {
+            border-color: #e65100;
+            box-shadow: 0 0 0 2px #e65100;
+        }
+
+        .aba-servico button {
+            border-radius: 0;
+            padding: 8px 10px;
+            font-size: 12px;
+        }
+
+        .aba-servico .aba-excluir {
+            background: #c62828;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .aba-servico .aba-abrir {
+            background: #fff;
+            color: #1e2430;
+            text-align: left;
+            max-width: 230px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .aba-servico.ativa .aba-abrir {
+            background: #fff3e0;
+            font-weight: bold;
+        }
+
+        .aba-servico .aba-total {
+            display: block;
+            font-size: 10px;
+            color: #666;
+            font-weight: normal;
+        }
+
+        .aba-novo {
+            background: #2e7d32;
+            color: #fff;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 8px 14px;
+        }
+
+        .servicos-vazio {
+            max-width: 800px;
+            margin: 0 auto 16px;
+            background: #fff;
+            border: 2px dashed #e65100;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            color: #555;
+            font-size: 15px;
+        }
+
         /* REGRAS DE IMPRESSÃO */
         @media print {
             body { background-color: white; padding: 0; }
@@ -566,6 +668,14 @@
         <a href="index.html" onclick="try{sessionStorage.setItem('pp_sessao','1')}catch(e){}">⬅ Voltar ao sistema</a>
         <span id="barra-tipo-doc">Paraná Peças — Orçamento</span>
     </div>
+
+    <div class="modo-tela nao-imprimir">
+        <button type="button" id="btn-modo-orcamento" class="ativo" onclick="trocarModo('orcamento')">📝 ORÇAMENTO</button>
+        <button type="button" id="btn-modo-servicos" class="btn-modo-servicos" onclick="trocarModo('servicos')">🔧 SERVIÇOS EM ABERTO</button>
+    </div>
+
+    <div class="servicos-abas nao-imprimir" id="servicos-abas" hidden></div>
+    <div class="servicos-vazio nao-imprimir" id="servicos-vazio" hidden></div>
 
     <datalist id="opcoesCatalogo"></datalist>
 
@@ -668,7 +778,7 @@
         <button class="btn-azul" onclick="window.print()">Imprimir</button>
         <button class="btn-roxo" onclick="gerarPDF()">Salvar PDF</button>
         <button onclick="gerarJPEG()">Salvar JPEG</button>
-        <button class="btn-limpar" onclick="limparOrcamento()">Limpar orçamento</button>
+        <button class="btn-limpar" id="btn-limpar-doc" onclick="acaoBotaoLimpar()">Limpar orçamento</button>
     </div>
 
     <div class="painel-config nao-imprimir">
@@ -838,6 +948,7 @@
                 try { sessionStorage.setItem('pp_sessao', '1'); } catch (e) {}
                 carregarEmpresaDoFirebase();
                 carregarCatalogo();
+                iniciarServicos();
             });
         }
 
@@ -877,7 +988,21 @@
         let cropUrlTemporaria = '';
         let tipoDocumento = 'ORÇAMENTO';
 
+        const COL_SERVICOS = 'servicos_abertos';
+        const STORAGE_MODO = 'parana_pecas_orcamento_modo_v1';
+        const STORAGE_SERVICO_ATUAL = 'parana_pecas_servico_atual_v1';
+        let modoTela = 'orcamento';
+        let servicosLista = [];
+        let servicosCarregados = false;
+        let servicosUnsub = null;
+        let servicoAtualId = null;
+        let servicoCarregando = false;
+        let servicoImgsCarregadas = false;
+        let servicoImgSync = {};
+        let servicoSalvarTimer = null;
+
         function prefixoArquivoDocumento() {
+            if (modoTela === 'servicos') return 'Servico_Aberto';
             return tipoDocumento === 'VENDA' ? 'Comprovante_Venda' : 'Orcamento';
         }
 
@@ -905,6 +1030,10 @@
         }
 
         function salvarOrcamentoAtual() {
+            if (modoTela === 'servicos') {
+                agendarSalvarServico();
+                return;
+            }
             const dados = {
                 cliente: document.getElementById('nome-cliente').value || '',
                 data: document.getElementById('data-orcamento').value || '',
@@ -1101,6 +1230,292 @@
             }, 2500);
         }
 
+        /* ---------- SERVIÇOS EM ABERTO ---------- */
+        function escServ(t) {
+            return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        function erroServico(err) {
+            console.error('Serviços em aberto:', err);
+            const semPermissao = err && err.code === 'permission-denied';
+            alert(semPermissao
+                ? 'Sem permissão para salvar Serviços em Aberto. Publique as regras atualizadas do Firestore (firestore.rules) no Console do Firebase.'
+                : 'Erro ao salvar serviço: ' + (err && err.message ? err.message : err));
+        }
+
+        function totalItens(itens) {
+            return (Array.isArray(itens) ? itens : []).reduce((s, i) => s + (Number(i.total) || 0), 0);
+        }
+
+        function rotuloServico(s) {
+            const cliente = (s.cliente || '').trim() || 'SEM NOME';
+            const modelo = (s.modelo || '').trim();
+            return modelo ? `${cliente} - ${modelo}` : cliente;
+        }
+
+        function coletarDadosFormulario() {
+            return {
+                cliente: document.getElementById('nome-cliente').value || '',
+                data: document.getElementById('data-orcamento').value || '',
+                modelo: document.getElementById('modelo-carro').value || '',
+                placa: document.getElementById('placa-carro').value || '',
+                itens: itensOrcamento
+            };
+        }
+
+        function preencherFormulario(d) {
+            document.getElementById('nome-cliente').value = d.cliente || '';
+            document.getElementById('data-orcamento').value = d.data || new Date().toLocaleDateString('pt-BR');
+            document.getElementById('modelo-carro').value = d.modelo || '';
+            document.getElementById('placa-carro').value = d.placa || '';
+            document.getElementById('desc-item').value = '';
+            document.getElementById('qtd-item').value = '1';
+            document.getElementById('valor-item').value = '';
+            itensOrcamento = (Array.isArray(d.itens) ? d.itens : []).map(i => ({
+                descricao: i.descricao || '',
+                qtd: Number(i.qtd) || 1,
+                valorUnitario: Number(i.valorUnitario) || 0,
+                total: Number(i.total) || 0
+            }));
+            imagensOrcamento = Array.isArray(d.imagens) ? d.imagens : [];
+            editandoIndex = -1;
+            atualizarTela();
+        }
+
+        function aplicarVisualModo() {
+            const servicos = modoTela === 'servicos';
+            document.getElementById('btn-modo-orcamento').classList.toggle('ativo', !servicos);
+            document.getElementById('btn-modo-servicos').classList.toggle('ativo', servicos);
+            document.getElementById('servicos-abas').hidden = !servicos;
+            const tipoOpcoes = document.querySelector('.tipo-doc-opcoes');
+            if (tipoOpcoes) tipoOpcoes.style.display = servicos ? 'none' : '';
+
+            const semServico = servicos && !servicoAtualId;
+            const vazio = document.getElementById('servicos-vazio');
+            vazio.hidden = !semServico;
+            vazio.innerHTML = servicosCarregados
+                ? 'Nenhum serviço em aberto.<br><br><button type="button" class="aba-novo" onclick="novoServico()">➕ Novo serviço</button>'
+                : 'Carregando serviços...';
+            document.getElementById('documento-orcamento').style.display = semServico ? 'none' : '';
+            document.querySelector('.acoes-finais').style.display = semServico ? 'none' : '';
+
+            const btnLimpar = document.getElementById('btn-limpar-doc');
+            if (servicos) {
+                document.getElementById('titulo-documento').textContent = 'SERVIÇO EM ABERTO';
+                document.getElementById('rotulo-total').textContent = 'Total do Serviço:';
+                document.getElementById('barra-tipo-doc').textContent = 'Paraná Peças — Serviços em Aberto';
+                btnLimpar.textContent = '🗑 Excluir este serviço';
+            } else {
+                btnLimpar.textContent = 'Limpar orçamento';
+            }
+            renderAbasServicos();
+        }
+
+        function renderAbasServicos() {
+            const container = document.getElementById('servicos-abas');
+            if (!container || modoTela !== 'servicos') return;
+            container.innerHTML = servicosLista.map(s => `
+                <div class="aba-servico ${s.id === servicoAtualId ? 'ativa' : ''}">
+                    <button type="button" class="aba-excluir" onclick="excluirServico('${s.id}')" title="Excluir este serviço">✕</button>
+                    <button type="button" class="aba-abrir" onclick="abrirServico('${s.id}')" title="${escServ(rotuloServico(s))}">
+                        ${escServ(rotuloServico(s))}
+                        <span class="aba-total">R$ ${totalItens(s.itens).toFixed(2)}</span>
+                    </button>
+                </div>`).join('') +
+                '<button type="button" class="aba-novo" onclick="novoServico()">➕ Novo serviço</button>';
+        }
+
+        function trocarModo(modo) {
+            if (modo === modoTela) return;
+            if (modoTela === 'servicos') salvarServicoAgora();
+            modoTela = modo;
+            try { localStorage.setItem(STORAGE_MODO, modo); } catch (e) {}
+
+            if (modo === 'orcamento') {
+                if (!carregarOrcamentoSalvo()) {
+                    preencherFormulario({});
+                    definirTipoDocumento('ORÇAMENTO');
+                }
+                aplicarVisualModo();
+                definirTipoDocumento(tipoDocumento);
+                return;
+            }
+
+            const id = servicoAtualId || (() => { try { return localStorage.getItem(STORAGE_SERVICO_ATUAL); } catch (e) { return null; } })();
+            servicoAtualId = null;
+            const alvo = servicosLista.find(s => s.id === id) || servicosLista[servicosLista.length - 1];
+            if (alvo) abrirServico(alvo.id);
+            else aplicarVisualModo();
+        }
+
+        function acaoBotaoLimpar() {
+            if (modoTela === 'servicos') {
+                if (servicoAtualId) excluirServico(servicoAtualId);
+            } else {
+                limparOrcamento();
+            }
+        }
+
+        function iniciarServicos() {
+            if (!dbOrc || servicosUnsub) return;
+            servicosUnsub = dbOrc.collection(COL_SERVICOS).onSnapshot((snap) => {
+                const lista = [];
+                snap.forEach(d => lista.push(Object.assign({ id: d.id }, d.data())));
+                lista.sort((a, b) => (a.criadoEm || 0) - (b.criadoEm || 0));
+
+                // O serviço aberto na tela vale o que está no formulário
+                const ativoLocal = servicosLista.find(s => s.id === servicoAtualId);
+                const ativoIdx = lista.findIndex(s => s.id === servicoAtualId);
+                if (ativoLocal && ativoIdx > -1) lista[ativoIdx] = Object.assign(lista[ativoIdx], ativoLocal);
+
+                servicosLista = lista;
+                servicosCarregados = true;
+
+                if (modoTela !== 'servicos') return;
+                if (servicoAtualId && ativoIdx === -1) servicoAtualId = null;
+                if (!servicoAtualId) {
+                    let preferido = null;
+                    try { preferido = localStorage.getItem(STORAGE_SERVICO_ATUAL); } catch (e) {}
+                    const alvo = lista.find(s => s.id === preferido) || lista[lista.length - 1];
+                    if (alvo) { abrirServico(alvo.id); return; }
+                }
+                aplicarVisualModo();
+            }, erroServico);
+        }
+
+        async function novoServico() {
+            if (!dbOrc) return alert('Firebase não configurado: não é possível salvar serviços.');
+            salvarServicoAgora();
+            const ref = dbOrc.collection(COL_SERVICOS).doc();
+            const dados = {
+                cliente: '',
+                data: new Date().toLocaleDateString('pt-BR'),
+                modelo: '',
+                placa: '',
+                itens: [],
+                imagensIds: [],
+                criadoEm: Date.now(),
+                atualizadoEm: Date.now()
+            };
+            servicosLista.push(Object.assign({ id: ref.id }, dados));
+            ref.set(dados).catch(erroServico);
+            await abrirServico(ref.id);
+            document.getElementById('nome-cliente').focus();
+        }
+
+        async function abrirServico(id) {
+            if (servicoAtualId && servicoAtualId !== id) salvarServicoAgora();
+            const s = servicosLista.find(x => x.id === id);
+            if (!s) {
+                servicoAtualId = null;
+                aplicarVisualModo();
+                return;
+            }
+
+            servicoAtualId = id;
+            try { localStorage.setItem(STORAGE_SERVICO_ATUAL, id); } catch (e) {}
+            servicoImgSync = {};
+            servicoImgsCarregadas = false;
+            servicoCarregando = true;
+            preencherFormulario(Object.assign({}, s, { imagens: [] }));
+            servicoCarregando = false;
+            aplicarVisualModo();
+
+            const ordem = Array.isArray(s.imagensIds) ? s.imagensIds : [];
+            if (!ordem.length || !dbOrc) {
+                servicoImgsCarregadas = true;
+                return;
+            }
+            try {
+                const snap = await dbOrc.collection(COL_SERVICOS).doc(id).collection('imagens').get();
+                if (servicoAtualId !== id) return;
+                const mapa = {};
+                snap.forEach(d => { mapa[d.id] = d.data().src; });
+                const carregadas = ordem.filter(imgId => mapa[imgId]).map(imgId => ({ id: imgId, src: mapa[imgId] }));
+                const extras = imagensOrcamento.filter(img => !img.id || !mapa[img.id]);
+                imagensOrcamento = carregadas.concat(extras);
+                carregadas.forEach(img => { servicoImgSync[img.id] = img.src; });
+                servicoImgsCarregadas = true;
+                atualizarGaleriaImagens();
+                if (extras.length) salvarServicoAgora();
+            } catch (err) {
+                erroServico(err);
+            }
+        }
+
+        function agendarSalvarServico() {
+            if (servicoCarregando || !servicoAtualId) return;
+            const local = servicosLista.find(s => s.id === servicoAtualId);
+            if (local) Object.assign(local, coletarDadosFormulario());
+            renderAbasServicos();
+            clearTimeout(servicoSalvarTimer);
+            servicoSalvarTimer = setTimeout(salvarServicoAgora, 700);
+        }
+
+        function salvarServicoAgora() {
+            clearTimeout(servicoSalvarTimer);
+            servicoSalvarTimer = null;
+            if (modoTela !== 'servicos' || !servicoAtualId || !dbOrc || servicoCarregando) return;
+
+            const ref = dbOrc.collection(COL_SERVICOS).doc(servicoAtualId);
+            const dados = coletarDadosFormulario();
+            dados.atualizadoEm = Date.now();
+
+            if (servicoImgsCarregadas) {
+                const atuais = {};
+                imagensOrcamento.forEach(img => {
+                    if (!img.id) img.id = ref.collection('imagens').doc().id;
+                    atuais[img.id] = img.src;
+                });
+                Object.keys(atuais).forEach(imgId => {
+                    if (servicoImgSync[imgId] !== atuais[imgId]) {
+                        ref.collection('imagens').doc(imgId).set({ src: atuais[imgId] }).catch(erroServico);
+                    }
+                });
+                Object.keys(servicoImgSync).forEach(imgId => {
+                    if (!(imgId in atuais)) ref.collection('imagens').doc(imgId).delete().catch(erroServico);
+                });
+                servicoImgSync = atuais;
+                dados.imagensIds = imagensOrcamento.map(img => img.id);
+            }
+
+            const local = servicosLista.find(s => s.id === servicoAtualId);
+            if (local) Object.assign(local, dados);
+            ref.set(dados, { merge: true }).catch(erroServico);
+        }
+
+        async function excluirServico(id) {
+            const s = servicosLista.find(x => x.id === id);
+            if (!s || !dbOrc) return;
+            if (!confirm(`Excluir o serviço "${rotuloServico(s)}"?\n\nEssa ação não pode ser desfeita.`)) return;
+
+            if (id === servicoAtualId) {
+                clearTimeout(servicoSalvarTimer);
+                servicoSalvarTimer = null;
+                servicoAtualId = null;
+            }
+            servicosLista = servicosLista.filter(x => x.id !== id);
+
+            const ref = dbOrc.collection(COL_SERVICOS).doc(id);
+            try {
+                const imgs = await ref.collection('imagens').get();
+                await Promise.all(imgs.docs.map(d => d.ref.delete()));
+                await ref.delete();
+            } catch (err) {
+                erroServico(err);
+            }
+
+            if (!servicoAtualId) {
+                const proximo = servicosLista[servicosLista.length - 1];
+                if (proximo) abrirServico(proximo.id);
+                else aplicarVisualModo();
+            } else {
+                renderAbasServicos();
+            }
+        }
+
+        window.addEventListener('pagehide', salvarServicoAgora);
+
         // Inicialização
         montarSelectLojas();
         preencherFormularioLoja();
@@ -1125,6 +1540,10 @@
         });
 
         iniciarFerramentaImagens();
+
+        try {
+            if (localStorage.getItem(STORAGE_MODO) === 'servicos') trocarModo('servicos');
+        } catch (e) {}
 
                 function iniciarFerramentaImagens() {
             const arquivo = document.getElementById('arquivo-imagem');

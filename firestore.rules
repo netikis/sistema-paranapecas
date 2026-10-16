@@ -66,6 +66,15 @@ service cloud.firestore {
       allow read, write: if isSignedIn();
     }
 
+    // --- SERVIÇOS EM ABERTO (orcamento.html) ---
+    match /servicos_abertos/{docId} {
+      allow read, write: if isSignedIn();
+
+      match /imagens/{imgId} {
+        allow read, write: if isSignedIn();
+      }
+    }
+
     // --- VENDAS / SAÍDAS (vendas.html) — só admin ---
     match /caixa_lancamentos/{docId} {
       allow read, delete: if isAdmin() || isLegacyAdmin();
