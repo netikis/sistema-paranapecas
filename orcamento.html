@@ -295,6 +295,10 @@
             display: none;
         }
 
+        .pix-orcamento .pix-item + .pix-item {
+            margin-top: 10px;
+        }
+
         .pix-orcamento .pix-chave {
             font-weight: bold;
             font-size: 14px;
@@ -773,10 +777,7 @@
             <span id="rotulo-total">Total do Orçamento:</span> R$ <span id="valor-total">0.00</span>
         </div>
 
-        <div class="pix-orcamento oculto" id="pix-orcamento">
-            <div class="pix-chave">CHAVE PIX: <span id="doc-pix-chave"></span></div>
-            <div class="pix-beneficiario" id="doc-pix-beneficiario"></div>
-        </div>
+        <div class="pix-orcamento oculto" id="pix-orcamento"></div>
 
             <h3 class="titulo-imagens oculto" id="titulo-imagens">Fotos</h3>
             <div class="galeria-imagens" id="galeria-imagens"></div>
@@ -824,11 +825,17 @@
             Mostrar PIX no orçamento
         </label>
 
-        <label for="cfg-pix-chave">Chave PIX</label>
+        <label for="cfg-pix-chave">Chave PIX 1</label>
         <input type="text" id="cfg-pix-chave" placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória">
 
-        <label for="cfg-pix-beneficiario">Dados do beneficiário</label>
+        <label for="cfg-pix-beneficiario">Dados do beneficiário 1</label>
         <textarea id="cfg-pix-beneficiario" placeholder="Nome completo&#10;CPF/CNPJ&#10;Banco (opcional)"></textarea>
+
+        <label for="cfg-pix-chave2">Chave PIX 2</label>
+        <input type="text" id="cfg-pix-chave2" placeholder="Segunda chave PIX (opcional)">
+
+        <label for="cfg-pix-beneficiario2">Dados do beneficiário 2</label>
+        <textarea id="cfg-pix-beneficiario2" placeholder="Nome completo&#10;CPF/CNPJ&#10;Banco (opcional)"></textarea>
 
         <div class="acoes-config">
             <button class="btn-salvar-loja" type="button" onclick="salvarConfigPix()">Salvar PIX</button>
@@ -894,7 +901,7 @@
             if (d.ativo === 2) configEmpresas.lojaAtiva = 1;
             else if (d.ativo === 1) configEmpresas.lojaAtiva = 0;
             if (d.pix) {
-                configEmpresas.pix = Object.assign({}, configEmpresas.pix || {}, d.pix);
+                configEmpresas.pix = normalizarPix(Object.assign({}, configEmpresas.pix || {}, d.pix));
             }
             montarSelectLojas();
             preencherFormularioLoja();
@@ -966,7 +973,9 @@
             pix: {
                 mostrar: true,
                 chave: '',
-                beneficiario: ''
+                beneficiario: '',
+                chave2: '',
+                beneficiario2: ''
             },
             lojas: [
                 {
@@ -1120,9 +1129,7 @@
                 if (!dados.lojas || dados.lojas.length < 2) {
                     return JSON.parse(JSON.stringify(padraoEmpresas));
                 }
-                if (!dados.pix) {
-                    dados.pix = JSON.parse(JSON.stringify(padraoEmpresas.pix));
-                }
+                dados.pix = normalizarPix(dados.pix);
                 return dados;
             } catch (e) {
                 return JSON.parse(JSON.stringify(padraoEmpresas));
@@ -1159,11 +1166,33 @@
             preencherFormularioPix();
         }
 
+        function normalizarPix(pix) {
+            const base = JSON.parse(JSON.stringify(padraoEmpresas.pix));
+            const atual = pix && typeof pix === 'object' ? pix : {};
+            base.mostrar = atual.mostrar !== false;
+            base.chave = atual.chave || '';
+            base.beneficiario = atual.beneficiario || '';
+            base.chave2 = atual.chave2 || '';
+            base.beneficiario2 = atual.beneficiario2 || '';
+            return base;
+        }
+
+        function listaChavesPix(pix) {
+            const dados = normalizarPix(pix);
+            return [
+                { chave: (dados.chave || '').trim(), beneficiario: (dados.beneficiario || '').trim() },
+                { chave: (dados.chave2 || '').trim(), beneficiario: (dados.beneficiario2 || '').trim() }
+            ].filter(p => p.chave);
+        }
+
         function preencherFormularioPix() {
-            const pix = configEmpresas.pix || padraoEmpresas.pix;
+            const pix = normalizarPix(configEmpresas.pix);
+            configEmpresas.pix = pix;
             document.getElementById('cfg-mostrar-pix').checked = pix.mostrar !== false;
             document.getElementById('cfg-pix-chave').value = pix.chave || '';
             document.getElementById('cfg-pix-beneficiario').value = pix.beneficiario || '';
+            document.getElementById('cfg-pix-chave2').value = pix.chave2 || '';
+            document.getElementById('cfg-pix-beneficiario2').value = pix.beneficiario2 || '';
         }
 
         function atualizarCabecalhoDocumento() {
@@ -1180,14 +1209,16 @@
         }
 
         function atualizarPixDocumento() {
-            const pix = configEmpresas.pix || {};
+            const pix = normalizarPix(configEmpresas.pix);
             const bloco = document.getElementById('pix-orcamento');
-            const chave = (pix.chave || '').trim();
-            const beneficiario = (pix.beneficiario || '').trim();
-            const mostrar = pix.mostrar !== false && !!chave;
+            const lista = listaChavesPix(pix);
+            const mostrar = pix.mostrar !== false && lista.length > 0;
 
-            document.getElementById('doc-pix-chave').textContent = chave;
-            document.getElementById('doc-pix-beneficiario').textContent = beneficiario;
+            bloco.innerHTML = lista.map((p, i) => {
+                const rotulo = lista.length > 1 ? `CHAVE PIX ${i + 1}: ` : 'CHAVE PIX: ';
+                const benef = p.beneficiario ? `<div class="pix-beneficiario">${escHtmlPix(p.beneficiario)}</div>` : '';
+                return `<div class="pix-item"><div class="pix-chave">${rotulo}${escHtmlPix(p.chave)}</div>${benef}</div>`;
+            }).join('');
 
             if (mostrar) {
                 bloco.classList.remove('oculto');
@@ -1196,13 +1227,20 @@
             }
         }
 
+        function escHtmlPix(t) {
+            return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[c])).replace(/\n/g, '<br>');
+        }
+
         function salvarConfigPix() {
-            if (!configEmpresas.pix) {
-                configEmpresas.pix = JSON.parse(JSON.stringify(padraoEmpresas.pix));
-            }
-            configEmpresas.pix.mostrar = document.getElementById('cfg-mostrar-pix').checked;
-            configEmpresas.pix.chave = document.getElementById('cfg-pix-chave').value.trim();
-            configEmpresas.pix.beneficiario = document.getElementById('cfg-pix-beneficiario').value.trim();
+            configEmpresas.pix = {
+                mostrar: document.getElementById('cfg-mostrar-pix').checked,
+                chave: document.getElementById('cfg-pix-chave').value.trim(),
+                beneficiario: document.getElementById('cfg-pix-beneficiario').value.trim(),
+                chave2: document.getElementById('cfg-pix-chave2').value.trim(),
+                beneficiario2: document.getElementById('cfg-pix-beneficiario2').value.trim()
+            };
             persistirConfig();
             atualizarPixDocumento();
             sincronizarLojaNoFirebase();
