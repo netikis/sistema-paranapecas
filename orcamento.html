@@ -420,6 +420,16 @@
             flex-direction: column;
         }
 
+        .dado-print {
+            display: none;
+            min-height: 22px;
+            padding: 4px 0;
+            font-size: 15px;
+            font-weight: bold;
+            color: #111;
+            line-height: 1.3;
+        }
+
         input[type="text"], input[type="number"] {
             padding: 8px;
             border: 1px solid #ccc;
@@ -860,11 +870,13 @@
 
         #documento-orcamento.exportando .nao-imprimir,
         #documento-orcamento.exportando #canvas-assinatura-doc,
-        #documento-orcamento.exportando #nome-entregador {
+        #documento-orcamento.exportando #nome-entregador,
+        #documento-orcamento.exportando .dados-cliente input {
             display: none !important;
         }
 
         #documento-orcamento.exportando .nome-entregador-print,
+        #documento-orcamento.exportando .dado-print,
         #documento-orcamento.exportando .img-assinatura-doc.visivel {
             display: block !important;
         }
@@ -924,8 +936,8 @@
             body { background-color: white; padding: 0; }
             #documento-orcamento { box-shadow: none; padding: 12px; }
             .nao-imprimir { display: none !important; }
-            #nome-entregador { display: none !important; }
-            .nome-entregador-print { display: block !important; }
+            #nome-entregador, .dados-cliente input { display: none !important; }
+            .nome-entregador-print, .dado-print { display: block !important; }
             input { border: none; background: transparent; padding: 0; margin: 0; }
             .galeria-imagens { grid-template-columns: 1fr 1fr 1fr; }
             .card-imagem img { max-height: 90px; }
@@ -984,26 +996,32 @@
             <div>
                 <label>Cliente:</label>
                 <input type="text" id="nome-cliente" placeholder="Nome do cliente">
+                <div class="dado-print" id="print-nome-cliente"></div>
             </div>
             <div>
                 <label>Data:</label>
                 <input type="text" id="data-orcamento" placeholder="DD/MM/AAAA">
+                <div class="dado-print" id="print-data-orcamento"></div>
             </div>
             <div>
                 <label>Veículo (Modelo):</label>
                 <input type="text" id="modelo-carro" placeholder="Ex: Gol 1.0">
+                <div class="dado-print" id="print-modelo-carro"></div>
             </div>
             <div>
                 <label>Placa:</label>
                 <input type="text" id="placa-carro" placeholder="ABC-1234">
+                <div class="dado-print" id="print-placa-carro"></div>
             </div>
             <div>
                 <label>CPF:</label>
                 <input type="text" id="cpf-cliente" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" oninput="formatarCpfOrcamento(this)">
+                <div class="dado-print" id="print-cpf-cliente"></div>
             </div>
             <div>
                 <label>Telefone:</label>
                 <input type="text" id="tel-cliente" inputmode="tel" maxlength="16" placeholder="(00) 00000-0000" oninput="formatarTelOrcamento(this)">
+                <div class="dado-print" id="print-tel-cliente"></div>
             </div>
         </div>
 
@@ -2666,6 +2684,19 @@ function adicionarItem() {
             const printEnt = document.getElementById('nome-entregador-print');
             if (printEnt) printEnt.textContent = nomeEnt ? nomeEnt : '';
 
+            [
+                ['nome-cliente', 'print-nome-cliente'],
+                ['data-orcamento', 'print-data-orcamento'],
+                ['modelo-carro', 'print-modelo-carro'],
+                ['placa-carro', 'print-placa-carro'],
+                ['cpf-cliente', 'print-cpf-cliente'],
+                ['tel-cliente', 'print-tel-cliente']
+            ].forEach(([idCampo, idPrint]) => {
+                const campo = document.getElementById(idCampo);
+                const dest = document.getElementById(idPrint);
+                if (campo && dest) dest.textContent = (campo.value || '').trim();
+            });
+
             const doc = document.getElementById('documento-orcamento');
             doc.classList.add('exportando');
             document.querySelectorAll('#documento-orcamento input').forEach(i => {
@@ -2720,12 +2751,13 @@ function adicionarItem() {
             const elemento = document.getElementById('documento-orcamento');
             const logo = document.getElementById('logo-empresa');
             const opcoes = {
-                scale: 2,
+                scale: 4,
                 useCORS: true,
                 allowTaint: true,
                 backgroundColor: '#ffffff',
                 logging: false,
-                windowWidth: elemento.scrollWidth,
+                letterRendering: true,
+                windowWidth: Math.max(elemento.scrollWidth, 900),
                 windowHeight: elemento.scrollHeight
             };
 
@@ -2734,7 +2766,10 @@ function adicionarItem() {
             } catch (erro1) {
                 if (logo) logo.style.visibility = 'hidden';
                 try {
-                    return await html2canvas(elemento, Object.assign({}, opcoes, { useCORS: false }));
+                    return await html2canvas(elemento, Object.assign({}, opcoes, {
+                        scale: 3,
+                        useCORS: false
+                    }));
                 } finally {
                     if (logo) logo.style.removeProperty('visibility');
                 }
@@ -2765,7 +2800,11 @@ function adicionarItem() {
             }
             const x = (pageW - w) / 2;
             const y = (pageH - h) / 2;
-            pdf.addImage(canvas.toDataURL('image/jpeg', 0.93), 'JPEG', x, y, w, h);
+            try {
+                pdf.addImage(canvas.toDataURL('image/png'), 'PNG', x, y, w, h, undefined, 'NONE');
+            } catch (e) {
+                pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', x, y, w, h, undefined, 'NONE');
+            }
             return pdf.output('blob');
         }
 
@@ -2779,7 +2818,7 @@ function adicionarItem() {
             const nomeArquivo = `${prefixoArquivoDocumento()}_${cliente}.pdf`;
 
             prepararVisualExportacao();
-            await new Promise(r => setTimeout(r, 80));
+            await new Promise(r => setTimeout(r, 150));
 
             try {
                 const canvas = await capturarDocumentoCanvas();
@@ -2803,7 +2842,7 @@ function adicionarItem() {
             const nomeArquivo = `${prefixoArquivoDocumento()}_${cliente}.jpeg`;
 
             prepararVisualExportacao();
-            await new Promise(r => setTimeout(r, 80));
+            await new Promise(r => setTimeout(r, 150));
 
             try {
                 const canvas = await capturarDocumentoCanvas();
@@ -2811,7 +2850,7 @@ function adicionarItem() {
                     canvas.toBlob((resultado) => {
                         if (resultado) resolve(resultado);
                         else reject(new Error('Não foi possível criar a imagem.'));
-                    }, 'image/jpeg', 0.92);
+                    }, 'image/jpeg', 0.98);
                 });
                 await baixarArquivo(blob, nomeArquivo, 'image/jpeg', 'jpeg');
             } catch (erro) {
