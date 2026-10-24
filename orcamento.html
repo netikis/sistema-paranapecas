@@ -2751,7 +2751,7 @@ function adicionarItem() {
             const elemento = document.getElementById('documento-orcamento');
             const logo = document.getElementById('logo-empresa');
             const opcoes = {
-                scale: 4,
+                scale: 3,
                 useCORS: true,
                 allowTaint: true,
                 backgroundColor: '#ffffff',
@@ -2767,7 +2767,7 @@ function adicionarItem() {
                 if (logo) logo.style.visibility = 'hidden';
                 try {
                     return await html2canvas(elemento, Object.assign({}, opcoes, {
-                        scale: 3,
+                        scale: 2,
                         useCORS: false
                     }));
                 } finally {
@@ -2800,11 +2800,7 @@ function adicionarItem() {
             }
             const x = (pageW - w) / 2;
             const y = (pageH - h) / 2;
-            try {
-                pdf.addImage(canvas.toDataURL('image/png'), 'PNG', x, y, w, h, undefined, 'NONE');
-            } catch (e) {
-                pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', x, y, w, h, undefined, 'NONE');
-            }
+            pdf.addImage(canvas.toDataURL('image/jpeg', 0.82), 'JPEG', x, y, w, h, undefined, 'MEDIUM');
             return pdf.output('blob');
         }
 
@@ -2850,7 +2846,7 @@ function adicionarItem() {
                     canvas.toBlob((resultado) => {
                         if (resultado) resolve(resultado);
                         else reject(new Error('Não foi possível criar a imagem.'));
-                    }, 'image/jpeg', 0.98);
+                    }, 'image/jpeg', 0.82);
                 });
                 await baixarArquivo(blob, nomeArquivo, 'image/jpeg', 'jpeg');
             } catch (erro) {
