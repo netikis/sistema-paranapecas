@@ -250,38 +250,33 @@
             padding: 12px 22px;
             border-radius: 8px;
             background: rgba(46, 125, 50, 0.08);
-            transform: rotate(-6deg);
         }
 
         .timbre-loja {
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 12px;
+            gap: 8px;
             width: 100%;
             padding-top: 10px;
             border-top: 1px solid #ddd;
         }
 
         .timbre-loja img {
-            width: 72px;
+            width: 92px;
             height: auto;
-            max-height: 72px;
+            max-height: 92px;
             object-fit: contain;
             background: #000;
             border-radius: 4px;
         }
 
         .timbre-loja-dados {
-            text-align: left;
-            font-size: 11px;
+            text-align: center;
+            font-size: 12px;
             line-height: 1.4;
             color: #333;
-        }
-
-        .timbre-loja-dados .nome-empresa {
-            font-weight: bold;
-            font-size: 12px;
         }
 
         .bloco-assinatura {
@@ -291,9 +286,21 @@
         }
 
         .bloco-assinatura h3 {
-            margin: 0 0 8px;
+            margin: 0 0 10px;
             font-size: 14px;
             color: #333;
+            text-transform: uppercase;
+        }
+
+        .nome-entregador {
+            margin-bottom: 10px;
+        }
+
+        .nome-entregador label {
+            display: block;
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 4px;
         }
 
         #canvas-assinatura-doc {
@@ -986,20 +993,19 @@
             <div class="carimbo-pago-doc">PAGO!<br>PRODUTO ENTREGUE</div>
             <div class="timbre-loja">
                 <img src="parana-pecas-logo-hd.png" alt="Timbre Paraná Peças">
-                <div class="timbre-loja-dados">
-                    <div class="nome-empresa" id="timbre-nome"></div>
-                    <div id="timbre-endereco"></div>
-                    <div id="timbre-telefones"></div>
-                    <div id="timbre-cnpj"></div>
-                </div>
+                <div class="timbre-loja-dados" id="timbre-endereco"></div>
             </div>
         </div>
 
         <div class="bloco-assinatura" id="bloco-assinatura">
-            <h3>Assinatura digital</h3>
+            <h3>Assinatura do entregador das mercadorias</h3>
+            <div class="nome-entregador">
+                <label for="nome-entregador">Nome de quem entregou a mercadoria:</label>
+                <input type="text" id="nome-entregador" placeholder="Nome do entregador">
+            </div>
             <canvas id="canvas-assinatura-doc" class="nao-imprimir"></canvas>
             <img id="img-assinatura-doc" class="img-assinatura-doc" alt="Assinatura">
-            <div class="linha-assinatura">Assinatura do cliente</div>
+            <div class="linha-assinatura">ASSINATURA DO ENTREGADOR DAS MERCADORIAS</div>
             <div class="acoes-assinatura nao-imprimir">
                 <button type="button" class="btn-azul" onclick="limparAssinaturaDoc()">Limpar assinatura</button>
                 <button type="button" onclick="document.getElementById('arquivo-assinatura-doc').click()">Carregar imagem da assinatura</button>
@@ -1326,10 +1332,7 @@
                 const el = document.getElementById(id);
                 if (el) el.textContent = valor || '';
             };
-            setTxt('timbre-nome', loja.nome || '');
             setTxt('timbre-endereco', loja.endereco || '');
-            setTxt('timbre-telefones', loja.telefones ? `Tel: ${loja.telefones}` : '');
-            setTxt('timbre-cnpj', loja.cnpj ? `CNPJ: ${loja.cnpj}` : '');
         }
 
         function pontoAssinatura(evento, canvas) {
@@ -1482,7 +1485,8 @@
                 tipoDocumento: tipoDocumento,
                 pagoEntregue: documentoPago,
                 assinatura: assinaturaDoc,
-                formaPagamento: formaPagamento
+                formaPagamento: formaPagamento,
+                entregador: document.getElementById('nome-entregador').value || ''
             };
             try {
                 localStorage.setItem(STORAGE_ORCAMENTO, JSON.stringify(dados));
@@ -1502,6 +1506,7 @@
                 document.getElementById('placa-carro').value = dados.placa || '';
                 document.getElementById('cpf-cliente').value = dados.cpf || '';
                 document.getElementById('tel-cliente').value = dados.telefone || '';
+                document.getElementById('nome-entregador').value = dados.entregador || '';
                 itensOrcamento = Array.isArray(dados.itens) ? dados.itens : [];
                 imagensOrcamento = Array.isArray(dados.imagens) ? dados.imagens : [];
                 editandoIndex = -1;
@@ -1524,7 +1529,8 @@
                 || document.getElementById('modelo-carro').value
                 || document.getElementById('placa-carro').value
                 || document.getElementById('cpf-cliente').value
-                || document.getElementById('tel-cliente').value;
+                || document.getElementById('tel-cliente').value
+                || document.getElementById('nome-entregador').value;
 
             if (temDados && !confirm('Deseja limpar todo o orçamento? Essa ação não pode ser desfeita.')) {
                 return;
@@ -1543,6 +1549,7 @@
             document.getElementById('placa-carro').value = '';
             document.getElementById('cpf-cliente').value = '';
             document.getElementById('tel-cliente').value = '';
+            document.getElementById('nome-entregador').value = '';
             document.getElementById('data-orcamento').value = new Date().toLocaleDateString('pt-BR');
             document.getElementById('desc-item').value = '';
             document.getElementById('qtd-item').value = '1';
@@ -1765,7 +1772,8 @@
                 itens: itensOrcamento,
                 pagoEntregue: documentoPago,
                 assinatura: assinaturaDoc,
-                formaPagamento: formaPagamento
+                formaPagamento: formaPagamento,
+                entregador: document.getElementById('nome-entregador').value || ''
             };
         }
 
@@ -1776,6 +1784,7 @@
             document.getElementById('placa-carro').value = d.placa || '';
             document.getElementById('cpf-cliente').value = d.cpf || '';
             document.getElementById('tel-cliente').value = d.telefone || '';
+            document.getElementById('nome-entregador').value = d.entregador || '';
             document.getElementById('desc-item').value = '';
             document.getElementById('qtd-item').value = '1';
             document.getElementById('valor-item').value = '';
@@ -1910,6 +1919,7 @@
                 pagoEntregue: false,
                 assinatura: '',
                 formaPagamento: '',
+                entregador: '',
                 itens: [],
                 imagensIds: [],
                 criadoEm: Date.now(),
@@ -2044,7 +2054,7 @@
             document.getElementById('data-orcamento').value = new Date().toLocaleDateString('pt-BR');
         }
 
-        ['nome-cliente', 'data-orcamento', 'modelo-carro', 'placa-carro', 'cpf-cliente', 'tel-cliente'].forEach((id) => {
+        ['nome-cliente', 'data-orcamento', 'modelo-carro', 'placa-carro', 'cpf-cliente', 'tel-cliente', 'nome-entregador'].forEach((id) => {
             document.getElementById(id).addEventListener('input', salvarOrcamentoAtual);
         });
 
