@@ -166,8 +166,15 @@
             display: flex;
             justify-content: flex-end;
             align-items: center;
+            flex-wrap: wrap;
             gap: 6px;
             margin: 0 0 8px;
+        }
+
+        #tipo-doc-tipos {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
 
         .tipo-doc-opcoes span {
@@ -195,6 +202,138 @@
 
         .btn-tipo.ativo:hover {
             background: #0b3c8a;
+        }
+
+        .btn-pago {
+            background: #e8f5e9;
+            color: #1b5e20;
+            border: 1px solid #2e7d32;
+        }
+
+        .btn-pago:hover {
+            background: #c8e6c9;
+        }
+
+        .btn-pago.ativo {
+            background: #2e7d32;
+            color: #fff;
+        }
+
+        .btn-pago.ativo:hover {
+            background: #1b5e20;
+        }
+
+        .rodape-pago {
+            margin-top: 28px;
+            padding-top: 18px;
+            border-top: 2px solid #2e7d32;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .rodape-pago.oculto {
+            display: none;
+        }
+
+        .carimbo-pago-doc {
+            display: inline-block;
+            border: 4px solid #2e7d32;
+            color: #2e7d32;
+            font-size: 22px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            line-height: 1.15;
+            text-align: center;
+            padding: 12px 22px;
+            border-radius: 8px;
+            background: rgba(46, 125, 50, 0.08);
+            transform: rotate(-6deg);
+        }
+
+        .timbre-loja {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            width: 100%;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+        }
+
+        .timbre-loja img {
+            width: 72px;
+            height: auto;
+            max-height: 72px;
+            object-fit: contain;
+            background: #000;
+            border-radius: 4px;
+        }
+
+        .timbre-loja-dados {
+            text-align: left;
+            font-size: 11px;
+            line-height: 1.4;
+            color: #333;
+        }
+
+        .timbre-loja-dados .nome-empresa {
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .bloco-assinatura {
+            margin-top: 28px;
+            padding-top: 16px;
+            border-top: 1px solid #ddd;
+        }
+
+        .bloco-assinatura h3 {
+            margin: 0 0 8px;
+            font-size: 14px;
+            color: #333;
+        }
+
+        #canvas-assinatura-doc {
+            width: 100%;
+            height: 140px;
+            background: #fff;
+            border: 1px dashed #888;
+            border-radius: 6px;
+            cursor: crosshair;
+            touch-action: none;
+            display: block;
+        }
+
+        .img-assinatura-doc {
+            display: none;
+            width: 100%;
+            max-height: 140px;
+            object-fit: contain;
+            background: #fff;
+        }
+
+        .linha-assinatura {
+            margin-top: 4px;
+            border-top: 1px solid #222;
+            padding-top: 4px;
+            font-size: 11px;
+            color: #555;
+            text-align: center;
+        }
+
+        .acoes-assinatura {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .acoes-assinatura button {
+            font-size: 12px;
+            padding: 8px 12px;
         }
 
         .dados-empresa-doc {
@@ -663,6 +802,12 @@
             input { border: none; background: transparent; padding: 0; margin: 0; }
             .galeria-imagens { grid-template-columns: 1fr 1fr; }
             .card-imagem img { max-height: none; }
+            .carimbo-pago-doc, .timbre-loja img {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            #canvas-assinatura-doc { display: none !important; }
+            .img-assinatura-doc.visivel { display: block !important; }
         }
     </style>
 </head>
@@ -691,9 +836,12 @@
             </div>
             <div class="area-titulo">
                 <div class="tipo-doc-opcoes nao-imprimir">
-                    <span>Tipo:</span>
-                    <button type="button" id="btn-tipo-orcamento" class="btn-tipo ativo" onclick="definirTipoDocumento('ORÇAMENTO')">ORÇAMENTO</button>
-                    <button type="button" id="btn-tipo-venda" class="btn-tipo" onclick="definirTipoDocumento('VENDA')">COMPROVANTE DE VENDA</button>
+                    <span id="tipo-doc-tipos">
+                        <span>Tipo:</span>
+                        <button type="button" id="btn-tipo-orcamento" class="btn-tipo ativo" onclick="definirTipoDocumento('ORÇAMENTO')">ORÇAMENTO</button>
+                        <button type="button" id="btn-tipo-venda" class="btn-tipo" onclick="definirTipoDocumento('VENDA')">COMPROVANTE DE VENDA</button>
+                    </span>
+                    <button type="button" id="btn-pago-entregue" class="btn-tipo btn-pago" onclick="alternarPagoEntregue()">PAGO - PRODUTO ENTREGUE</button>
                 </div>
                 <h1 id="titulo-documento">ORÇAMENTO</h1>
                 <div class="dados-empresa-doc" id="dados-empresa-doc">
@@ -781,6 +929,31 @@
 
             <h3 class="titulo-imagens oculto" id="titulo-imagens">Fotos</h3>
             <div class="galeria-imagens" id="galeria-imagens"></div>
+
+        <div class="rodape-pago oculto" id="rodape-pago">
+            <div class="carimbo-pago-doc">PAGO!<br>PRODUTO ENTREGUE</div>
+            <div class="timbre-loja">
+                <img src="parana-pecas-logo-hd.png" alt="Timbre Paraná Peças">
+                <div class="timbre-loja-dados">
+                    <div class="nome-empresa" id="timbre-nome"></div>
+                    <div id="timbre-endereco"></div>
+                    <div id="timbre-telefones"></div>
+                    <div id="timbre-cnpj"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bloco-assinatura" id="bloco-assinatura">
+            <h3>Assinatura digital</h3>
+            <canvas id="canvas-assinatura-doc" class="nao-imprimir"></canvas>
+            <img id="img-assinatura-doc" class="img-assinatura-doc" alt="Assinatura">
+            <div class="linha-assinatura">Assinatura do cliente</div>
+            <div class="acoes-assinatura nao-imprimir">
+                <button type="button" class="btn-azul" onclick="limparAssinaturaDoc()">Limpar assinatura</button>
+                <button type="button" onclick="document.getElementById('arquivo-assinatura-doc').click()">Carregar imagem da assinatura</button>
+                <input type="file" id="arquivo-assinatura-doc" accept="image/*" hidden>
+            </div>
+        </div>
     </div>
 
     <div class="acoes-finais nao-imprimir">
@@ -1004,6 +1177,10 @@
         let cropDrag = null;
         let cropUrlTemporaria = '';
         let tipoDocumento = 'ORÇAMENTO';
+        let documentoPago = false;
+        let assinaturaDoc = '';
+        let assinaturaDesenhando = false;
+        let assinaturaUltimo = null;
 
         const COL_SERVICOS = 'servicos_abertos';
         const STORAGE_MODO = 'parana_pecas_orcamento_modo_v1';
@@ -1046,6 +1223,165 @@
             salvarOrcamentoAtual();
         }
 
+        function alternarPagoEntregue() {
+            definirPagoEntregue(!documentoPago);
+            salvarOrcamentoAtual();
+        }
+
+        function definirPagoEntregue(pago) {
+            documentoPago = !!pago;
+            const btn = document.getElementById('btn-pago-entregue');
+            if (btn) btn.classList.toggle('ativo', documentoPago);
+            const rodape = document.getElementById('rodape-pago');
+            if (rodape) rodape.classList.toggle('oculto', !documentoPago);
+            atualizarTimbreLoja();
+        }
+
+        function atualizarTimbreLoja() {
+            const loja = lojaAtual();
+            const setTxt = (id, valor) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = valor || '';
+            };
+            setTxt('timbre-nome', loja.nome || '');
+            setTxt('timbre-endereco', loja.endereco || '');
+            setTxt('timbre-telefones', loja.telefones ? `Tel: ${loja.telefones}` : '');
+            setTxt('timbre-cnpj', loja.cnpj ? `CNPJ: ${loja.cnpj}` : '');
+        }
+
+        function pontoAssinatura(evento, canvas) {
+            const r = canvas.getBoundingClientRect();
+            const escalaX = canvas.width / r.width;
+            const escalaY = canvas.height / r.height;
+            const src = evento.touches ? evento.touches[0] : evento;
+            return {
+                x: (src.clientX - r.left) * escalaX,
+                y: (src.clientY - r.top) * escalaY
+            };
+        }
+
+        function ajustarCanvasAssinatura() {
+            const canvas = document.getElementById('canvas-assinatura-doc');
+            if (!canvas) return;
+            const largura = Math.max(300, Math.round(canvas.clientWidth || 600));
+            const altura = 140;
+            if (canvas.width !== largura || canvas.height !== altura) {
+                canvas.width = largura;
+                canvas.height = altura;
+            }
+            const ctx = canvas.getContext('2d');
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.strokeStyle = '#111';
+            if (assinaturaDoc) desenharAssinaturaNoCanvas(assinaturaDoc);
+        }
+
+        function desenharAssinaturaNoCanvas(src) {
+            const canvas = document.getElementById('canvas-assinatura-doc');
+            if (!canvas || !src) return;
+            const img = new Image();
+            img.onload = () => {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            };
+            img.src = src;
+        }
+
+        function mostrarImagemAssinatura(src) {
+            const img = document.getElementById('img-assinatura-doc');
+            if (!img) return;
+            if (src) {
+                img.src = src;
+                img.classList.add('visivel');
+            } else {
+                img.removeAttribute('src');
+                img.classList.remove('visivel');
+            }
+        }
+
+        function gravarAssinaturaDoc() {
+            const canvas = document.getElementById('canvas-assinatura-doc');
+            if (!canvas) return;
+            assinaturaDoc = canvas.toDataURL('image/png');
+            mostrarImagemAssinatura(assinaturaDoc);
+            salvarOrcamentoAtual();
+        }
+
+        function aplicarAssinaturaDoc(src) {
+            assinaturaDoc = src || '';
+            mostrarImagemAssinatura(assinaturaDoc);
+            const canvas = document.getElementById('canvas-assinatura-doc');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (assinaturaDoc) desenharAssinaturaNoCanvas(assinaturaDoc);
+        }
+
+        function limparAssinaturaDoc() {
+            assinaturaDoc = '';
+            assinaturaDesenhando = false;
+            assinaturaUltimo = null;
+            const canvas = document.getElementById('canvas-assinatura-doc');
+            if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+            mostrarImagemAssinatura('');
+            salvarOrcamentoAtual();
+        }
+
+        function iniciarAssinaturaDoc() {
+            const canvas = document.getElementById('canvas-assinatura-doc');
+            const arquivo = document.getElementById('arquivo-assinatura-doc');
+            if (!canvas) return;
+            ajustarCanvasAssinatura();
+
+            const comecar = (evento) => {
+                evento.preventDefault();
+                assinaturaDesenhando = true;
+                assinaturaUltimo = pontoAssinatura(evento, canvas);
+            };
+            const mover = (evento) => {
+                if (!assinaturaDesenhando) return;
+                evento.preventDefault();
+                const atual = pontoAssinatura(evento, canvas);
+                const ctx = canvas.getContext('2d');
+                ctx.beginPath();
+                ctx.moveTo(assinaturaUltimo.x, assinaturaUltimo.y);
+                ctx.lineTo(atual.x, atual.y);
+                ctx.stroke();
+                assinaturaUltimo = atual;
+            };
+            const terminar = () => {
+                if (!assinaturaDesenhando) return;
+                assinaturaDesenhando = false;
+                assinaturaUltimo = null;
+                gravarAssinaturaDoc();
+            };
+
+            canvas.addEventListener('pointerdown', comecar);
+            canvas.addEventListener('pointermove', mover);
+            canvas.addEventListener('pointerup', terminar);
+            canvas.addEventListener('pointerleave', terminar);
+            canvas.addEventListener('pointercancel', terminar);
+            window.addEventListener('resize', ajustarCanvasAssinatura);
+
+            if (arquivo) {
+                arquivo.addEventListener('change', (evento) => {
+                    const file = evento.target.files && evento.target.files[0];
+                    evento.target.value = '';
+                    if (!file) return;
+                    const leitor = new FileReader();
+                    leitor.onload = () => aplicarAssinaturaDoc(leitor.result);
+                    leitor.onloadend = () => {
+                        if (assinaturaDoc) salvarOrcamentoAtual();
+                    };
+                    leitor.readAsDataURL(file);
+                });
+            }
+
+            if (assinaturaDoc) aplicarAssinaturaDoc(assinaturaDoc);
+        }
+
         function salvarOrcamentoAtual() {
             if (modoTela === 'servicos') {
                 agendarSalvarServico();
@@ -1060,7 +1396,9 @@
                 telefone: document.getElementById('tel-cliente').value || '',
                 itens: itensOrcamento,
                 imagens: imagensOrcamento,
-                tipoDocumento: tipoDocumento
+                tipoDocumento: tipoDocumento,
+                pagoEntregue: documentoPago,
+                assinatura: assinaturaDoc
             };
             try {
                 localStorage.setItem(STORAGE_ORCAMENTO, JSON.stringify(dados));
@@ -1084,6 +1422,8 @@
                 imagensOrcamento = Array.isArray(dados.imagens) ? dados.imagens : [];
                 editandoIndex = -1;
                 definirTipoDocumento(dados.tipoDocumento === 'VENDA' ? 'VENDA' : 'ORÇAMENTO');
+                definirPagoEntregue(!!dados.pagoEntregue);
+                aplicarAssinaturaDoc(dados.assinatura || '');
                 atualizarTela();
                 return true;
             } catch (e) {
@@ -1108,6 +1448,8 @@
             imagensOrcamento = [];
             editandoIndex = -1;
             definirTipoDocumento('ORÇAMENTO');
+            definirPagoEntregue(false);
+            limparAssinaturaDoc();
             document.getElementById('nome-cliente').value = '';
             document.getElementById('modelo-carro').value = '';
             document.getElementById('placa-carro').value = '';
@@ -1206,6 +1548,7 @@
                 ? `CNPJ: ${loja.cnpj}`
                 : '';
             atualizarPixDocumento();
+            atualizarTimbreLoja();
         }
 
         function atualizarPixDocumento() {
@@ -1331,7 +1674,9 @@
                 placa: document.getElementById('placa-carro').value || '',
                 cpf: document.getElementById('cpf-cliente').value || '',
                 telefone: document.getElementById('tel-cliente').value || '',
-                itens: itensOrcamento
+                itens: itensOrcamento,
+                pagoEntregue: documentoPago,
+                assinatura: assinaturaDoc
             };
         }
 
@@ -1353,6 +1698,8 @@
             }));
             imagensOrcamento = Array.isArray(d.imagens) ? d.imagens : [];
             editandoIndex = -1;
+            definirPagoEntregue(!!d.pagoEntregue);
+            aplicarAssinaturaDoc(d.assinatura || '');
             atualizarTela();
         }
 
@@ -1361,8 +1708,8 @@
             document.getElementById('btn-modo-orcamento').classList.toggle('ativo', !servicos);
             document.getElementById('btn-modo-servicos').classList.toggle('ativo', servicos);
             document.getElementById('servicos-abas').hidden = !servicos;
-            const tipoOpcoes = document.querySelector('.tipo-doc-opcoes');
-            if (tipoOpcoes) tipoOpcoes.style.display = servicos ? 'none' : '';
+            const tipos = document.getElementById('tipo-doc-tipos');
+            if (tipos) tipos.style.display = servicos ? 'none' : '';
 
             const semServico = servicos && !servicoAtualId;
             const vazio = document.getElementById('servicos-vazio');
@@ -1468,6 +1815,8 @@
                 placa: '',
                 cpf: '',
                 telefone: '',
+                pagoEntregue: false,
+                assinatura: '',
                 itens: [],
                 imagensIds: [],
                 criadoEm: Date.now(),
@@ -1616,6 +1965,7 @@
         });
 
         iniciarFerramentaImagens();
+        iniciarAssinaturaDoc();
 
         try {
             if (localStorage.getItem(STORAGE_MODO) === 'servicos') trocarModo('servicos');
@@ -2112,6 +2462,8 @@ function adicionarItem() {
             });
             const logo = document.getElementById('logo-empresa');
             if (logo) logo.style.removeProperty('visibility');
+            const imgAss = document.getElementById('img-assinatura-doc');
+            if (imgAss) imgAss.style.removeProperty('display');
         }
 
         function prepararVisualExportacao() {
@@ -2121,6 +2473,12 @@ function adicionarItem() {
             document.querySelectorAll('.nao-imprimir').forEach(el => {
                 el.style.display = 'none';
             });
+            const imgAss = document.getElementById('img-assinatura-doc');
+            if (imgAss && assinaturaDoc) {
+                imgAss.src = assinaturaDoc;
+                imgAss.classList.add('visivel');
+                imgAss.style.display = 'block';
+            }
         }
 
         async function baixarArquivo(blob, nomeArquivo, mimeType, extensao) {
