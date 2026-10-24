@@ -336,6 +336,49 @@
             padding: 8px 12px;
         }
 
+        .forma-pagamento {
+            margin-top: 16px;
+            text-align: right;
+        }
+
+        .forma-pagamento.oculto {
+            display: none;
+        }
+
+        .forma-pagamento-rotulo {
+            font-size: 16px;
+            font-weight: bold;
+            color: #111;
+        }
+
+        .forma-pagamento-opcoes {
+            display: flex;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .btn-pagto {
+            background: #e5e7eb;
+            color: #111;
+            padding: 8px 14px;
+            font-size: 12px;
+        }
+
+        .btn-pagto:hover {
+            background: #cbd5e1;
+        }
+
+        .btn-pagto.ativo {
+            background: #0d47a1;
+            color: #fff;
+        }
+
+        @media print {
+            .forma-pagamento.sem-forma { display: none !important; }
+        }
+
         .dados-empresa-doc {
             font-size: 12px;
             line-height: 1.45;
@@ -925,6 +968,15 @@
             <span id="rotulo-total">Total do Orçamento:</span> R$ <span id="valor-total">0.00</span>
         </div>
 
+        <div class="forma-pagamento oculto" id="forma-pagamento">
+            <div class="forma-pagamento-rotulo" id="forma-pagamento-rotulo"></div>
+            <div class="forma-pagamento-opcoes nao-imprimir">
+                <button type="button" class="btn-pagto" data-pagto="DINHEIRO" onclick="definirFormaPagamento('DINHEIRO')">💵 DINHEIRO</button>
+                <button type="button" class="btn-pagto" data-pagto="CARTÃO" onclick="definirFormaPagamento('CARTÃO')">💳 CARTÃO</button>
+                <button type="button" class="btn-pagto" data-pagto="PIX" onclick="definirFormaPagamento('PIX')">💠 PIX</button>
+            </div>
+        </div>
+
         <div class="pix-orcamento oculto" id="pix-orcamento"></div>
 
             <h3 class="titulo-imagens oculto" id="titulo-imagens">Fotos</h3>
@@ -1178,6 +1230,7 @@
         let cropUrlTemporaria = '';
         let tipoDocumento = 'ORÇAMENTO';
         let documentoPago = false;
+        let formaPagamento = '';
         let assinaturaDoc = '';
         let assinaturaDesenhando = false;
         let assinaturaUltimo = null;
@@ -1220,6 +1273,7 @@
             if (barra) {
                 barra.textContent = tipoDocumento === 'VENDA' ? 'Paraná Peças — Comprovante de Venda' : 'Paraná Peças — Orçamento';
             }
+            atualizarFormaPagamento();
             salvarOrcamentoAtual();
         }
 
@@ -1235,6 +1289,35 @@
             const rodape = document.getElementById('rodape-pago');
             if (rodape) rodape.classList.toggle('oculto', !documentoPago);
             atualizarTimbreLoja();
+            atualizarFormaPagamento();
+        }
+
+        function rotuloFormaPagamento(forma) {
+            if (forma === 'DINHEIRO') return 'DINHEIRO';
+            if (forma === 'CARTÃO' || forma === 'CARTAO') return 'CARTÃO';
+            if (forma === 'PIX') return 'PIX';
+            return '';
+        }
+
+        function definirFormaPagamento(forma) {
+            const escolhida = rotuloFormaPagamento(forma);
+            formaPagamento = formaPagamento === escolhida ? '' : escolhida;
+            atualizarFormaPagamento();
+            salvarOrcamentoAtual();
+        }
+
+        function atualizarFormaPagamento() {
+            const bloco = document.getElementById('forma-pagamento');
+            const rotulo = document.getElementById('forma-pagamento-rotulo');
+            if (!bloco || !rotulo) return;
+            const mostrar = tipoDocumento === 'VENDA' || documentoPago || modoTela === 'servicos';
+            const texto = rotuloFormaPagamento(formaPagamento);
+            rotulo.textContent = texto ? `Forma de pagamento: ${texto}` : 'Forma de pagamento:';
+            bloco.classList.toggle('oculto', !mostrar && !texto);
+            bloco.classList.toggle('sem-forma', !texto);
+            document.querySelectorAll('.btn-pagto').forEach(btn => {
+                btn.classList.toggle('ativo', rotuloFormaPagamento(btn.dataset.pagto) === texto);
+            });
         }
 
         function atualizarTimbreLoja() {
@@ -1398,7 +1481,8 @@
                 imagens: imagensOrcamento,
                 tipoDocumento: tipoDocumento,
                 pagoEntregue: documentoPago,
-                assinatura: assinaturaDoc
+                assinatura: assinaturaDoc,
+                formaPagamento: formaPagamento
             };
             try {
                 localStorage.setItem(STORAGE_ORCAMENTO, JSON.stringify(dados));
@@ -1423,6 +1507,8 @@
                 editandoIndex = -1;
                 definirTipoDocumento(dados.tipoDocumento === 'VENDA' ? 'VENDA' : 'ORÇAMENTO');
                 definirPagoEntregue(!!dados.pagoEntregue);
+                formaPagamento = rotuloFormaPagamento(dados.formaPagamento);
+                atualizarFormaPagamento();
                 aplicarAssinaturaDoc(dados.assinatura || '');
                 atualizarTela();
                 return true;
@@ -1449,6 +1535,8 @@
             editandoIndex = -1;
             definirTipoDocumento('ORÇAMENTO');
             definirPagoEntregue(false);
+            formaPagamento = '';
+            atualizarFormaPagamento();
             limparAssinaturaDoc();
             document.getElementById('nome-cliente').value = '';
             document.getElementById('modelo-carro').value = '';
@@ -1676,7 +1764,8 @@
                 telefone: document.getElementById('tel-cliente').value || '',
                 itens: itensOrcamento,
                 pagoEntregue: documentoPago,
-                assinatura: assinaturaDoc
+                assinatura: assinaturaDoc,
+                formaPagamento: formaPagamento
             };
         }
 
@@ -1699,6 +1788,8 @@
             imagensOrcamento = Array.isArray(d.imagens) ? d.imagens : [];
             editandoIndex = -1;
             definirPagoEntregue(!!d.pagoEntregue);
+            formaPagamento = rotuloFormaPagamento(d.formaPagamento);
+            atualizarFormaPagamento();
             aplicarAssinaturaDoc(d.assinatura || '');
             atualizarTela();
         }
@@ -1729,6 +1820,7 @@
             } else {
                 btnLimpar.textContent = 'Limpar orçamento';
             }
+            atualizarFormaPagamento();
             renderAbasServicos();
         }
 
@@ -1817,6 +1909,7 @@
                 telefone: '',
                 pagoEntregue: false,
                 assinatura: '',
+                formaPagamento: '',
                 itens: [],
                 imagensIds: [],
                 criadoEm: Date.now(),
