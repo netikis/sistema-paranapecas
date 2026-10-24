@@ -13,6 +13,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <style>
         * {
@@ -301,6 +302,14 @@
             font-size: 12px;
             font-weight: bold;
             margin-bottom: 4px;
+        }
+
+        .nome-entregador-print {
+            display: none;
+            font-size: 15px;
+            font-weight: bold;
+            color: #111;
+            padding: 6px 0;
         }
 
         #canvas-assinatura-doc {
@@ -844,20 +853,88 @@
             font-size: 15px;
         }
 
+        #documento-orcamento.exportando {
+            box-shadow: none;
+            padding: 16px 20px;
+        }
+
+        #documento-orcamento.exportando .nao-imprimir,
+        #documento-orcamento.exportando #canvas-assinatura-doc,
+        #documento-orcamento.exportando #nome-entregador {
+            display: none !important;
+        }
+
+        #documento-orcamento.exportando .nome-entregador-print,
+        #documento-orcamento.exportando .img-assinatura-doc.visivel {
+            display: block !important;
+        }
+
+        #documento-orcamento.exportando .img-assinatura-doc.visivel {
+            height: 88px;
+            border: 1px solid #ccc;
+        }
+
+        #documento-orcamento.exportando .area-logo img {
+            width: 120px;
+            max-height: 120px;
+        }
+
+        #documento-orcamento.exportando .cabecalho-orcamento {
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+        }
+
+        #documento-orcamento.exportando .dados-cliente {
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        #documento-orcamento.exportando table {
+            margin-bottom: 8px;
+        }
+
+        #documento-orcamento.exportando th,
+        #documento-orcamento.exportando td {
+            padding: 6px;
+            font-size: 13px;
+        }
+
+        #documento-orcamento.exportando .total-container {
+            margin-top: 8px;
+            font-size: 18px;
+        }
+
+        #documento-orcamento.exportando .pix-orcamento,
+        #documento-orcamento.exportando .rodape-pago,
+        #documento-orcamento.exportando .bloco-assinatura {
+            margin-top: 10px;
+            padding-top: 8px;
+        }
+
+        #documento-orcamento.exportando .galeria-imagens {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        #documento-orcamento.exportando .card-imagem img {
+            max-height: 80px;
+        }
+
         /* REGRAS DE IMPRESSÃO */
         @media print {
             body { background-color: white; padding: 0; }
-            #documento-orcamento { box-shadow: none; padding: 0; }
+            #documento-orcamento { box-shadow: none; padding: 12px; }
             .nao-imprimir { display: none !important; }
+            #nome-entregador { display: none !important; }
+            .nome-entregador-print { display: block !important; }
             input { border: none; background: transparent; padding: 0; margin: 0; }
-            .galeria-imagens { grid-template-columns: 1fr 1fr; }
-            .card-imagem img { max-height: none; }
+            .galeria-imagens { grid-template-columns: 1fr 1fr 1fr; }
+            .card-imagem img { max-height: 90px; }
             .carimbo-pago-doc, .timbre-loja img {
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
             #canvas-assinatura-doc { display: none !important; }
-            .img-assinatura-doc.visivel { display: block !important; }
+            .img-assinatura-doc.visivel { display: block !important; height: 88px; }
         }
     </style>
 </head>
@@ -1002,6 +1079,7 @@
             <div class="nome-entregador">
                 <label for="nome-entregador">Nome de quem entregou a mercadoria:</label>
                 <input type="text" id="nome-entregador" placeholder="Nome do entregador">
+                <div class="nome-entregador-print" id="nome-entregador-print"></div>
             </div>
             <canvas id="canvas-assinatura-doc" class="nao-imprimir"></canvas>
             <img id="img-assinatura-doc" class="img-assinatura-doc" alt="Assinatura">
@@ -2069,6 +2147,8 @@
 
         iniciarFerramentaImagens();
         iniciarAssinaturaDoc();
+        window.addEventListener('beforeprint', prepararVisualExportacao);
+        window.addEventListener('afterprint', restaurarVisualExportacao);
 
         try {
             if (localStorage.getItem(STORAGE_MODO) === 'servicos') trocarModo('servicos');
@@ -2556,32 +2636,53 @@ function adicionarItem() {
                 .trim() || 'Cliente';
         }
 
+        function canvasTemDesenho(canvas) {
+            if (!canvas || !canvas.width || !canvas.height) return false;
+            try {
+                const ctx = canvas.getContext('2d');
+                const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+                for (let i = 3; i < data.length; i += 4) {
+                    if (data[i] > 20) return true;
+                }
+            } catch (e) {
+                return !!assinaturaDoc;
+            }
+            return false;
+        }
+
+        function prepararVisualExportacao() {
+            atualizarCabecalhoDocumento();
+            atualizarPixDocumento();
+            atualizarFormaPagamento();
+            atualizarTimbreLoja();
+
+            const canvas = document.getElementById('canvas-assinatura-doc');
+            if ((!assinaturaDoc || assinaturaDoc.length < 80) && canvas && canvasTemDesenho(canvas)) {
+                assinaturaDoc = canvas.toDataURL('image/png');
+            }
+            mostrarImagemAssinatura(assinaturaDoc);
+
+            const nomeEnt = (document.getElementById('nome-entregador').value || '').trim();
+            const printEnt = document.getElementById('nome-entregador-print');
+            if (printEnt) printEnt.textContent = nomeEnt ? nomeEnt : '';
+
+            const doc = document.getElementById('documento-orcamento');
+            doc.classList.add('exportando');
+            document.querySelectorAll('#documento-orcamento input').forEach(i => {
+                i.style.border = 'none';
+            });
+        }
+
         function restaurarVisualExportacao() {
+            const doc = document.getElementById('documento-orcamento');
+            if (doc) doc.classList.remove('exportando');
             document.querySelectorAll('#documento-orcamento input').forEach(i => {
                 i.style.removeProperty('border');
-            });
-            document.querySelectorAll('.nao-imprimir').forEach(el => {
-                el.style.removeProperty('display');
             });
             const logo = document.getElementById('logo-empresa');
             if (logo) logo.style.removeProperty('visibility');
             const imgAss = document.getElementById('img-assinatura-doc');
             if (imgAss) imgAss.style.removeProperty('display');
-        }
-
-        function prepararVisualExportacao() {
-            document.querySelectorAll('#documento-orcamento input').forEach(i => {
-                i.style.border = 'none';
-            });
-            document.querySelectorAll('.nao-imprimir').forEach(el => {
-                el.style.display = 'none';
-            });
-            const imgAss = document.getElementById('img-assinatura-doc');
-            if (imgAss && assinaturaDoc) {
-                imgAss.src = assinaturaDoc;
-                imgAss.classList.add('visivel');
-                imgAss.style.display = 'block';
-            }
         }
 
         async function baixarArquivo(blob, nomeArquivo, mimeType, extensao) {
@@ -2618,86 +2719,71 @@ function adicionarItem() {
         async function capturarDocumentoCanvas() {
             const elemento = document.getElementById('documento-orcamento');
             const logo = document.getElementById('logo-empresa');
+            const opcoes = {
+                scale: 2,
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#ffffff',
+                logging: false,
+                windowWidth: elemento.scrollWidth,
+                windowHeight: elemento.scrollHeight
+            };
 
             try {
-                return await html2canvas(elemento, {
-                    scale: 2,
-                    useCORS: true,
-                    allowTaint: false,
-                    backgroundColor: '#ffffff',
-                    logging: false
-                });
+                return await html2canvas(elemento, opcoes);
             } catch (erro1) {
-                // Em arquivo local a logo pode bloquear a captura; tenta de novo sem ela
                 if (logo) logo.style.visibility = 'hidden';
                 try {
-                    return await html2canvas(elemento, {
-                        scale: 2,
-                        backgroundColor: '#ffffff',
-                        logging: false
-                    });
+                    return await html2canvas(elemento, Object.assign({}, opcoes, { useCORS: false }));
                 } finally {
                     if (logo) logo.style.removeProperty('visibility');
                 }
             }
         }
 
+        function obterJsPdf() {
+            if (window.jspdf && window.jspdf.jsPDF) return window.jspdf.jsPDF;
+            if (window.jsPDF) return window.jsPDF;
+            return null;
+        }
+
+        function pdfUmaPagina(canvas) {
+            const JsPDF = obterJsPdf();
+            if (!JsPDF) throw new Error('Biblioteca PDF indisponível.');
+            const pdf = new JsPDF('p', 'mm', 'a4');
+            const pageW = pdf.internal.pageSize.getWidth();
+            const pageH = pdf.internal.pageSize.getHeight();
+            const margin = 7;
+            const maxW = pageW - margin * 2;
+            const maxH = pageH - margin * 2;
+            const ratio = canvas.width / canvas.height;
+            let w = maxW;
+            let h = w / ratio;
+            if (h > maxH) {
+                h = maxH;
+                w = h * ratio;
+            }
+            const x = (pageW - w) / 2;
+            const y = (pageH - h) / 2;
+            pdf.addImage(canvas.toDataURL('image/jpeg', 0.93), 'JPEG', x, y, w, h);
+            return pdf.output('blob');
+        }
+
         async function gerarPDF() {
-            if (typeof html2pdf === 'undefined' && typeof html2canvas === 'undefined') {
+            if (typeof html2canvas === 'undefined') {
                 alert('Não foi possível carregar a biblioteca de PDF. Verifique a internet e tente novamente.');
                 return;
             }
 
-            atualizarCabecalhoDocumento();
-            const elemento = document.getElementById('documento-orcamento');
             const cliente = nomeArquivoSeguro(document.getElementById('nome-cliente').value);
             const nomeArquivo = `${prefixoArquivoDocumento()}_${cliente}.pdf`;
 
             prepararVisualExportacao();
+            await new Promise(r => setTimeout(r, 80));
 
             try {
-                let blob = null;
-
-                if (typeof html2pdf !== 'undefined') {
-                    const opcoes = {
-                        margin: 10,
-                        filename: nomeArquivo,
-                        image: { type: 'jpeg', quality: 0.98 },
-                        html2canvas: {
-                            scale: 2,
-                            useCORS: true,
-                            allowTaint: false,
-                            backgroundColor: '#ffffff',
-                            logging: false
-                        },
-                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-                    };
-                    blob = await html2pdf().set(opcoes).from(elemento).outputPdf('blob');
-                } else {
-                    // Fallback: gera PDF a partir do canvas
-                    const canvas = await capturarDocumentoCanvas();
-                    const imgData = canvas.toDataURL('image/jpeg', 0.95);
-                    const { jsPDF } = window.jspdf || {};
-                    if (!jsPDF) throw new Error('Biblioteca PDF indisponível.');
-                    const pdf = new jsPDF('p', 'mm', 'a4');
-                    const pageWidth = pdf.internal.pageSize.getWidth();
-                    const pageHeight = pdf.internal.pageSize.getHeight();
-                    const margin = 10;
-                    const imgWidth = pageWidth - margin * 2;
-                    const imgHeight = canvas.height * imgWidth / canvas.width;
-                    let heightLeft = imgHeight;
-                    let position = margin;
-                    pdf.addImage(imgData, 'JPEG', margin, position, imgWidth, imgHeight);
-                    heightLeft -= (pageHeight - margin * 2);
-                    while (heightLeft > 0) {
-                        position = margin - (imgHeight - heightLeft);
-                        pdf.addPage();
-                        pdf.addImage(imgData, 'JPEG', margin, position, imgWidth, imgHeight);
-                        heightLeft -= (pageHeight - margin * 2);
-                    }
-                    blob = pdf.output('blob');
-                }
-
+                const canvas = await capturarDocumentoCanvas();
+                const blob = pdfUmaPagina(canvas);
                 await baixarArquivo(blob, nomeArquivo, 'application/pdf', 'pdf');
             } catch (erro) {
                 console.error(erro);
@@ -2713,11 +2799,11 @@ function adicionarItem() {
                 return;
             }
 
-            atualizarCabecalhoDocumento();
             const cliente = nomeArquivoSeguro(document.getElementById('nome-cliente').value);
             const nomeArquivo = `${prefixoArquivoDocumento()}_${cliente}.jpeg`;
 
             prepararVisualExportacao();
+            await new Promise(r => setTimeout(r, 80));
 
             try {
                 const canvas = await capturarDocumentoCanvas();
