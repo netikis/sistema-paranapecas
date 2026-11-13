@@ -811,6 +811,11 @@
             align-items: stretch;
         }
 
+        .servicos-abas[hidden],
+        .servicos-vazio[hidden] {
+            display: none !important;
+        }
+
         .aba-servico {
             display: flex;
             border: 1px solid #ccc;
@@ -1938,16 +1943,23 @@
             const servicos = modoTela === 'servicos';
             document.getElementById('btn-modo-orcamento').classList.toggle('ativo', !servicos);
             document.getElementById('btn-modo-servicos').classList.toggle('ativo', servicos);
-            document.getElementById('servicos-abas').hidden = !servicos;
+            const abas = document.getElementById('servicos-abas');
+            const vazio = document.getElementById('servicos-vazio');
+            if (abas) {
+                abas.hidden = !servicos;
+                abas.style.display = servicos ? 'flex' : 'none';
+            }
             const tipos = document.getElementById('tipo-doc-tipos');
             if (tipos) tipos.style.display = servicos ? 'none' : '';
 
             const semServico = servicos && !servicoAtualId;
-            const vazio = document.getElementById('servicos-vazio');
-            vazio.hidden = !semServico;
-            vazio.innerHTML = servicosCarregados
-                ? 'Nenhum serviço em aberto.<br><br><button type="button" class="aba-novo" onclick="novoServico()">➕ Novo serviço</button>'
-                : 'Carregando serviços...';
+            if (vazio) {
+                vazio.hidden = !semServico;
+                vazio.style.display = semServico ? 'block' : 'none';
+                vazio.innerHTML = servicosCarregados
+                    ? 'Nenhum serviço em aberto.<br><br><button type="button" class="aba-novo" onclick="novoServico()">➕ Novo serviço</button>'
+                    : 'Carregando serviços...';
+            }
             document.getElementById('documento-orcamento').style.display = semServico ? 'none' : '';
             document.querySelector('.acoes-finais').style.display = semServico ? 'none' : '';
 
@@ -1957,16 +1969,25 @@
                 document.getElementById('rotulo-total').textContent = 'Total do Serviço:';
                 document.getElementById('barra-tipo-doc').textContent = 'Paraná Peças — Serviços em Aberto';
                 btnLimpar.textContent = '🗑 Excluir este serviço';
+                renderAbasServicos();
             } else {
                 btnLimpar.textContent = 'Limpar orçamento';
+                if (abas) abas.innerHTML = '';
             }
             atualizarFormaPagamento();
-            renderAbasServicos();
         }
 
         function renderAbasServicos() {
             const container = document.getElementById('servicos-abas');
-            if (!container || modoTela !== 'servicos') return;
+            if (!container) return;
+            if (modoTela !== 'servicos') {
+                container.hidden = true;
+                container.style.display = 'none';
+                container.innerHTML = '';
+                return;
+            }
+            container.hidden = false;
+            container.style.display = 'flex';
             container.innerHTML = servicosLista.map(s => `
                 <div class="aba-servico ${s.id === servicoAtualId ? 'ativa' : ''}">
                     <button type="button" class="aba-excluir" onclick="excluirServico('${s.id}')" title="Excluir este serviço">✕</button>
