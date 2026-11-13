@@ -440,13 +440,28 @@
         /* Formulário de Adição de Itens (Não sai na impressão) */
         .form-add-item {
             display: grid;
-            grid-template-columns: 2fr 1fr 1fr auto;
-            gap: 10px;
+            grid-template-columns: 2fr 70px 95px 80px 105px auto;
+            gap: 8px;
             background-color: #eef2f5;
             padding: 15px;
             border-radius: 5px;
             margin-bottom: 20px;
             align-items: end;
+        }
+
+        .form-add-item .campo-interno label {
+            color: #c05600;
+        }
+
+        .th-interno {
+            background: #fff3e0;
+            color: #c05600;
+        }
+
+        .td-interno {
+            background: #fff8e1;
+            color: #7c4a03;
+            font-size: 13px;
         }
 
         button {
@@ -871,7 +886,8 @@
         #documento-orcamento.exportando .nao-imprimir,
         #documento-orcamento.exportando #canvas-assinatura-doc,
         #documento-orcamento.exportando #nome-entregador,
-        #documento-orcamento.exportando .dados-cliente input {
+        #documento-orcamento.exportando .dados-cliente input,
+        #documento-orcamento.exportando .col-interno {
             display: none !important;
         }
 
@@ -935,7 +951,7 @@
         @media print {
             body { background-color: white; padding: 0; }
             #documento-orcamento { box-shadow: none; padding: 12px; }
-            .nao-imprimir { display: none !important; }
+            .nao-imprimir, .col-interno { display: none !important; }
             #nome-entregador, .dados-cliente input { display: none !important; }
             .nome-entregador-print, .dado-print { display: block !important; }
             input { border: none; background: transparent; padding: 0; margin: 0; }
@@ -1032,14 +1048,23 @@
             </div>
             <div>
                 <label>Qtd</label>
-                <input type="number" id="qtd-item" value="1" min="1">
+                <input type="number" id="qtd-item" value="1" min="1" oninput="calcularValorVendaItem()">
+            </div>
+            <div class="campo-interno">
+                <label>Custo (R$)</label>
+                <input type="number" id="custo-item" placeholder="0.00" step="0.01" min="0" oninput="calcularValorVendaItem()">
+            </div>
+            <div class="campo-interno">
+                <label>%</label>
+                <input type="number" id="pct-item" placeholder="0" step="0.01" min="0" oninput="calcularValorVendaItem()">
             </div>
             <div>
                 <label>Valor Unit. (R$)</label>
-                <input type="number" id="valor-item" placeholder="0.00" step="0.01">
+                <input type="number" id="valor-item" placeholder="0.00" step="0.01" oninput="marcarValorManual()">
             </div>
             <button onclick="adicionarItem()">Adicionar</button>
         </div>
+        <p class="nao-imprimir" style="margin:-12px 0 16px; font-size:12px; color:#888;">Custo e % ficam só na tela. No PDF e no JPEG o cliente vê apenas quantidade, valor unitário e total.</p>
 
         <div class="form-imagens nao-imprimir">
             <strong>Imagens do orçamento</strong>
@@ -1057,6 +1082,8 @@
                 <tr>
                     <th>Descrição</th>
                     <th>Qtd</th>
+                    <th class="col-interno th-interno">Custo</th>
+                    <th class="col-interno th-interno">%</th>
                     <th>V. Unit.</th>
                     <th>Total</th>
                     <th class="nao-imprimir">Ação</th>
@@ -1649,7 +1676,10 @@
             document.getElementById('data-orcamento').value = new Date().toLocaleDateString('pt-BR');
             document.getElementById('desc-item').value = '';
             document.getElementById('qtd-item').value = '1';
+            document.getElementById('custo-item').value = '';
+            document.getElementById('pct-item').value = '';
             document.getElementById('valor-item').value = '';
+            valorItemManual = false;
             localStorage.removeItem(STORAGE_ORCAMENTO);
             atualizarTela();
         }
@@ -1883,10 +1913,15 @@
             document.getElementById('nome-entregador').value = d.entregador || '';
             document.getElementById('desc-item').value = '';
             document.getElementById('qtd-item').value = '1';
+            document.getElementById('custo-item').value = '';
+            document.getElementById('pct-item').value = '';
             document.getElementById('valor-item').value = '';
+            valorItemManual = false;
             itensOrcamento = (Array.isArray(d.itens) ? d.itens : []).map(i => ({
                 descricao: i.descricao || '',
                 qtd: Number(i.qtd) || 1,
+                custo: Number(i.custo) || 0,
+                porcentagem: Number(i.porcentagem) || 0,
                 valorUnitario: Number(i.valorUnitario) || 0,
                 total: Number(i.total) || 0
             }));
@@ -2154,7 +2189,7 @@
             document.getElementById(id).addEventListener('input', salvarOrcamentoAtual);
         });
 
-        ['desc-item', 'qtd-item', 'valor-item'].forEach((id) => {
+        ['desc-item', 'qtd-item', 'custo-item', 'pct-item', 'valor-item'].forEach((id) => {
             document.getElementById(id).addEventListener('keydown', (evento) => {
                 if (evento.key === 'Enter') {
                     evento.preventDefault();
@@ -2572,21 +2607,48 @@
             }
         }
 
-function adicionarItem() {
-            const descricao = document.getElementById('desc-item').value;
-            const qtd = parseInt(document.getElementById('qtd-item').value);
-            const valorUnitario = parseFloat(document.getElementById('valor-item').value);
+        let valorItemManual = false;
 
-            if (!descricao || isNaN(qtd) || isNaN(valorUnitario)) {
-                alert("Preencha todos os campos do item corretamente.");
+        function parseNumeroItem(txt) {
+            let s = String(txt || '').replace(/[R$\s]/g, '');
+            if (s.indexOf(',') >= 0) s = s.replace(/\./g, '').replace(',', '.');
+            const n = parseFloat(s);
+            return isNaN(n) ? 0 : Math.round(n * 100) / 100;
+        }
+
+        function marcarValorManual() {
+            valorItemManual = true;
+        }
+
+        function calcularValorVendaItem() {
+            const custo = parseNumeroItem(document.getElementById('custo-item').value);
+            const pct = parseNumeroItem(document.getElementById('pct-item').value);
+            if (custo <= 0) return;
+            valorItemManual = false;
+            const unitario = Math.round(custo * (1 + pct / 100) * 100) / 100;
+            document.getElementById('valor-item').value = unitario.toFixed(2);
+        }
+
+        function adicionarItem() {
+            calcularValorVendaItem();
+            const descricao = (document.getElementById('desc-item').value || '').trim();
+            const qtd = parseInt(document.getElementById('qtd-item').value, 10);
+            const custo = parseNumeroItem(document.getElementById('custo-item').value);
+            const porcentagem = parseNumeroItem(document.getElementById('pct-item').value);
+            const valorUnitario = parseNumeroItem(document.getElementById('valor-item').value);
+
+            if (!descricao || !qtd || qtd < 1 || valorUnitario <= 0) {
+                alert("Preencha a descrição, a quantidade e o valor unitário (ou custo + %).");
                 return;
             }
 
             const novoItem = {
                 descricao: descricao,
                 qtd: qtd,
+                custo: custo,
+                porcentagem: porcentagem,
                 valorUnitario: valorUnitario,
-                total: qtd * valorUnitario
+                total: Math.round(qtd * valorUnitario * 100) / 100
             };
 
             if (editandoIndex > -1) {
@@ -2598,7 +2660,10 @@ function adicionarItem() {
 
             document.getElementById('desc-item').value = '';
             document.getElementById('qtd-item').value = '1';
+            document.getElementById('custo-item').value = '';
+            document.getElementById('pct-item').value = '';
             document.getElementById('valor-item').value = '';
+            valorItemManual = false;
             document.getElementById('desc-item').focus();
 
             atualizarTela();
@@ -2609,7 +2674,10 @@ function adicionarItem() {
             const item = itensOrcamento[index];
             document.getElementById('desc-item').value = item.descricao;
             document.getElementById('qtd-item').value = item.qtd;
+            document.getElementById('custo-item').value = item.custo ? Number(item.custo).toFixed(2) : '';
+            document.getElementById('pct-item').value = item.porcentagem ? Number(item.porcentagem) : '';
             document.getElementById('valor-item').value = item.valorUnitario;
+            valorItemManual = !(item.custo > 0);
             editandoIndex = index;
         }
 
@@ -2629,12 +2697,16 @@ function adicionarItem() {
             itensOrcamento.forEach((item, index) => {
                 valorTotalGeral += item.total;
 
+                const custo = Number(item.custo) || 0;
+                const pct = Number(item.porcentagem) || 0;
                 tbody.innerHTML += `
                     <tr>
                         <td>${item.descricao}</td>
                         <td>${item.qtd}</td>
-                        <td>R$ ${item.valorUnitario.toFixed(2)}</td>
-                        <td>R$ ${item.total.toFixed(2)}</td>
+                        <td class="col-interno td-interno">${custo ? 'R$ ' + custo.toFixed(2) : '—'}</td>
+                        <td class="col-interno td-interno">${custo || pct ? pct.toFixed(2) + '%' : '—'}</td>
+                        <td>R$ ${Number(item.valorUnitario).toFixed(2)}</td>
+                        <td>R$ ${Number(item.total).toFixed(2)}</td>
                         <td class="nao-imprimir">
                             <button class="btn-editar" onclick="editarItem(${index})">Editar</button>
                             <button class="btn-remover" onclick="removerItem(${index})">X</button>
